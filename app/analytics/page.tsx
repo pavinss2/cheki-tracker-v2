@@ -124,6 +124,12 @@ export default function AnalyticsPage() {
             const pct = maxVal > 0 ? (val / maxVal) * 100 : 0;
             const rank = idx + 1;
 
+            // Border color according to rank: rank 1-3 use metallic rank colors, 4+ use white border
+            let avatarBorderColor = '#ffffff';
+            if (rank === 1) avatarBorderColor = '#facc15';
+            else if (rank === 2) avatarBorderColor = '#e2e8f0';
+            else if (rank === 3) avatarBorderColor = '#d97706';
+
             return (
               <div key={item.name} className="leaderboard-row">
                 {/* Column 1: Rank(#) */}
@@ -131,9 +137,9 @@ export default function AnalyticsPage() {
 
                 {/* Column 2: Trophy */}
                 <div className="col-trophy">
-                  {rank === 1 && <Trophy size={22} color="#f59e0b" fill="#f59e0b" />}
-                  {rank === 2 && <Trophy size={22} color="#9ca3af" fill="#9ca3af" />}
-                  {rank === 3 && <Trophy size={22} color="#d97706" fill="#d97706" />}
+                  {rank === 1 && <Trophy size={20} color="#facc15" fill="#facc15" />}
+                  {rank === 2 && <Trophy size={20} color="#e2e8f0" fill="#e2e8f0" />}
+                  {rank === 3 && <Trophy size={20} color="#d97706" fill="#d97706" />}
                 </div>
 
                 {/* Column 3: Member Image / Avatar Fallback */}
@@ -143,7 +149,7 @@ export default function AnalyticsPage() {
                       src={item.image} 
                       name={item.name} 
                       size={34} 
-                      colorHex={item.colorHex} 
+                      colorHex={avatarBorderColor} 
                     />
                   </div>
                 )}
@@ -165,7 +171,7 @@ export default function AnalyticsPage() {
                   </div>
                 </div>
 
-                {/* Column 6: Number */}
+                {/* Column 6: Number (Unbold) */}
                 <span className="col-number">
                   {metric === 'qty' ? val : `฿${val.toLocaleString()}`}
                 </span>
@@ -271,15 +277,15 @@ export default function AnalyticsPage() {
         .bar-track {
           width: 100%;
           height: 18px;
-          background-color: #1e212b;
-          border-radius: 9px;
+          background-color: #262626;
+          border-radius: 9999px;
           overflow: hidden;
           border: 1px solid rgba(255,255,255,0.05);
         }
 
         .bar-fill {
           height: 100%;
-          border-radius: 9px;
+          border-radius: 9999px;
           transform-origin: left;
           animation: barEmerge 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
           transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -297,8 +303,8 @@ export default function AnalyticsPage() {
         }
 
         .col-number {
-          font-weight: 700;
-          font-size: 1rem;
+          font-weight: 400;
+          font-size: 0.95rem;
           color: #58a6ff;
           min-width: 28px;
           text-align: right;

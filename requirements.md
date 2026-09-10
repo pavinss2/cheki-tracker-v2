@@ -184,10 +184,16 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 - **Parenthesis Stripping Rule**: Any member name containing text inside parentheses (e.g. `"Zero (NOLiMIT)"`, `"Siso (22%)"`) will automatically have the parentheses and enclosed content removed for UI display (e.g. `"Zero (NOLiMIT)"` renders as `"Zero"`, `"Siso (22%)"` renders as `"Siso"`).
 - **Implementation**: Handled centrally via `formatDisplayName(name)` in [lib/imageUtils.ts](file:///Users/pavin/01%20Pavin%20Coding/cheki-tracker-v2/lib/imageUtils.ts) (`name.replace(/\s*\([^)]*\)/g, '').trim()`) and applied across Analytics Leaderboard / Bar Graph rows, Data Tables, Member Avatars, Admin `dim_member` table, and Raw Data transaction tables.
 
-### 6.9 Analytics Tab Bar Graph Exclusive Mode & Enlarged Leaderboard Layout
-- **Bar Graph Exclusive View**: The Analytics tab exclusively displays the Bar Graph (Leaderboard) view. The Data Table view option and Mode toggle button group have been removed for a clean, focused user experience.
-- **Enlarged Icons & Member Names (20% Larger)**: Leaderboard icons and text elements in `.leaderboard-row` are scaled up: MemberAvatar size increased to `34px`, Trophy icon size increased to `22px`, and member name font size increased to `0.98rem`.
-- **Compact Row Spacing & Progress Bar Visibility**: Row gap tightened to `6px` (`gap: 6px`) to compensate for enlarged icons on mobile screens while preserving over `50px` min-width for `.col-bar-container` (`flex: 1`). Ensures progress bars (`bar-track` / `bar-fill`) remain prominent and readable.
+### 6.9 Analytics Tab Bar Graph Styling & Leaderboard Layout Specifications
+- **Bar Graph Exclusive View**: The Analytics tab exclusively displays the Bar Graph (Leaderboard) view.
+- **Rank-Based Metallic Trophy & Avatar Borders**:
+  - Rank #1: Gold trophy icon (`#facc15`), Gold avatar border (`#facc15`).
+  - Rank #2: Silver trophy icon (`#e2e8f0`), Silver avatar border (`#e2e8f0`).
+  - Rank #3: Bronze trophy icon (`#d97706`), Bronze avatar border (`#d97706`).
+  - Rank #4+: No trophy icon displayed, Crisp white avatar border (`#ffffff`).
+- **Unbolded Metric Numbers**: Values in `.col-number` are rendered unbolded (`font-weight: 400`) in light blue (`#58a6ff`) matching screenshot specs.
+- **Curved Pill Graph Angles**: Both `.bar-track` (`background-color: #262626`) and `.bar-fill` enforce fully rounded pill angles (`border-radius: 9999px`).
+- **Enlarged Elements & Compact Row Spacing**: MemberAvatar size set to `34px`, Trophy icon size set to `20px`, member name font size set to `0.98rem`, with row gap set to `6px` (`gap: 6px`) to ensure optimal fit on mobile screens.
 
 ---
 
