@@ -308,10 +308,10 @@ export default function CalendarPage() {
 
         <div className="btn-group" onClick={(e) => e.stopPropagation()}>
           <button className="btn btn-secondary btn-sm" onClick={handlePrevMonth}>
-            <ChevronLeft size={16} /> Prev
+            <ChevronLeft size={16} />
           </button>
           <button className="btn btn-secondary btn-sm" onClick={handleNextMonth}>
-            Next <ChevronRight size={16} />
+            <ChevronRight size={16} />
           </button>
         </div>
       </div>

@@ -14,13 +14,13 @@ import {
 } from 'lucide-react';
 
 const NAV_ITEMS = [
-  { label: ' Home', href: '/', icon: Home },
-  { label: ' Calendar', href: '/calendar', icon: Calendar },
-  { label: ' Raw Data', href: '/raw',  icon: Table },
-  { label: ' Analytics', href: '/analytics', icon: BarChart2 },
-  { label: ' Events', href: '/events', icon: CalendarDays },
-  { label: ' Grid Entry', href: '/grid-entry', icon: Grid },
-  { label: ' Back Office', href: '/admin', icon: Settings },
+  { label: 'Home', href: '/', icon: Home },
+  { label: 'Calendar', href: '/calendar', icon: Calendar },
+  { label: 'Raw Data', href: '/raw',  icon: Table },
+  { label: 'Analytics', href: '/analytics', icon: BarChart2 },
+  { label: 'Events', href: '/events', icon: CalendarDays },
+  { label: 'Grid Entry', href: '/grid-entry', icon: Grid },
+  { label: 'Back Office', href: '/admin', icon: Settings },
 ];
 
 export const Sidebar: React.FC = () => {
