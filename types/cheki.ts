@@ -35,6 +35,9 @@ export interface DimMember {
   is_active: boolean;
   x_profile?: string;
   date_added?: string;
+  date_modified?: string;
+  createdAt?: string;
+  updatedAt?: string;
   is_default?: boolean;
   isDefault?: boolean;
   is_imported?: boolean;
@@ -50,6 +53,10 @@ export interface DimGroup {
   is_default?: boolean;
   isDefault?: boolean;
   is_imported?: boolean;
+  date_added?: string;
+  date_modified?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface DimCompany {
@@ -60,6 +67,10 @@ export interface DimCompany {
   is_default?: boolean;
   isDefault?: boolean;
   is_imported?: boolean;
+  date_added?: string;
+  date_modified?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface DimColor {
@@ -70,6 +81,10 @@ export interface DimColor {
   is_active?: boolean;
   is_default?: boolean;
   isDefault?: boolean;
+  date_added?: string;
+  date_modified?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface DimType {
@@ -79,6 +94,10 @@ export interface DimType {
   is_active?: boolean;
   is_default?: boolean;
   isDefault?: boolean;
+  date_added?: string;
+  date_modified?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface DimCountry {
@@ -89,6 +108,10 @@ export interface DimCountry {
   is_active?: boolean;
   is_default?: boolean;
   isDefault?: boolean;
+  date_added?: string;
+  date_modified?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface DimLocation {
@@ -98,6 +121,10 @@ export interface DimLocation {
   is_active?: boolean;
   is_default?: boolean;
   isDefault?: boolean;
+  date_added?: string;
+  date_modified?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface PriceRuleCondition {

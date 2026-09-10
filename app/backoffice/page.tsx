@@ -390,6 +390,7 @@ export default function BackOfficePage() {
                     <th className="sortable-th" onClick={() => handleSortMembers('date_added')}>
                       Date Added {memberSortKey === 'date_added' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                     </th>
+                    <th>Date Modified</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -492,7 +493,8 @@ export default function BackOfficePage() {
                           onChange={(e) => setTempMember({ ...tempMember, x_profile: e.target.value })}
                         />
                       </td>
-                      <td><span className="date-added-cell">{tempMember.date_added}</span></td>
+                      <td className="mono">{tempMember.date_added}</td>
+                      <td className="mono">{tempMember.date_added}</td>
                       <td>
                         <div className="action-btns">
                           <button className="btn btn-primary btn-sm icon-only" onClick={handleSaveTempMember} title="Save Default Member">
@@ -532,7 +534,8 @@ export default function BackOfficePage() {
                           </span>
                         </td>
                         <td>{m.x_profile || '-'}</td>
-                        <td className="mono">{m.date_added || '-'}</td>
+                        <td className="mono">{m.date_added || (m.createdAt ? m.createdAt.split('T')[0] : '-')}</td>
+                        <td className="mono">{m.date_modified || (m.updatedAt ? m.updatedAt.split('T')[0] : '-')}</td>
                         <td>
                           <div className="action-btns">
                             <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_member', data: { ...m } })}>
@@ -568,6 +571,8 @@ export default function BackOfficePage() {
                     <th>Group</th>
                     <th>Country</th>
                     <th>Company</th>
+                    <th>Date Added</th>
+                    <th>Date Modified</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -594,14 +599,19 @@ export default function BackOfficePage() {
                         />
                       </td>
                       <td>
-                        <input 
-                          type="text" 
-                          className="table-input" 
-                          placeholder="Company" 
-                          value={tempGroup.company} 
+                        <select 
+                          className="table-select" 
+                          value={tempGroup.company || 'Individual'} 
                           onChange={(e) => setTempGroup({ ...tempGroup, company: e.target.value })}
-                        />
+                        >
+                          <option value="Individual">Individual</option>
+                          {companies.filter(c => c.company !== 'Individual').map((c) => (
+                            <option key={c.id} value={c.company}>{c.company}</option>
+                          ))}
+                        </select>
                       </td>
+                      <td className="mono">{new Date().toISOString().split('T')[0]}</td>
+                      <td className="mono">{new Date().toISOString().split('T')[0]}</td>
                       <td>
                         <div className="action-btns">
                           <button className="btn btn-primary btn-xs" onClick={handleSaveTempGroup}><Save size={13} /> Save</button>
@@ -616,6 +626,8 @@ export default function BackOfficePage() {
                       <td className="bold">{g.group}</td>
                       <td>{g.country}</td>
                       <td>{g.company}</td>
+                      <td className="mono">{g.date_added || (g.createdAt ? g.createdAt.split('T')[0] : '-')}</td>
+                      <td className="mono">{g.date_modified || (g.updatedAt ? g.updatedAt.split('T')[0] : '-')}</td>
                       <td>
                         <div className="action-btns">
                           <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_group', data: { ...g } })}>
@@ -648,6 +660,8 @@ export default function BackOfficePage() {
                 <thead>
                   <tr>
                     <th>Company</th>
+                    <th>Date Added</th>
+                    <th>Date Modified</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -664,6 +678,8 @@ export default function BackOfficePage() {
                           onChange={(e) => setTempCompany({ company: e.target.value })}
                         />
                       </td>
+                      <td className="mono">{new Date().toISOString().split('T')[0]}</td>
+                      <td className="mono">{new Date().toISOString().split('T')[0]}</td>
                       <td>
                         <div className="action-btns">
                           <button className="btn btn-primary btn-xs" onClick={handleSaveTempCompany}><Save size={13} /> Save</button>
@@ -676,6 +692,8 @@ export default function BackOfficePage() {
                   {companies.map((c) => (
                     <tr key={c.id}>
                       <td className="bold">{c.company}</td>
+                      <td className="mono">{c.date_added || (c.createdAt ? c.createdAt.split('T')[0] : '-')}</td>
+                      <td className="mono">{c.date_modified || (c.updatedAt ? c.updatedAt.split('T')[0] : '-')}</td>
                       <td>
                         <div className="action-btns">
                           <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_company', data: { ...c } })}>
@@ -709,7 +727,9 @@ export default function BackOfficePage() {
                   <tr>
                     <th>Color Name</th>
                     <th>Color Preview</th>
-                    <th>Hex Code</th>
+                    <th>Hex Code & Picker</th>
+                    <th>Date Added</th>
+                    <th>Date Modified</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -730,14 +750,24 @@ export default function BackOfficePage() {
                         <span className="color-swatch" style={{ backgroundColor: tempColor.color_code }} />
                       </td>
                       <td>
-                        <input 
-                          type="text" 
-                          className="table-input mono" 
-                          placeholder="#ffffff" 
-                          value={tempColor.color_code} 
-                          onChange={(e) => setTempColor({ ...tempColor, color_code: e.target.value })}
-                        />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input 
+                            type="color" 
+                            className="color-picker-input" 
+                            value={tempColor.color_code && tempColor.color_code.startsWith('#') ? tempColor.color_code : '#ffffff'} 
+                            onChange={(e) => setTempColor({ ...tempColor, color_code: e.target.value })}
+                          />
+                          <input 
+                            type="text" 
+                            className="table-input mono" 
+                            placeholder="#ffffff" 
+                            value={tempColor.color_code} 
+                            onChange={(e) => setTempColor({ ...tempColor, color_code: e.target.value })}
+                          />
+                        </div>
                       </td>
+                      <td className="mono">{new Date().toISOString().split('T')[0]}</td>
+                      <td className="mono">{new Date().toISOString().split('T')[0]}</td>
                       <td>
                         <div className="action-btns">
                           <button className="btn btn-primary btn-xs" onClick={handleSaveTempColor}><Save size={13} /> Save</button>
@@ -753,7 +783,22 @@ export default function BackOfficePage() {
                       <td>
                         <span className="color-swatch" style={{ backgroundColor: c.color_code }} />
                       </td>
-                      <td className="mono">{c.color_code}</td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input 
+                            type="color" 
+                            className="color-picker-input" 
+                            value={c.color_code && c.color_code.startsWith('#') ? c.color_code : '#ffffff'} 
+                            onChange={(e) => {
+                              const newHex = e.target.value;
+                              updateDefaultMetadataDoc('dim_color', c.id, { ...c, color_code: newHex }, isDemoUser);
+                            }}
+                          />
+                          <span className="mono">{c.color_code}</span>
+                        </div>
+                      </td>
+                      <td className="mono">{c.date_added || (c.createdAt ? c.createdAt.split('T')[0] : '-')}</td>
+                      <td className="mono">{c.date_modified || (c.updatedAt ? c.updatedAt.split('T')[0] : '-')}</td>
                       <td>
                         <div className="action-btns">
                           <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_color', data: { ...c } })}>
@@ -786,6 +831,8 @@ export default function BackOfficePage() {
                 <thead>
                   <tr>
                     <th>Type</th>
+                    <th>Date Added</th>
+                    <th>Date Modified</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -802,6 +849,8 @@ export default function BackOfficePage() {
                           onChange={(e) => setTempType({ type: e.target.value })}
                         />
                       </td>
+                      <td className="mono">{new Date().toISOString().split('T')[0]}</td>
+                      <td className="mono">{new Date().toISOString().split('T')[0]}</td>
                       <td>
                         <div className="action-btns">
                           <button className="btn btn-primary btn-xs" onClick={handleSaveTempType}><Save size={13} /> Save</button>
@@ -814,6 +863,8 @@ export default function BackOfficePage() {
                   {types.map((t) => (
                     <tr key={t.id}>
                       <td className="bold">{t.type}</td>
+                      <td className="mono">{t.date_added || (t.createdAt ? t.createdAt.split('T')[0] : '-')}</td>
+                      <td className="mono">{t.date_modified || (t.updatedAt ? t.updatedAt.split('T')[0] : '-')}</td>
                       <td>
                         <div className="action-btns">
                           <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_type', data: { ...t } })}>
@@ -846,6 +897,8 @@ export default function BackOfficePage() {
                 <thead>
                   <tr>
                     <th>Country Display</th>
+                    <th>Date Added</th>
+                    <th>Date Modified</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -862,6 +915,8 @@ export default function BackOfficePage() {
                           onChange={(e) => setTempCountry({ country: e.target.value.replace(/[^A-Za-z]/g, ''), displayed_country: e.target.value })}
                         />
                       </td>
+                      <td className="mono">{new Date().toISOString().split('T')[0]}</td>
+                      <td className="mono">{new Date().toISOString().split('T')[0]}</td>
                       <td>
                         <div className="action-btns">
                           <button className="btn btn-primary btn-xs" onClick={handleSaveTempCountry}><Save size={13} /> Save</button>
@@ -874,6 +929,8 @@ export default function BackOfficePage() {
                   {countries.map((c) => (
                     <tr key={c.id}>
                       <td className="bold">{c.displayed_country || c.country}</td>
+                      <td className="mono">{c.date_added || (c.createdAt ? c.createdAt.split('T')[0] : '-')}</td>
+                      <td className="mono">{c.date_modified || (c.updatedAt ? c.updatedAt.split('T')[0] : '-')}</td>
                       <td>
                         <div className="action-btns">
                           <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_country', data: { ...c } })}>
@@ -891,6 +948,7 @@ export default function BackOfficePage() {
             </div>
           </div>
         )}
+
         {/* DEFAULT LOCATIONS TAB */}
         {activeTab === 'locations' && (
           <div>
@@ -905,6 +963,8 @@ export default function BackOfficePage() {
                 <thead>
                   <tr>
                     <th>Location Name</th>
+                    <th>Date Added</th>
+                    <th>Date Modified</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -921,6 +981,8 @@ export default function BackOfficePage() {
                           onChange={(e) => setTempLocation({ location: e.target.value })}
                         />
                       </td>
+                      <td className="mono">{new Date().toISOString().split('T')[0]}</td>
+                      <td className="mono">{new Date().toISOString().split('T')[0]}</td>
                       <td>
                         <div className="action-btns">
                           <button className="btn btn-primary btn-xs" onClick={handleSaveTempLocation}><Save size={13} /> Save</button>
@@ -933,6 +995,8 @@ export default function BackOfficePage() {
                   {locations.map((loc) => (
                     <tr key={loc.id}>
                       <td className="bold">{loc.location}</td>
+                      <td className="mono">{loc.date_added || (loc.createdAt ? loc.createdAt.split('T')[0] : '-')}</td>
+                      <td className="mono">{loc.date_modified || (loc.updatedAt ? loc.updatedAt.split('T')[0] : '-')}</td>
                       <td>
                         <div className="action-btns">
                           <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_location', data: { ...loc } })}>
@@ -993,36 +1057,125 @@ export default function BackOfficePage() {
             </div>
 
             <form onSubmit={handleSaveEdit} className="modal-form">
-              {Object.keys(editingItem.data)
-                .filter(k => k !== 'id' && k !== 'userId' && k !== 'createdAt' && k !== 'updatedAt')
-                .map(key => (
-                  <div key={key} className="form-group">
-                    <label>{key}</label>
-                    {typeof editingItem.data[key] === 'boolean' ? (
-                      <select
-                        className="input-control"
-                        value={editingItem.data[key] ? 'true' : 'false'}
-                        onChange={(e) => setEditingItem({
-                          ...editingItem,
-                          data: { ...editingItem.data, [key]: e.target.value === 'true' }
-                        })}
-                      >
-                        <option value="true">Active (True)</option>
-                        <option value="false">Inactive (False)</option>
-                      </select>
-                    ) : (
+              {editingItem.table === 'dim_group' && (
+                <>
+                  <div className="form-group">
+                    <label>Group Name *</label>
+                    <input
+                      type="text"
+                      required
+                      className="input-control"
+                      value={String(editingItem.data.group || '')}
+                      onChange={(e) => setEditingItem({
+                        ...editingItem,
+                        data: { ...editingItem.data, group: e.target.value }
+                      })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Country</label>
+                    <input
+                      type="text"
+                      className="input-control"
+                      value={String(editingItem.data.country || '')}
+                      onChange={(e) => setEditingItem({
+                        ...editingItem,
+                        data: { ...editingItem.data, country: e.target.value }
+                      })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Company</label>
+                    <select
+                      className="input-control"
+                      value={String(editingItem.data.company || 'Individual')}
+                      onChange={(e) => setEditingItem({
+                        ...editingItem,
+                        data: { ...editingItem.data, company: e.target.value }
+                      })}
+                    >
+                      <option value="Individual">Individual</option>
+                      {companies.filter(c => c.company !== 'Individual').map((c) => (
+                        <option key={c.id} value={c.company}>{c.company}</option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
+
+              {editingItem.table === 'dim_color' && (
+                <>
+                  <div className="form-group">
+                    <label>Color Name *</label>
+                    <input
+                      type="text"
+                      required
+                      className="input-control"
+                      value={String(editingItem.data.color || '')}
+                      onChange={(e) => setEditingItem({
+                        ...editingItem,
+                        data: { ...editingItem.data, color: e.target.value }
+                      })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Hex Code & Color Picker</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <input
-                        type="text"
-                        className="input-control"
-                        value={String(editingItem.data[key] ?? '')}
+                        type="color"
+                        className="color-picker-input"
+                        value={String(editingItem.data.color_code || '#ffffff').startsWith('#') ? String(editingItem.data.color_code) : '#ffffff'}
                         onChange={(e) => setEditingItem({
                           ...editingItem,
-                          data: { ...editingItem.data, [key]: e.target.value }
+                          data: { ...editingItem.data, color_code: e.target.value }
                         })}
                       />
-                    )}
+                      <input
+                        type="text"
+                        className="input-control mono"
+                        value={String(editingItem.data.color_code || '')}
+                        onChange={(e) => setEditingItem({
+                          ...editingItem,
+                          data: { ...editingItem.data, color_code: e.target.value }
+                        })}
+                      />
+                    </div>
                   </div>
-                ))}
+                </>
+              )}
+
+              {editingItem.table !== 'dim_group' && editingItem.table !== 'dim_color' && (
+                Object.keys(editingItem.data)
+                  .filter(k => k !== 'id' && k !== 'userId' && k !== 'createdAt' && k !== 'updatedAt' && k !== 'date_added' && k !== 'date_modified')
+                  .map(key => (
+                    <div key={key} className="form-group">
+                      <label>{key}</label>
+                      {typeof editingItem.data[key] === 'boolean' ? (
+                        <select
+                          className="input-control"
+                          value={editingItem.data[key] ? 'true' : 'false'}
+                          onChange={(e) => setEditingItem({
+                            ...editingItem,
+                            data: { ...editingItem.data, [key]: e.target.value === 'true' }
+                          })}
+                        >
+                          <option value="true">Active (True)</option>
+                          <option value="false">Inactive (False)</option>
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          className="input-control"
+                          value={String(editingItem.data[key] ?? '')}
+                          onChange={(e) => setEditingItem({
+                            ...editingItem,
+                            data: { ...editingItem.data, [key]: e.target.value }
+                          })}
+                        />
+                      )}
+                    </div>
+                  ))
+              )}
 
               <div className="modal-actions">
                 <button type="button" className="btn btn-secondary" onClick={() => setEditingItem(null)}>Cancel</button>
@@ -1217,6 +1370,25 @@ export default function BackOfficePage() {
           color: var(--text-muted);
           font-style: italic;
           font-size: 0.82rem;
+        }
+
+        .color-picker-input {
+          width: 32px;
+          height: 32px;
+          padding: 0;
+          border: 1px solid var(--border-subtle);
+          border-radius: 6px;
+          background: none;
+          cursor: pointer;
+          flex-shrink: 0;
+          -webkit-appearance: none;
+        }
+        .color-picker-input::-webkit-color-swatch-wrapper {
+          padding: 0;
+        }
+        .color-picker-input::-webkit-color-swatch {
+          border: none;
+          border-radius: 5px;
         }
 
         .date-added-cell {
