@@ -80,23 +80,36 @@ export const Sidebar: React.FC = () => {
           display: flex;
           align-items: center;
           gap: 12px;
-          padding: 20px 24px;
+          padding: 14px 18px;
           border-radius: var(--radius-sm);
-          color: var(--text-muted);
+          color: #38bdf8;
           font-weight: 500;
-          font-size: 0.9rem;
+          font-size: 0.95rem;
           transition: all var(--transition-fast);
+        }
+
+        .nav-item :global(.nav-icon) {
+          color: #38bdf8;
+          transition: color var(--transition-fast);
         }
 
         .nav-item:hover {
           background-color: var(--bg-surface-2);
-          color: var(--text-main);
+          color: #ffffff;
+        }
+
+        .nav-item:hover :global(.nav-icon) {
+          color: #ffffff;
         }
 
         .nav-item.active {
-          background-color: var(--accent-primary-subtle);
-          color: var(--accent-primary);
-          font-weight: 600;
+          background-color: rgba(212, 168, 75, 0.12);
+          color: #d4a84b;
+          font-weight: 700;
+        }
+
+        .nav-item.active :global(.nav-icon) {
+          color: #d4a84b;
         }
 
         .nav-badge {

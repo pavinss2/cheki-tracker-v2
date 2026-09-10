@@ -1,9 +1,7 @@
-'use client';
-
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useFilters } from '@/context/FilterContext';
 import { Transaction } from '@/types/cheki';
-import { X, RotateCcw } from 'lucide-react';
+import { X, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface FilterBarProps {
   transactions: Transaction[];
@@ -11,6 +9,7 @@ interface FilterBarProps {
 
 export const FilterBar: React.FC<FilterBarProps> = ({ transactions }) => {
   const { filters, setFilter, removeCellFilter, clearAllFilters } = useFilters();
+  const [showMore, setShowMore] = useState(false);
 
   const options = useMemo(() => {
     const years = new Set<string>();
@@ -55,6 +54,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({ transactions }) => {
   }, [transactions, filters]);
 
   const activeTokens = Object.entries(filters.activeCellFilters);
+  const secondaryActiveCount = [filters.type, filters.location, filters.company, filters.nationality].filter(Boolean).length;
+
   const hasAnyFilter = Boolean(
     filters.year || filters.group || filters.color || filters.member || filters.nationality || filters.company || filters.type || filters.location || activeTokens.length > 0
   );
@@ -62,6 +63,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ transactions }) => {
   return (
     <div className="filter-bar">
       <div className="filter-grid">
+        {/* Top 4 Primary Filters */}
         <div className="filter-item">
           <label>Year</label>
           <select value={filters.year} onChange={(e) => setFilter('year', e.target.value)}>
@@ -102,47 +104,53 @@ export const FilterBar: React.FC<FilterBarProps> = ({ transactions }) => {
           </select>
         </div>
 
-        <div className="filter-item">
-          <label>Type</label>
-          <select value={filters.type} onChange={(e) => setFilter('type', e.target.value)}>
-            <option value="">-- All Types --</option>
-            {options.types.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-        </div>
+        {/* Remaining Secondary Filters (Shown when expanded) */}
+        {showMore && (
+          <>
+            <div className="filter-item">
+              <label>Type</label>
+              <select value={filters.type} onChange={(e) => setFilter('type', e.target.value)}>
+                <option value="">-- All Types --</option>
+                {options.types.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
 
-        <div className="filter-item">
-          <label>Location</label>
-          <select value={filters.location} onChange={(e) => setFilter('location', e.target.value)}>
-            <option value="">-- All Locations --</option>
-            {options.locations.map((l) => (
-              <option key={l} value={l}>{l}</option>
-            ))}
-          </select>
-        </div>
+            <div className="filter-item">
+              <label>Location</label>
+              <select value={filters.location} onChange={(e) => setFilter('location', e.target.value)}>
+                <option value="">-- All Locations --</option>
+                {options.locations.map((l) => (
+                  <option key={l} value={l}>{l}</option>
+                ))}
+              </select>
+            </div>
 
-        <div className="filter-item">
-          <label>Company</label>
-          <select value={filters.company} onChange={(e) => setFilter('company', e.target.value)}>
-            <option value="">-- All Companies --</option>
-            {options.companies.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        </div>
+            <div className="filter-item">
+              <label>Company</label>
+              <select value={filters.company} onChange={(e) => setFilter('company', e.target.value)}>
+                <option value="">-- All Companies --</option>
+                {options.companies.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
 
-        <div className="filter-item">
-          <label>Nationality</label>
-          <select value={filters.nationality} onChange={(e) => setFilter('nationality', e.target.value)}>
-            <option value="">-- All Nationalities --</option>
-            {options.nationalities.map((n) => (
-              <option key={n} value={n}>{n}</option>
-            ))}
-          </select>
-        </div>
+            <div className="filter-item">
+              <label>Nationality</label>
+              <select value={filters.nationality} onChange={(e) => setFilter('nationality', e.target.value)}>
+                <option value="">-- All Nationalities --</option>
+                {options.nationalities.map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
       </div>
 
+      {/* Row Drilldown Active Tokens */}
       {activeTokens.length > 0 && (
         <div className="tokens-bar">
           <span className="tokens-title">Row Drilldowns:</span>
@@ -155,14 +163,27 @@ export const FilterBar: React.FC<FilterBarProps> = ({ transactions }) => {
         </div>
       )}
 
-      {hasAnyFilter && (
-        <div className="reset-bar">
+      {/* Action Bar: Show More Toggle & Reset Button */}
+      <div className="filter-actions-bar">
+        <button
+          type="button"
+          className="btn-show-more"
+          onClick={() => setShowMore(!showMore)}
+        >
+          <span>{showMore ? 'Show Less Filters' : 'Show More Filters'}</span>
+          {secondaryActiveCount > 0 && !showMore && (
+            <span className="active-badge">+{secondaryActiveCount} active</span>
+          )}
+          {showMore ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </button>
+
+        {hasAnyFilter && (
           <button onClick={clearAllFilters} className="btn-reset">
             <RotateCcw size={12} />
             <span>Reset All Filters</span>
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       <style jsx>{`
         .filter-bar {
@@ -173,7 +194,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ transactions }) => {
           margin-bottom: 1px;
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 12px;
         }
 
         .filter-grid {
@@ -232,9 +253,38 @@ export const FilterBar: React.FC<FilterBarProps> = ({ transactions }) => {
           align-items: center;
         }
 
-        .reset-bar {
+        .filter-actions-bar {
           display: flex;
-          justify-content: flex-end;
+          justify-content: space-between;
+          align-items: center;
+          padding-top: 6px;
+        }
+
+        .btn-show-more {
+          background: none;
+          border: none;
+          color: var(--accent-blue);
+          font-size: 0.78rem;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 4px 0;
+          transition: color var(--transition-fast);
+        }
+
+        .btn-show-more:hover {
+          color: var(--accent-primary);
+        }
+
+        .active-badge {
+          background: var(--accent-primary-subtle);
+          color: var(--accent-primary);
+          font-size: 0.68rem;
+          padding: 1px 6px;
+          border-radius: 10px;
+          font-weight: 700;
         }
 
         .btn-reset {
@@ -246,10 +296,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({ transactions }) => {
           display: flex;
           align-items: center;
           gap: 4px;
+          margin-left: auto;
+        }
 
-          &:hover {
-            color: var(--color-warning);
-          }
+        .btn-reset:hover {
+          color: var(--color-warning);
         }
 
         @media (max-width: 1024px) {
