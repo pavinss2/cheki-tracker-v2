@@ -272,12 +272,6 @@ export default function CalendarPage() {
 
   return (
     <div className="calendar-page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Calendar</h1>
-        </div>
-      </div>
-
       <FilterBar transactions={allTransactions} />
 
       {/* Requirement 3: Clicking cal-nav-card resets to full month gallery view */}

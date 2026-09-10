@@ -4,12 +4,35 @@ import React from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { LogIn, LogOut, User as UserIcon, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+const ROUTE_TITLES: Record<string, string> = {
+  '/': 'Home',
+  '/calendar': 'Calendar',
+  '/raw': 'Raw Data',
+  '/analytics': 'Analytics',
+  '/events': 'Events',
+  '/admin': 'Back Office',
+  '/grid-entry': 'Grid Entry',
+};
 
 export const Header: React.FC = () => {
   const { user, signInWithGoogle, signOutUser, isDemoUser } = useAuth();
+  const pathname = usePathname();
+
+  const pageTitle = ROUTE_TITLES[pathname] || 
+    (pathname.startsWith('/admin') ? 'Back Office' : 
+     pathname.startsWith('/raw') ? 'Raw Data' : 
+     pathname.startsWith('/analytics') ? 'Analytics' : 
+     pathname.startsWith('/calendar') ? 'Calendar' : 
+     pathname.startsWith('/events') ? 'Events' : '');
 
   return (
     <header className="app-header">
+      <div className="header-left">
+        <h1 className="header-page-title">{pageTitle}</h1>
+      </div>
+
       <div className="header-actions">
         {isDemoUser && (
           <div className="demo-banner">
@@ -21,7 +44,7 @@ export const Header: React.FC = () => {
         {user ? (
           <div className="user-profile" title={user.displayName || user.email || 'Logged in User'}>
             {user.photoURL ? (
-              // eslint-disable-next-next/no-img-element
+              /* eslint-disable-next-line @next/next/no-img-element */
               <img src={user.photoURL} alt={user.displayName || 'User'} className="user-avatar" />
             ) : (
               <div className="user-avatar-placeholder">
@@ -47,12 +70,25 @@ export const Header: React.FC = () => {
           border-bottom: 1px solid var(--border-subtle);
           display: flex;
           align-items: center;
-          justify-content: flex-end;
+          justify-content: space-between;
           padding: 0 24px;
           position: sticky;
           top: 0;
           z-index: 40;
           margin-left: var(--sidebar-width);
+        }
+
+        .header-left {
+          display: flex;
+          align-items: center;
+        }
+
+        .header-page-title {
+          font-family: var(--font-display);
+          font-size: 1.35rem;
+          font-weight: 700;
+          color: var(--text-main);
+          margin: 0;
         }
 
         @media (max-width: 768px) {

@@ -401,30 +401,26 @@ export default function RawDataPage() {
 
   return (
     <div className="raw-data-page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Raw Data</h1>
-        </div>
-        
-        {/* Integrated Grid Entry Action Controls */}
-        <div className="header-actions">
-          <button className="btn btn-secondary" onClick={() => setShowRuleModal(true)}>
-            <Settings size={16} /> Price Rules
-          </button>
-          <button className="btn btn-secondary" onClick={() => setShowPasteModal(true)}>
-            <Clipboard size={16} /> Paste TSV
-          </button>
-          <button className="btn btn-secondary" onClick={handleAddBlankRow}>
-            <Plus size={16} /> Add Blank Row
-          </button>
-          <button 
-            className="btn btn-primary" 
-            onClick={handleBatchSave} 
-            disabled={isSavingBatch || validDirtyCount === 0}
-          >
-            <Save size={16} /> {isSavingBatch ? 'Saving...' : `Save All (${validDirtyCount} new)`}
-          </button>
-        </div>
+      <FilterBar transactions={allTransactions} />
+
+      {/* Integrated Grid Entry Action Controls (Positioned under FilterBar) */}
+      <div className="raw-actions-bar">
+        <button className="btn btn-secondary" onClick={() => setShowRuleModal(true)}>
+          <Settings size={16} /> Price Rules
+        </button>
+        <button className="btn btn-secondary" onClick={() => setShowPasteModal(true)}>
+          <Clipboard size={16} /> Paste TSV
+        </button>
+        <button className="btn btn-secondary" onClick={handleAddBlankRow}>
+          <Plus size={16} /> Add Blank Row
+        </button>
+        <button 
+          className="btn btn-primary" 
+          onClick={handleBatchSave} 
+          disabled={isSavingBatch || validDirtyCount === 0}
+        >
+          <Save size={16} /> {isSavingBatch ? 'Saving...' : `Save All (${validDirtyCount} new)`}
+        </button>
       </div>
 
       {saveSuccessMsg && (
@@ -433,8 +429,6 @@ export default function RawDataPage() {
           <span>{saveSuccessMsg}</span>
         </div>
       )}
-
-      <FilterBar transactions={allTransactions} />
 
       {/* Transactions Table */}
       <div className="table-card card">
@@ -784,22 +778,12 @@ export default function RawDataPage() {
           min-width: 0;
         }
 
-        .page-header {
+        .raw-actions-bar {
           display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 16px;
+          gap: 12px;
           flex-wrap: wrap;
-        }
-
-        .header-actions {
-          display: flex;
-          gap: 10px;
           align-items: center;
-          flex-wrap: wrap;
         }
-
-        .page-title { font-size: 1.6rem; }
 
         .success-banner {
           display: flex;

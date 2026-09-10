@@ -201,12 +201,6 @@ export default function BackOfficePage() {
 
   return (
     <div className="admin-page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Back Office</h1>
-        </div>
-      </div>
-
       {/* Admin Tabs */}
       <div className="tabs-bar">
         <button className={`tab-btn ${activeTab === 'members' ? 'active' : ''}`} onClick={() => setActiveTab('members')}>

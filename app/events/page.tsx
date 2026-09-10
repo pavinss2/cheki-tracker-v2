@@ -87,17 +87,14 @@ export default function EventsPage() {
 
   return (
     <div className="events-page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Events</h1>
-        </div>
+      <FilterBar transactions={allTransactions} />
+
+      <div className="events-controls">
         <div className="btn-group">
           <button className={`btn-toggle ${viewMode === 'DAILY' ? 'active' : ''}`} onClick={() => setViewMode('DAILY')}>Daily View</button>
           <button className={`btn-toggle ${viewMode === 'MONTHLY' ? 'active' : ''}`} onClick={() => setViewMode('MONTHLY')}>Monthly View</button>
         </div>
       </div>
-
-      <FilterBar transactions={allTransactions} />
 
       <div className="table-card card">
         <div className="table-wrapper">

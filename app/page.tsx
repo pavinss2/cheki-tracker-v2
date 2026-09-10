@@ -322,8 +322,6 @@ export default function HomePage() {
 
   return (
     <div className="home-page">
-      <h1 className="page-title">Home</h1>
-
       <FilterBar transactions={allTransactions} />
 
       {/* KPI Cards Grid - 3x3 Layout matching attached reference image */}

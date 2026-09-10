@@ -66,6 +66,13 @@ The application employs a dual-storage strategy to ensure real-time Cloud persis
 - **Combined Overview Card Content Alignment**:
   - Contents inside `kpi-card combined-overview-card` are **vertically centered** (`justify-content: center`, `align-items: center`).
 
+### 2.4 Global App Header & Raw Data Header Actions Placement
+- **Global App Header Title Integration**:
+  - Individual page title headings (`<h1 className="page-title">`) are removed from content card areas across all tab views.
+  - The current page title (e.g. `Home`, `Calendar`, `Raw Data`, `Analytics`, `Events`, `Back Office`) is dynamically displayed on the **top-left of the global application header bar (`app-header`)**.
+- **Raw Data Action Controls Placement**:
+  - In the Raw Data tab, all integrated action controls (`Price Rules`, `Paste TSV`, `Add Blank Row`, `Save All`) are positioned in `.raw-actions-bar` directly **underneath the `<FilterBar>`**.
+
 ---
 
 ## 3. Global Filter System (FilterBar)
