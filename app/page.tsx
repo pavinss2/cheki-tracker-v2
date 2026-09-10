@@ -431,6 +431,9 @@ export default function HomePage() {
               <YAxis stroke="#71717a" fontSize={12} />
               <Tooltip 
                 contentStyle={{ backgroundColor: '#1e2230', borderColor: 'rgba(255,255,255,0.1)', color: '#f4f4f7' }}
+                isAnimationActive={false}
+                animationDuration={0}
+                cursor={false}
               />
               <Bar dataKey="quantity" fill="#d4a84b" radius={[4, 4, 0, 0]} />
             </BarChart>

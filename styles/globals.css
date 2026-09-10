@@ -16,6 +16,8 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
   overflow-x: hidden;
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
 }
 
 /* Sidebar Nav Items & Active State Highlighting (Gold / Amber #d4a84b) */

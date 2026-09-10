@@ -76,6 +76,16 @@ The application employs a dual-storage strategy to ensure real-time Cloud persis
   - In the Raw Data tab, all integrated action controls (`Price Rules`, `Paste TSV`, `Add Blank Row`, `Save All`) are positioned in `.raw-actions-bar` directly **underneath the `<FilterBar>`**.
   - **Mobile Paste TSV Hiding Rule**: The `Paste TSV` button (`.btn-paste-tsv`) is **hidden on mobile viewports ($\le 768\text{px}$)** (`display: none !important`) to save horizontal layout space.
 
+### 2.5 Layout Stability, Home Chart Tooltip & Events Controls Rules
+- **Header & Layout Anti-Twitch Rule**:
+  - `html` and `body` enforce `overflow-y: scroll; scrollbar-gutter: stable;` across all pages to reserve vertical scrollbar space permanently.
+  - `.app-header` specifies `width: calc(100% - var(--sidebar-width));` and `.header-actions` specifies `flex-shrink: 0; margin-left: auto;` so `.user-profile` remains perfectly stationary and never twitches or bounces when switching between tabs.
+- **Home Chart Instant Tooltip & Clean Overlay Rule**:
+  - Recharts `<Tooltip>` on the Home tab timeline chart sets `isAnimationActive={false}`, `animationDuration={0}`, and `cursor={false}`.
+  - Eliminates laggy sliding animation so the tooltip displays instantly under the hovered date, and removes the white hover rectangle highlight overlay.
+- **Events Controls Width Rule**:
+  - In the Events tab, `.events-controls` and `.btn-group` specify `width: fit-content` so the control bar fits tightly to the combined width of both view toggle buttons without stretching full width.
+
 ---
 
 ## 3. Global Filter System (FilterBar)

@@ -76,11 +76,15 @@ export const Header: React.FC = () => {
           top: 0;
           z-index: 40;
           margin-left: var(--sidebar-width);
+          width: calc(100% - var(--sidebar-width));
+          box-sizing: border-box;
         }
 
         .header-left {
           display: flex;
           align-items: center;
+          flex: 1;
+          min-width: 0;
         }
 
         .header-page-title {
@@ -94,6 +98,7 @@ export const Header: React.FC = () => {
         @media (max-width: 768px) {
           .app-header {
             margin-left: 0;
+            width: 100%;
           }
         }
 
@@ -148,6 +153,8 @@ export const Header: React.FC = () => {
           display: flex;
           align-items: center;
           gap: 16px;
+          flex-shrink: 0;
+          margin-left: auto;
         }
 
         .demo-banner {

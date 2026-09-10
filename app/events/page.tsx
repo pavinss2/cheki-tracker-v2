@@ -147,19 +147,15 @@ export default function EventsPage() {
           min-width: 0;
         }
 
-        .page-header {
+        .events-controls {
           display: flex;
-          justify-content: space-between;
           align-items: center;
-          gap: 12px;
-          flex-wrap: wrap;
+          width: fit-content;
         }
 
-        .page-title { font-size: 1.6rem; }
-        .page-subtitle { color: var(--text-muted); font-size: 0.88rem; margin-top: -12px; }
-
         .btn-group {
-          display: flex;
+          display: inline-flex;
+          width: fit-content;
           background-color: var(--bg-surface-2);
           padding: 3px;
           border-radius: var(--radius-sm);
