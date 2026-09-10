@@ -145,7 +145,7 @@ export default function EventsPage() {
         .events-page {
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 8px;
           width: 100%;
           max-width: 100%;
           min-width: 0;

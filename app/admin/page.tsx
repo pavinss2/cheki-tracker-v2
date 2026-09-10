@@ -1018,7 +1018,7 @@ export default function BackOfficePage() {
       )}
 
       <style jsx>{`
-        .admin-page { display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 100%; min-width: 0; }
+        .admin-page { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 100%; min-width: 0; }
         .page-title { font-size: 1.6rem; }
 
         .tabs-bar { display: flex; gap: 8px; flex-wrap: wrap; }

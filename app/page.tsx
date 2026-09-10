@@ -445,7 +445,7 @@ export default function HomePage() {
         .home-page {
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 8px;
         }
 
         .page-title { font-size: 1.6rem; }
