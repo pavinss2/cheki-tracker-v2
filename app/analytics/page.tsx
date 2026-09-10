@@ -131,9 +131,9 @@ export default function AnalyticsPage() {
 
                 {/* Column 2: Trophy */}
                 <div className="col-trophy">
-                  {rank === 1 && <Trophy size={18} color="#f59e0b" fill="#f59e0b" />}
-                  {rank === 2 && <Trophy size={18} color="#9ca3af" fill="#9ca3af" />}
-                  {rank === 3 && <Trophy size={18} color="#d97706" fill="#d97706" />}
+                  {rank === 1 && <Trophy size={22} color="#f59e0b" fill="#f59e0b" />}
+                  {rank === 2 && <Trophy size={22} color="#9ca3af" fill="#9ca3af" />}
+                  {rank === 3 && <Trophy size={22} color="#d97706" fill="#d97706" />}
                 </div>
 
                 {/* Column 3: Member Image / Avatar Fallback */}
@@ -142,7 +142,7 @@ export default function AnalyticsPage() {
                     <MemberAvatar 
                       src={item.image} 
                       name={item.name} 
-                      size={28} 
+                      size={34} 
                       colorHex={item.colorHex} 
                     />
                   </div>
@@ -221,21 +221,21 @@ export default function AnalyticsPage() {
         .leaderboard-row {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
           padding: 6px 0;
           border-bottom: 1px solid rgba(255, 255, 255, 0.03);
         }
 
         .col-rank {
-          font-size: 0.85rem;
+          font-size: 0.88rem;
           font-weight: 700;
           color: var(--text-subtle);
-          min-width: 26px;
+          min-width: 24px;
           flex-shrink: 0;
         }
 
         .col-trophy {
-          width: 18px;
+          width: 22px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -251,9 +251,9 @@ export default function AnalyticsPage() {
 
         .col-name {
           font-weight: 600;
-          font-size: 0.85rem;
+          font-size: 0.98rem;
           color: var(--text-main);
-          max-width: 85px;
+          max-width: 95px;
           min-width: 44px;
           flex-shrink: 0;
           white-space: nowrap;
@@ -263,23 +263,23 @@ export default function AnalyticsPage() {
 
         .col-bar-container {
           flex: 1;
-          min-width: 60px;
+          min-width: 50px;
           display: flex;
           align-items: center;
         }
 
         .bar-track {
           width: 100%;
-          height: 16px;
+          height: 18px;
           background-color: #1e212b;
-          border-radius: 8px;
+          border-radius: 9px;
           overflow: hidden;
           border: 1px solid rgba(255,255,255,0.05);
         }
 
         .bar-fill {
           height: 100%;
-          border-radius: 8px;
+          border-radius: 9px;
           transform-origin: left;
           animation: barEmerge 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
           transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -298,7 +298,7 @@ export default function AnalyticsPage() {
 
         .col-number {
           font-weight: 700;
-          font-size: 0.95rem;
+          font-size: 1rem;
           color: #58a6ff;
           min-width: 28px;
           text-align: right;
