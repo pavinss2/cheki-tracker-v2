@@ -25,8 +25,7 @@ import {
   DimCompany, 
   DimColor, 
   DimType, 
-  DimCountry, 
-  DimLocation 
+  DimCountry 
 } from '@/types/cheki';
 import { 
   Plus, 
@@ -39,7 +38,6 @@ import {
   Palette, 
   Layers, 
   Tag, 
-  MapPin, 
   X, 
   Save, 
   ArrowUpDown, 
@@ -74,18 +72,22 @@ export default function BackOfficePage() {
   const [colors, setColors] = useState<DimColor[]>([]);
   const [types, setTypes] = useState<DimType[]>([]);
   const [countries, setCountries] = useState<DimCountry[]>([]);
-  const [locations, setLocations] = useState<DimLocation[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [activeTab, setActiveTab] = useState<'members' | 'groups' | 'companies' | 'colors' | 'types' | 'countries' | 'locations' | 'logs'>('members');
+  const [activeTab, setActiveTab] = useState<'members' | 'groups' | 'companies' | 'colors' | 'types' | 'countries' | 'logs'>('members');
   const [editingItem, setEditingItem] = useState<{ table: string; data: Record<string, unknown> } | null>(null);
 
   // Sorting state for dim_member
   const [memberSortKey, setMemberSortKey] = useState<MemberSortKey>('date_added');
   const [memberSortAsc, setMemberSortAsc] = useState<boolean>(false);
 
-  // Temporary draft row state for creating a new member
+  // Temporary draft row state for top-row inline additions
   const [tempMember, setTempMember] = useState<TempMemberRow | null>(null);
+  const [tempGroup, setTempGroup] = useState<{ group: string; country: string; company: string } | null>(null);
+  const [tempCompany, setTempCompany] = useState<{ company: string } | null>(null);
+  const [tempColor, setTempColor] = useState<{ color: string; color_code: string } | null>(null);
+  const [tempType, setTempType] = useState<{ type: string } | null>(null);
+  const [tempCountry, setTempCountry] = useState<{ country: string; displayed_country: string } | null>(null);
 
   // Custom popup for delete confirmation
   const [deleteConfirmModal, setDeleteConfirmModal] = useState<{
@@ -105,12 +107,6 @@ export default function BackOfficePage() {
     const unsubClr = subscribeDefaultMetadata<DimColor>('dim_color', DEFAULT_COLORS, setColors, isDemoUser);
     const unsubTyp = subscribeDefaultMetadata<DimType>('dim_type', DEFAULT_TYPES, setTypes, isDemoUser);
     const unsubCnt = subscribeDefaultMetadata<DimCountry>('dim_country', DEFAULT_COUNTRIES, setCountries, isDemoUser);
-    const unsubLoc = subscribeDefaultMetadata<DimLocation>('dim_location', [
-      { location: 'Bangkok' },
-      { location: 'Tokyo' },
-      { location: 'Seoul' },
-      { location: 'Taipei' }
-    ], setLocations, isDemoUser);
 
     setLoading(false);
 
@@ -121,7 +117,6 @@ export default function BackOfficePage() {
       unsubClr();
       unsubTyp();
       unsubCnt();
-      unsubLoc();
     };
   }, [isDemoUser]);
 
@@ -198,6 +193,57 @@ export default function BackOfficePage() {
     }
   };
 
+  // Generic Save Handlers for Top-Row Drafts
+  const handleSaveTempGroup = async () => {
+    if (!tempGroup || !tempGroup.group.trim()) return;
+    try {
+      await addDefaultMetadataDoc('dim_group', tempGroup, isDemoUser);
+      setTempGroup(null);
+    } catch (err) {
+      alert("Error saving group: " + (err instanceof Error ? err.message : String(err)));
+    }
+  };
+
+  const handleSaveTempCompany = async () => {
+    if (!tempCompany || !tempCompany.company.trim()) return;
+    try {
+      await addDefaultMetadataDoc('dim_company', tempCompany, isDemoUser);
+      setTempCompany(null);
+    } catch (err) {
+      alert("Error saving company: " + (err instanceof Error ? err.message : String(err)));
+    }
+  };
+
+  const handleSaveTempColor = async () => {
+    if (!tempColor || !tempColor.color.trim()) return;
+    try {
+      await addDefaultMetadataDoc('dim_color', tempColor, isDemoUser);
+      setTempColor(null);
+    } catch (err) {
+      alert("Error saving color: " + (err instanceof Error ? err.message : String(err)));
+    }
+  };
+
+  const handleSaveTempType = async () => {
+    if (!tempType || !tempType.type.trim()) return;
+    try {
+      await addDefaultMetadataDoc('dim_type', tempType, isDemoUser);
+      setTempType(null);
+    } catch (err) {
+      alert("Error saving type: " + (err instanceof Error ? err.message : String(err)));
+    }
+  };
+
+  const handleSaveTempCountry = async () => {
+    if (!tempCountry || !tempCountry.country.trim()) return;
+    try {
+      await addDefaultMetadataDoc('dim_country', tempCountry, isDemoUser);
+      setTempCountry(null);
+    } catch (err) {
+      alert("Error saving country: " + (err instanceof Error ? err.message : String(err)));
+    }
+  };
+
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingItem) return;
@@ -269,9 +315,6 @@ export default function BackOfficePage() {
         </button>
         <button className={`tab-btn ${activeTab === 'countries' ? 'active' : ''}`} onClick={() => setActiveTab('countries')}>
           <Flag size={16} /> Countries ({countries.length})
-        </button>
-        <button className={`tab-btn ${activeTab === 'locations' ? 'active' : ''}`} onClick={() => setActiveTab('locations')}>
-          <MapPin size={16} /> Locations ({locations.length})
         </button>
         <button className={`tab-btn ${activeTab === 'logs' ? 'active' : ''}`} onClick={() => setActiveTab('logs')}>
           <Shield size={16} /> System Logs ({logs.length})
@@ -490,7 +533,7 @@ export default function BackOfficePage() {
           <div>
             <div className="tab-header">
               <h2>Default Groups (default_dim_group)</h2>
-              <button className="btn btn-primary btn-sm" onClick={() => handleAddNewItem('dim_group', { group: 'New Group', country: '🇹🇭 TH', company: 'Individual' })}>
+              <button className="btn btn-primary btn-sm" onClick={() => setTempGroup({ group: '', country: '🇹🇭 TH', company: 'Individual' })} disabled={Boolean(tempGroup)}>
                 <Plus size={14} /> Add Default Group
               </button>
             </div>
@@ -505,6 +548,45 @@ export default function BackOfficePage() {
                   </tr>
                 </thead>
                 <tbody>
+                  {tempGroup && (
+                    <tr className="temp-row">
+                      <td>
+                        <input 
+                          type="text" 
+                          className="table-input bold" 
+                          placeholder="Group Name *" 
+                          autoFocus
+                          value={tempGroup.group} 
+                          onChange={(e) => setTempGroup({ ...tempGroup, group: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <input 
+                          type="text" 
+                          className="table-input" 
+                          placeholder="Country (🇹🇭 TH)" 
+                          value={tempGroup.country} 
+                          onChange={(e) => setTempGroup({ ...tempGroup, country: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <input 
+                          type="text" 
+                          className="table-input" 
+                          placeholder="Company" 
+                          value={tempGroup.company} 
+                          onChange={(e) => setTempGroup({ ...tempGroup, company: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <div className="action-btns">
+                          <button className="btn btn-primary btn-xs" onClick={handleSaveTempGroup}><Save size={13} /> Save</button>
+                          <button className="btn btn-secondary btn-xs" onClick={() => setTempGroup(null)}><X size={13} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+
                   {groups.map((g) => (
                     <tr key={g.id}>
                       <td className="bold">{g.group}</td>
@@ -533,7 +615,7 @@ export default function BackOfficePage() {
           <div>
             <div className="tab-header">
               <h2>Default Companies (default_dim_company)</h2>
-              <button className="btn btn-primary btn-sm" onClick={() => handleAddNewItem('dim_company', { company: 'New Production' })}>
+              <button className="btn btn-primary btn-sm" onClick={() => setTempCompany({ company: '' })} disabled={Boolean(tempCompany)}>
                 <Plus size={14} /> Add Default Company
               </button>
             </div>
@@ -546,6 +628,27 @@ export default function BackOfficePage() {
                   </tr>
                 </thead>
                 <tbody>
+                  {tempCompany && (
+                    <tr className="temp-row">
+                      <td>
+                        <input 
+                          type="text" 
+                          className="table-input bold" 
+                          placeholder="Company Name *" 
+                          autoFocus
+                          value={tempCompany.company} 
+                          onChange={(e) => setTempCompany({ company: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <div className="action-btns">
+                          <button className="btn btn-primary btn-xs" onClick={handleSaveTempCompany}><Save size={13} /> Save</button>
+                          <button className="btn btn-secondary btn-xs" onClick={() => setTempCompany(null)}><X size={13} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+
                   {companies.map((c) => (
                     <tr key={c.id}>
                       <td className="bold">{c.company}</td>
@@ -572,7 +675,7 @@ export default function BackOfficePage() {
           <div>
             <div className="tab-header">
               <h2>Default Colors (default_dim_color)</h2>
-              <button className="btn btn-primary btn-sm" onClick={() => handleAddNewItem('dim_color', { color: 'Custom Gold', color_code: '#d4a84b' })}>
+              <button className="btn btn-primary btn-sm" onClick={() => setTempColor({ color: '', color_code: '#ffffff' })} disabled={Boolean(tempColor)}>
                 <Plus size={14} /> Add Default Color
               </button>
             </div>
@@ -587,6 +690,39 @@ export default function BackOfficePage() {
                   </tr>
                 </thead>
                 <tbody>
+                  {tempColor && (
+                    <tr className="temp-row">
+                      <td>
+                        <input 
+                          type="text" 
+                          className="table-input bold" 
+                          placeholder="Color Name *" 
+                          autoFocus
+                          value={tempColor.color} 
+                          onChange={(e) => setTempColor({ ...tempColor, color: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <span className="color-swatch" style={{ backgroundColor: tempColor.color_code }} />
+                      </td>
+                      <td>
+                        <input 
+                          type="text" 
+                          className="table-input mono" 
+                          placeholder="#ffffff" 
+                          value={tempColor.color_code} 
+                          onChange={(e) => setTempColor({ ...tempColor, color_code: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <div className="action-btns">
+                          <button className="btn btn-primary btn-xs" onClick={handleSaveTempColor}><Save size={13} /> Save</button>
+                          <button className="btn btn-secondary btn-xs" onClick={() => setTempColor(null)}><X size={13} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+
                   {colors.map((c) => (
                     <tr key={c.id}>
                       <td className="bold">{c.color}</td>
@@ -617,7 +753,7 @@ export default function BackOfficePage() {
           <div>
             <div className="tab-header">
               <h2>Default Cheki Types (default_dim_type)</h2>
-              <button className="btn btn-primary btn-sm" onClick={() => handleAddNewItem('dim_type', { type: 'New Cheki Type' })}>
+              <button className="btn btn-primary btn-sm" onClick={() => setTempType({ type: '' })} disabled={Boolean(tempType)}>
                 <Plus size={14} /> Add Default Type
               </button>
             </div>
@@ -630,6 +766,27 @@ export default function BackOfficePage() {
                   </tr>
                 </thead>
                 <tbody>
+                  {tempType && (
+                    <tr className="temp-row">
+                      <td>
+                        <input 
+                          type="text" 
+                          className="table-input bold" 
+                          placeholder="Type Name *" 
+                          autoFocus
+                          value={tempType.type} 
+                          onChange={(e) => setTempType({ type: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <div className="action-btns">
+                          <button className="btn btn-primary btn-xs" onClick={handleSaveTempType}><Save size={13} /> Save</button>
+                          <button className="btn btn-secondary btn-xs" onClick={() => setTempType(null)}><X size={13} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+
                   {types.map((t) => (
                     <tr key={t.id}>
                       <td className="bold">{t.type}</td>
@@ -656,7 +813,7 @@ export default function BackOfficePage() {
           <div>
             <div className="tab-header">
               <h2>Default Countries (default_dim_country)</h2>
-              <button className="btn btn-primary btn-sm" onClick={() => handleAddNewItem('dim_country', { country: 'JP', displayed_country: '🇯🇵 JP' })}>
+              <button className="btn btn-primary btn-sm" onClick={() => setTempCountry({ country: 'JP', displayed_country: '🇯🇵 JP' })} disabled={Boolean(tempCountry)}>
                 <Plus size={14} /> Add Default Country
               </button>
             </div>
@@ -669,6 +826,27 @@ export default function BackOfficePage() {
                   </tr>
                 </thead>
                 <tbody>
+                  {tempCountry && (
+                    <tr className="temp-row">
+                      <td>
+                        <input 
+                          type="text" 
+                          className="table-input bold" 
+                          placeholder="Country Display (🇯🇵 JP) *" 
+                          autoFocus
+                          value={tempCountry.displayed_country} 
+                          onChange={(e) => setTempCountry({ country: e.target.value.replace(/[^A-Za-z]/g, ''), displayed_country: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <div className="action-btns">
+                          <button className="btn btn-primary btn-xs" onClick={handleSaveTempCountry}><Save size={13} /> Save</button>
+                          <button className="btn btn-secondary btn-xs" onClick={() => setTempCountry(null)}><X size={13} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+
                   {countries.map((c) => (
                     <tr key={c.id}>
                       <td className="bold">{c.displayed_country || c.country}</td>
@@ -678,45 +856,6 @@ export default function BackOfficePage() {
                             <Edit2 size={14} />
                           </button>
                           <button className="btn-icon danger" onClick={() => setDeleteConfirmModal({ table: 'dim_country', id: c.id, displayValue: getItemValueString(c as unknown as Record<string, unknown>) })}>
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* DEFAULT LOCATIONS TAB */}
-        {activeTab === 'locations' && (
-          <div>
-            <div className="tab-header">
-              <h2>Default Locations (default_dim_location)</h2>
-              <button className="btn btn-primary btn-sm" onClick={() => handleAddNewItem('dim_location', { location: 'New Location' })}>
-                <Plus size={14} /> Add Default Location
-              </button>
-            </div>
-            <div className="table-wrapper">
-              <table className="dim-table">
-                <thead>
-                  <tr>
-                    <th>Location Name</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {locations.map((loc) => (
-                    <tr key={loc.id}>
-                      <td className="bold">{loc.location}</td>
-                      <td>
-                        <div className="action-btns">
-                          <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_location', data: { ...loc } })}>
-                            <Edit2 size={14} />
-                          </button>
-                          <button className="btn-icon danger" onClick={() => setDeleteConfirmModal({ table: 'dim_location', id: loc.id, displayValue: getItemValueString(loc as unknown as Record<string, unknown>) })}>
                             <Trash2 size={14} />
                           </button>
                         </div>

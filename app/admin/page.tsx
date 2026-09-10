@@ -29,9 +29,9 @@ interface TempMemberRow {
 
 export default function BackOfficePage() {
   const { user, isDemoUser } = useAuth();
-  const { members, companies, groups, colors, types, countries, locations, userId, loading } = useChekiData();
+  const { members, companies, groups, colors, types, countries, userId, loading } = useChekiData();
 
-  const [activeTab, setActiveTab] = useState<'members' | 'groups' | 'companies' | 'locations' | 'logs'>('members');
+  const [activeTab, setActiveTab] = useState<'members' | 'groups' | 'companies' | 'logs'>('members');
   const [editingItem, setEditingItem] = useState<{ table: string; data: Record<string, unknown> } | null>(null);
   
   // Sorting state for dim_member (Defaults to date_added descending)
@@ -53,6 +53,14 @@ export default function BackOfficePage() {
   } | null>(null);
 
   const logs = getAdminLogs(userId);
+
+  const handleToggleActive = async (tableName: string, item: any, newActive: boolean) => {
+    try {
+      await updateMetadataDoc(tableName, item.id, userId, { ...item, is_active: newActive }, isDemoUser);
+    } catch (err) {
+      alert("Failed updating active status: " + (err instanceof Error ? err.message : String(err)));
+    }
+  };
 
   // Group lookup map for auto-populating country & company when group is selected
   const groupLookup = useMemo(() => {
@@ -188,9 +196,6 @@ export default function BackOfficePage() {
         <button className={`tab-btn ${activeTab === 'companies' ? 'active' : ''}`} onClick={() => setActiveTab('companies')}>
           <Building size={16} /> Companies ({companies.length})
         </button>
-        <button className={`tab-btn ${activeTab === 'locations' ? 'active' : ''}`} onClick={() => setActiveTab('locations')}>
-          <MapPin size={16} /> Locations ({locations.length})
-        </button>
         <button className={`tab-btn ${activeTab === 'logs' ? 'active' : ''}`} onClick={() => setActiveTab('logs')}>
           <Shield size={16} /> Audit Logs ({logs.length})
         </button>
@@ -211,6 +216,7 @@ export default function BackOfficePage() {
               <table className="dim-table member-table">
                 <thead>
                   <tr>
+                    <th>Origin</th>
                     <th>Avatar</th>
                     <th className="sortable-th" onClick={() => handleSortMembers('member_name')}>
                       Member Name {memberSortKey === 'member_name' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
@@ -234,7 +240,7 @@ export default function BackOfficePage() {
                       End Date {memberSortKey === 'end_date' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                     </th>
                     <th className="sortable-th" onClick={() => handleSortMembers('is_active')}>
-                      Status {memberSortKey === 'is_active' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                      Active Status {memberSortKey === 'is_active' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                     </th>
                     <th>X Profile</th>
                     <th className="sortable-th" onClick={() => handleSortMembers('date_added')}>
@@ -247,6 +253,7 @@ export default function BackOfficePage() {
                   {/* Temporary Unsaved New Member Row Pinned at Top Row */}
                   {tempMember && (
                     <tr className="temp-row">
+                      <td><span className="badge-pill dark" style={{ fontSize: '0.72rem' }}>New Draft</span></td>
                       <td style={{ minWidth: '160px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <MemberAvatar 
@@ -409,9 +416,17 @@ export default function BackOfficePage() {
                     const xUrl = m.x_profile 
                       ? (m.x_profile.startsWith('http') ? m.x_profile : `https://x.com/${m.x_profile.replace('@', '')}`)
                       : '';
+                    const isDef = m.isDefault || m.id.startsWith('default_');
 
                     return (
                       <tr key={m.id}>
+                        <td>
+                          {isDef ? (
+                            <span className="badge-pill gold-outline" style={{ fontSize: '0.72rem', padding: '2px 8px', fontWeight: 600 }}>⚡ Default</span>
+                          ) : (
+                            <span className="badge-pill dark" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>Custom</span>
+                          )}
+                        </td>
                         <td>
                           <MemberAvatar 
                             src={m.member_image} 
@@ -427,7 +442,18 @@ export default function BackOfficePage() {
                         <td>{m.company}</td>
                         <td>{m.start_date || '-'}</td>
                         <td>{m.end_date || '-'}</td>
-                        <td>{m.is_active ? <span className="status-badge active">Active</span> : <span className="status-badge">Inactive</span>}</td>
+                        <td>
+                          <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                            <input 
+                              type="checkbox" 
+                              checked={Boolean(m.is_active ?? true)} 
+                              onChange={(e) => handleToggleActive('dim_member', m, e.target.checked)} 
+                            />
+                            <span className={`status-badge ${m.is_active !== false ? 'active' : ''}`}>
+                              {m.is_active !== false ? 'Active' : 'Inactive'}
+                            </span>
+                          </label>
+                        </td>
                         <td>
                           {xUrl ? (
                             <a href={xUrl} target="_blank" rel="noreferrer" className="x-link" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
@@ -469,31 +495,55 @@ export default function BackOfficePage() {
               <table className="dim-table">
                 <thead>
                   <tr>
+                    <th>Origin</th>
                     <th>Group Name</th>
                     <th>Country</th>
                     <th>Company</th>
+                    <th>Active Status</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {groups.map((g) => (
-                    <tr key={g.id}>
-                      <td><strong>{g.group}</strong></td>
-                      <td>{g.country}</td>
-                      <td>{g.company}</td>
-                      <td>
-                        <div className="action-btns">
-                          <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_group', data: { ...g } })}><Edit2 size={15} /></button>
-                          <button 
-                            className="btn-icon danger" 
-                            onClick={() => setDeleteConfirmModal({ table: 'dim_group', id: g.id, displayValue: getItemValueString(g as unknown as Record<string, unknown>) })}
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {groups.map((g) => {
+                    const isDef = g.isDefault || g.id.startsWith('default_');
+                    return (
+                      <tr key={g.id}>
+                        <td>
+                          {isDef ? (
+                            <span className="badge-pill gold-outline" style={{ fontSize: '0.72rem', padding: '2px 8px', fontWeight: 600 }}>⚡ Default</span>
+                          ) : (
+                            <span className="badge-pill dark" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>Custom</span>
+                          )}
+                        </td>
+                        <td><strong>{g.group}</strong></td>
+                        <td>{g.country}</td>
+                        <td>{g.company}</td>
+                        <td>
+                          <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                            <input 
+                              type="checkbox" 
+                              checked={Boolean(g.is_active ?? true)} 
+                              onChange={(e) => handleToggleActive('dim_group', g, e.target.checked)} 
+                            />
+                            <span className={`status-badge ${g.is_active !== false ? 'active' : ''}`}>
+                              {g.is_active !== false ? 'Active' : 'Inactive'}
+                            </span>
+                          </label>
+                        </td>
+                        <td>
+                          <div className="action-btns">
+                            <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_group', data: { ...g } })}><Edit2 size={15} /></button>
+                            <button 
+                              className="btn-icon danger" 
+                              onClick={() => setDeleteConfirmModal({ table: 'dim_group', id: g.id, displayValue: getItemValueString(g as unknown as Record<string, unknown>) })}
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -513,67 +563,51 @@ export default function BackOfficePage() {
               <table className="dim-table">
                 <thead>
                   <tr>
+                    <th>Origin</th>
                     <th>Company Name</th>
+                    <th>Active Status</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {companies.map((c) => (
-                    <tr key={c.id}>
-                      <td><strong>{c.company}</strong></td>
-                      <td>
-                        <div className="action-btns">
-                          <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_company', data: { ...c } })}><Edit2 size={15} /></button>
-                          <button 
-                            className="btn-icon danger" 
-                            onClick={() => setDeleteConfirmModal({ table: 'dim_company', id: c.id, displayValue: getItemValueString(c as unknown as Record<string, unknown>) })}
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* LOCATIONS TAB */}
-        {activeTab === 'locations' && (
-          <div>
-            <div className="tab-header">
-              <h2>dim_location</h2>
-              <button className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_location', data: { location: '' } })}>
-                <Plus size={14} /> Add Location
-              </button>
-            </div>
-            <div className="table-wrapper">
-              <table className="dim-table">
-                <thead>
-                  <tr>
-                    <th>Location Name</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {locations.map((loc) => (
-                    <tr key={loc.id}>
-                      <td><strong>{loc.location}</strong></td>
-                      <td>
-                        <div className="action-btns">
-                          <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_location', data: { ...loc } })}><Edit2 size={15} /></button>
-                          <button 
-                            className="btn-icon danger" 
-                            onClick={() => setDeleteConfirmModal({ table: 'dim_location', id: loc.id, displayValue: getItemValueString(loc as unknown as Record<string, unknown>) })}
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {companies.map((c) => {
+                    const isDef = c.isDefault || c.id.startsWith('default_');
+                    return (
+                      <tr key={c.id}>
+                        <td>
+                          {isDef ? (
+                            <span className="badge-pill gold-outline" style={{ fontSize: '0.72rem', padding: '2px 8px', fontWeight: 600 }}>⚡ Default</span>
+                          ) : (
+                            <span className="badge-pill dark" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>Custom</span>
+                          )}
+                        </td>
+                        <td><strong>{c.company}</strong></td>
+                        <td>
+                          <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                            <input 
+                              type="checkbox" 
+                              checked={Boolean(c.is_active ?? true)} 
+                              onChange={(e) => handleToggleActive('dim_company', c, e.target.checked)} 
+                            />
+                            <span className={`status-badge ${c.is_active !== false ? 'active' : ''}`}>
+                              {c.is_active !== false ? 'Active' : 'Inactive'}
+                            </span>
+                          </label>
+                        </td>
+                        <td>
+                          <div className="action-btns">
+                            <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_company', data: { ...c } })}><Edit2 size={15} /></button>
+                            <button 
+                              className="btn-icon danger" 
+                              onClick={() => setDeleteConfirmModal({ table: 'dim_company', id: c.id, displayValue: getItemValueString(c as unknown as Record<string, unknown>) })}
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

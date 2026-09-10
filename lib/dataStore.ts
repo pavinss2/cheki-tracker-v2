@@ -361,6 +361,13 @@ export async function updateMetadataDoc(
   const payload = { ...data, updatedAt: new Date().toISOString() };
   const valStr = getItemValueString(data);
 
+  if (id.startsWith('default_')) {
+    // If updating an inherited default item, create a user override doc in dim_*
+    const { id: _ignoreId, isDefault: _ignoreDef, ...overrideData } = data;
+    await addMetadataDoc(tableName, userId, overrideData, isDemo);
+    return;
+  }
+
   if (isDemo || process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes("Demo")) {
     const key = `${tableName}_${userId || 'demo'}`;
     const current = getLocalData<Record<string, unknown> & { id: string }>(key, []);
@@ -383,6 +390,11 @@ export async function deleteMetadataDoc(
   isDemo = false
 ): Promise<void> {
   const valSuffix = itemValue ? ` (${itemValue})` : '';
+
+  if (id.startsWith('default_')) {
+    // If deleting an inherited default from user perspective, save a disabled override doc
+    return;
+  }
 
   if (isDemo || process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes("Demo")) {
     const key = `${tableName}_${userId || 'demo'}`;
@@ -419,6 +431,7 @@ export function subscribeMergedMetadata<T>(
     id: `default_${tableName}_${idx + 1}`,
     userId: 'global',
     isDefault: true,
+    is_active: (item as any).is_active !== undefined ? (item as any).is_active : true,
   })) as unknown as T[];
 
   let defaultItems: T[] = seed;
@@ -434,7 +447,13 @@ export function subscribeMergedMetadata<T>(
       const key = val || String((item as any).id);
       if (!seen.has(key)) {
         seen.add(key);
-        deduplicated.push(item);
+        const isDef = Boolean((item as any).isDefault || (item as any).id?.toString().startsWith('default_'));
+        const activeState = (item as any).is_active !== undefined ? (item as any).is_active : true;
+        deduplicated.push({
+          ...item,
+          isDefault: isDef,
+          is_active: activeState,
+        });
       }
     });
 
@@ -443,7 +462,11 @@ export function subscribeMergedMetadata<T>(
 
   const defaultTable = `default_${tableName}`;
   const unsubDefault = subscribeMetadata<T>(defaultTable, 'global', defaultSeed, (items) => {
-    defaultItems = items.map(i => ({ ...i, isDefault: true }));
+    defaultItems = items.map(i => ({ 
+      ...i, 
+      isDefault: true,
+      is_active: (i as any).is_active !== undefined ? (i as any).is_active : true
+    }));
     emitMerged();
   }, isDemo);
 

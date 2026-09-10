@@ -35,6 +35,8 @@ export interface DimMember {
   is_active: boolean;
   x_profile?: string;
   date_added?: string;
+  is_default?: boolean;
+  isDefault?: boolean;
 }
 
 export interface DimGroup {
@@ -43,12 +45,18 @@ export interface DimGroup {
   group: string;
   country: string;
   company: string;
+  is_active?: boolean;
+  is_default?: boolean;
+  isDefault?: boolean;
 }
 
 export interface DimCompany {
   id: string;
   userId: string;
   company: string;
+  is_active?: boolean;
+  is_default?: boolean;
+  isDefault?: boolean;
 }
 
 export interface DimColor {
@@ -56,12 +64,18 @@ export interface DimColor {
   userId: string;
   color: string;
   color_code: string;
+  is_active?: boolean;
+  is_default?: boolean;
+  isDefault?: boolean;
 }
 
 export interface DimType {
   id: string;
   userId: string;
   type: string;
+  is_active?: boolean;
+  is_default?: boolean;
+  isDefault?: boolean;
 }
 
 export interface DimCountry {
@@ -69,12 +83,9 @@ export interface DimCountry {
   userId: string;
   country: string;
   displayed_country: string;
-}
-
-export interface DimLocation {
-  id: string;
-  userId: string;
-  location: string;
+  is_active?: boolean;
+  is_default?: boolean;
+  isDefault?: boolean;
 }
 
 export interface PriceRuleCondition {

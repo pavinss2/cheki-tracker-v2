@@ -63,7 +63,6 @@ export default function RawDataPage() {
     groups, 
     colors, 
     types, 
-    locations, 
     priceRules,
     updateRules,
     userId, 
@@ -73,6 +72,14 @@ export default function RawDataPage() {
 
   const [sortCol, setSortCol] = useState<keyof Transaction>('date');
   const [sortAsc, setSortAsc] = useState(false);
+
+  const locationOptions = useMemo(() => {
+    const set = new Set<string>(['Bangkok', 'Tokyo', 'Seoul', 'Taipei']);
+    allTransactions.forEach((t) => {
+      if (t.location) set.add(t.location);
+    });
+    return Array.from(set).sort();
+  }, [allTransactions]);
   
   // Single edit modal state
   const [modalTransaction, setModalTransaction] = useState<Partial<Transaction> | null>(null);
@@ -537,8 +544,8 @@ export default function RawDataPage() {
                       onChange={(e) => handleCellChange(idx, 'location', e.target.value)}
                       className="inline-select"
                     >
-                      {locations.map((l) => (
-                        <option key={l.id} value={l.location}>{l.location}</option>
+                      {locationOptions.map((loc) => (
+                        <option key={loc} value={loc}>{loc}</option>
                       ))}
                     </select>
                   </td>
@@ -721,8 +728,8 @@ export default function RawDataPage() {
               <div className="form-group">
                 <label>Location</label>
                 <select value={modalTransaction.location || ''} onChange={(e) => setModalTransaction({ ...modalTransaction, location: e.target.value })}>
-                  {locations.map((l) => (
-                    <option key={l.id} value={l.location}>{l.location}</option>
+                  {locationOptions.map((loc) => (
+                    <option key={loc} value={loc}>{loc}</option>
                   ))}
                 </select>
               </div>

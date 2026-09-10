@@ -24,7 +24,6 @@ import {
   DimCompany, 
   DimCountry, 
   DimGroup, 
-  DimLocation,
   DimMember, 
   DimType, 
   PriceRule, 
@@ -44,7 +43,6 @@ export function useChekiData() {
   const [colors, setColors] = useState<DimColor[]>([]);
   const [types, setTypes] = useState<DimType[]>([]);
   const [countries, setCountries] = useState<DimCountry[]>([]);
-  const [locations, setLocations] = useState<DimLocation[]>([]);
   const [priceRules, setPriceRulesState] = useState<PriceRule[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -57,7 +55,6 @@ export function useChekiData() {
       setColors([]);
       setTypes([]);
       setCountries([]);
-      setLocations([]);
       setLoading(false);
       return;
     }
@@ -80,12 +77,6 @@ export function useChekiData() {
     const unsubClr = subscribeMergedMetadata<DimColor>('dim_color', userId, DEFAULT_COLORS, setColors, isDemoUser);
     const unsubTyp = subscribeMergedMetadata<DimType>('dim_type', userId, DEFAULT_TYPES, setTypes, isDemoUser);
     const unsubCnt = subscribeMergedMetadata<DimCountry>('dim_country', userId, DEFAULT_COUNTRIES, setCountries, isDemoUser);
-    const unsubLoc = subscribeMergedMetadata<DimLocation>('dim_location', userId, [
-      { location: 'Bangkok' },
-      { location: 'Tokyo' },
-      { location: 'Seoul' },
-      { location: 'Taipei' }
-    ], setLocations, isDemoUser);
 
     // Price rules
     setPriceRulesState(getPriceRules(userId));
@@ -98,7 +89,6 @@ export function useChekiData() {
       unsubClr();
       unsubTyp();
       unsubCnt();
-      unsubLoc();
     };
   }, [userId, isDemoUser]);
 
@@ -142,7 +132,6 @@ export function useChekiData() {
     colors,
     types,
     countries,
-    locations,
     priceRules,
     updateRules,
     loading,
