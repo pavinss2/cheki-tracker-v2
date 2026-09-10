@@ -479,19 +479,28 @@ export default function BackOfficePage() {
                     </tr>
                   )}
 
+                  {/* Empty state message */}
+                  {sortedMembers.length === 0 && !tempMember && (
+                    <tr>
+                      <td colSpan={13} style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                        No members in your list yet. Click <strong>Import from Default</strong> above to copy choices, or click <strong>+ Add Member</strong> to create a new custom member.
+                      </td>
+                    </tr>
+                  )}
+
                   {/* Sorted Member List */}
                   {sortedMembers.map((m) => {
                     const colorObj = colors.find(c => c.color === m.color);
                     const xUrl = m.x_profile 
                       ? (m.x_profile.startsWith('http') ? m.x_profile : `https://x.com/${m.x_profile.replace('@', '')}`)
                       : '';
-                    const isDef = m.isDefault || m.id.startsWith('default_');
+                    const isImp = m.is_imported || m.isDefault || m.id.startsWith('default_');
 
                     return (
                       <tr key={m.id}>
                         <td>
-                          {isDef ? (
-                            <span className="badge-pill gold-outline" style={{ fontSize: '0.72rem', padding: '2px 8px', fontWeight: 600 }}>Default</span>
+                          {isImp ? (
+                            <span className="badge-pill gold-outline" style={{ fontSize: '0.72rem', padding: '2px 8px', fontWeight: 600 }}>Imported</span>
                           ) : (
                             <span className="badge-pill dark" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>Custom</span>
                           )}
@@ -566,13 +575,20 @@ export default function BackOfficePage() {
                   </tr>
                 </thead>
                 <tbody>
+                  {groups.length === 0 && (
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                        No groups in your list yet. Click <strong>Import from Default</strong> above to copy choices, or click <strong>+ Add Group</strong>.
+                      </td>
+                    </tr>
+                  )}
                   {groups.map((g) => {
-                    const isDef = g.isDefault || g.id.startsWith('default_');
+                    const isImp = g.is_imported || g.isDefault || g.id.startsWith('default_');
                     return (
                       <tr key={g.id}>
                         <td>
-                          {isDef ? (
-                            <span className="badge-pill gold-outline" style={{ fontSize: '0.72rem', padding: '2px 8px', fontWeight: 600 }}>Default</span>
+                          {isImp ? (
+                            <span className="badge-pill gold-outline" style={{ fontSize: '0.72rem', padding: '2px 8px', fontWeight: 600 }}>Imported</span>
                           ) : (
                             <span className="badge-pill dark" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>Custom</span>
                           )}
@@ -609,7 +625,7 @@ export default function BackOfficePage() {
         {activeTab === 'companies' && (
           <div>
             <div className="tab-header">
-              {/* <h2>dim_company</h2> */}
+              <h2>dim_company</h2>
               <button className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_company', data: { company: '' } })}>
                 <Plus size={14} /> Add Company
               </button>
@@ -625,13 +641,20 @@ export default function BackOfficePage() {
                   </tr>
                 </thead>
                 <tbody>
+                  {companies.length === 0 && (
+                    <tr>
+                      <td colSpan={4} style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                        No companies in your list yet. Click <strong>Import from Default</strong> above to copy choices, or click <strong>+ Add Company</strong>.
+                      </td>
+                    </tr>
+                  )}
                   {companies.map((c) => {
-                    const isDef = c.isDefault || c.id.startsWith('default_');
+                    const isImp = c.is_imported || c.isDefault || c.id.startsWith('default_');
                     return (
                       <tr key={c.id}>
                         <td>
-                          {isDef ? (
-                            <span className="badge-pill gold-outline" style={{ fontSize: '0.72rem', padding: '2px 8px', fontWeight: 600 }}>Default</span>
+                          {isImp ? (
+                            <span className="badge-pill gold-outline" style={{ fontSize: '0.72rem', padding: '2px 8px', fontWeight: 600 }}>Imported</span>
                           ) : (
                             <span className="badge-pill dark" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>Custom</span>
                           )}

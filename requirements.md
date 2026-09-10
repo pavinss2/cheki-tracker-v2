@@ -165,15 +165,16 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 - **Top-Row Inline Draft Rows**: Creating new values in Back Office pins a temporary draft row (`<tr className="temp-row">`) at the very top of the table for all dimensions (`tempMember`, `tempGroup`, `tempCompany`, `tempColor`, `tempType`, `tempCountry`, `tempLocation`). The existing table remains 100% visible and interactive underneath during creation.
 - **Exclusive Dimensions**: `Location` (`default_dim_location`), `Color` (`default_dim_color`), `Type` (`default_dim_type`), and `Countries` (`default_dim_country`) are managed **exclusively** by the super admin in the Back Office tab. They are completely hidden and removed from the regular user Admin tab.
 
-### 6.2 Admin Tab (`/admin`), Import Wizard & Read-Only Status Badges
-- Regular users use `/admin` to manage their custom dimensions: Members, Groups, Companies, and view their mutation audit logs (`fact_admin_log`).
-- **Prominent Inherited Default Display**: Items originating from Back Office global defaults are rendered with a prominent `⚡ Default` badge in the Origin column.
-- **Read-Only Active Status Badges**: Table rows display read-only status badges (`Active` / `Inactive`). Direct inline active status checkboxes are removed from table rows. Active status can only be toggled inside the structured Edit Modal form.
+### 6.2 Admin Tab (`/admin`), Explicit Import Rules & Inactivate/Delete Capabilities
+- **Explicit Import Rule**: Upon starting fresh or after clearing custom data, `dim_member`, `dim_group`, `dim_company` in the Admin tab start completely empty (`Members (0)`, `Groups (0)`, `Companies (0)`). Items from `default_dim_*` are **not defaultly shown** in `/admin` unless explicitly imported by the user using the **"Import from Default"** button.
+- **Full Editing, Inactivating & Deleting Capabilities**: Once an item is imported or manually created in `/admin`:
+  - It is stored as a user document in `dim_member`, `dim_group`, or `dim_company`.
+  - **Inactivating**: The user can edit the item via the Edit Modal form to set its status to `Inactive` (`is_active: false`).
+  - **Deleting**: The user can click the Trash icon to delete the item permanently from their custom `dim_*` list.
 - **Import from Default Settings Wizard**:
-  - A 3-step wizard modal (`Country` $\rightarrow$ `Company` $\rightarrow$ `Group`) allows users to import subsets of default metadata into their custom `dim_*` tables.
+  - A 3-step wizard modal (`Country` $\rightarrow$ `Company` $\rightarrow$ `Group`) allows users to import subsets of default metadata into their custom `dim_*` tables without creating duplicates.
   - An **"Import All"** button is accessible at any step of the journey (`Import All Default Data`, `Import All in [Country]`, `Import All in [Company]`).
-- **Reset Custom Data**: Provides a top bar action to clear user custom `dim_*` data (`clearUserCustomMetadata`), allowing users to rely strictly on Back Office global defaults.
-- **Merged Dimension Resolution (`subscribeMergedMetadata`)**: Across all operational app views (filters, forms, analytics, raw data, calendar), the system merges Back Office global defaults (`default_dim_*`) with user custom choices (`dim_*`), deduplicating by item string value so user custom items seamlessly extend or customize system defaults. Adding new items merges with existing default items without hiding default records.
+- **Reset Custom Data**: Provides a top bar action to clear user custom `dim_*` data (`clearUserCustomMetadata`), restoring `/admin` tables to empty states (`0` items).
 
 ### 6.3 `dim_member` Table Column Sorting & `date_added` Rule
 - **`date_added` Field**: `dim_member` records include a `date_added` field (`YYYY-MM-DD`). Automatically set to today's date when creating new member records.

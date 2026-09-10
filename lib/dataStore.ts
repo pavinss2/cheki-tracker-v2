@@ -772,6 +772,23 @@ export async function importFromDefaultMetadata(
   defaultCompanies: any[],
   isDemo = false
 ): Promise<{ count: number }> {
+  // Fetch current user custom items to prevent duplicates
+  const existingGroupsSnap = (isDemo || process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes("Demo")) 
+    ? getLocalData<any>(`dim_group_${userId || 'demo'}`, []) 
+    : (await getDocs(query(collection(db, 'dim_group'), where("userId", "==", userId)))).docs.map(d => d.data());
+  
+  const existingCompaniesSnap = (isDemo || process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes("Demo")) 
+    ? getLocalData<any>(`dim_company_${userId || 'demo'}`, []) 
+    : (await getDocs(query(collection(db, 'dim_company'), where("userId", "==", userId)))).docs.map(d => d.data());
+  
+  const existingMembersSnap = (isDemo || process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes("Demo")) 
+    ? getLocalData<any>(`dim_member_${userId || 'demo'}`, []) 
+    : (await getDocs(query(collection(db, 'dim_member'), where("userId", "==", userId)))).docs.map(d => d.data());
+
+  const existingGroupNames = new Set<string>(existingGroupsSnap.map(d => String(d.group || '').toLowerCase().trim()));
+  const existingCompanyNames = new Set<string>(existingCompaniesSnap.map(d => String(d.company || '').toLowerCase().trim()));
+  const existingMemberNames = new Set<string>(existingMembersSnap.map(d => String(d.member_name || '').toLowerCase().trim()));
+
   // 1. Determine matching groups
   const matchingGroups = defaultGroups.filter((g) => {
     if (selection.country && g.country !== selection.country) return false;
@@ -796,22 +813,25 @@ export async function importFromDefaultMetadata(
 
   let count = 0;
 
-  // Save to user dim_* collections
+  // Save to user dim_* collections (skipping existing duplicate names)
   for (const g of matchingGroups) {
+    if (existingGroupNames.has(String(g.group).toLowerCase().trim())) continue;
     const { id, isDefault, is_default, ...data } = g;
-    await addMetadataDoc('dim_group', userId, data, isDemo);
+    await addMetadataDoc('dim_group', userId, { ...data, is_imported: true, is_active: true }, isDemo);
     count++;
   }
 
   for (const c of matchingCompanies) {
+    if (existingCompanyNames.has(String(c.company).toLowerCase().trim())) continue;
     const { id, isDefault, is_default, ...data } = c;
-    await addMetadataDoc('dim_company', userId, data, isDemo);
+    await addMetadataDoc('dim_company', userId, { ...data, is_imported: true, is_active: true }, isDemo);
     count++;
   }
 
   for (const m of matchingMembers) {
+    if (existingMemberNames.has(String(m.member_name).toLowerCase().trim())) continue;
     const { id, isDefault, is_default, ...data } = m;
-    await addMetadataDoc('dim_member', userId, data, isDemo);
+    await addMetadataDoc('dim_member', userId, { ...data, is_imported: true, is_active: true }, isDemo);
     count++;
   }
 

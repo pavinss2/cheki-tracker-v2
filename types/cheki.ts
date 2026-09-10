@@ -37,6 +37,7 @@ export interface DimMember {
   date_added?: string;
   is_default?: boolean;
   isDefault?: boolean;
+  is_imported?: boolean;
 }
 
 export interface DimGroup {
@@ -48,6 +49,7 @@ export interface DimGroup {
   is_active?: boolean;
   is_default?: boolean;
   isDefault?: boolean;
+  is_imported?: boolean;
 }
 
 export interface DimCompany {
@@ -57,6 +59,7 @@ export interface DimCompany {
   is_active?: boolean;
   is_default?: boolean;
   isDefault?: boolean;
+  is_imported?: boolean;
 }
 
 export interface DimColor {
