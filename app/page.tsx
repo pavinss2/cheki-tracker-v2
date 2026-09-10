@@ -63,7 +63,7 @@ function getNationalityLabel(code: string): string {
 export default function HomePage() {
   const { user, isDemoUser } = useAuth();
   const { allTransactions, filteredTransactions, members, colors, loading } = useChekiData();
-  const [granularity, setGranularity] = useState<'DAILY' | 'MONTHLY' | 'YEARLY'>('DAILY');
+  const [granularity, setGranularity] = useState<'DAILY' | 'MONTHLY' | 'YEARLY'>('MONTHLY');
   const [selectedCardKey, setSelectedCardKey] = useState<string | null>(null);
 
   // Maps for custom color overrides
@@ -331,7 +331,7 @@ export default function HomePage() {
         {/* Combined Card: TOTAL CHEKI & UNIQUE COUNT */}
         <div className="kpi-card highlight combined-overview-card">
           <div className="kpi-header">
-            <span>TOTAL CHEKI & UNIQUE COUNT</span>
+            <span>TOTAL CHEKI</span>
             <div className="header-icons">
               <ImageIcon size={15} className="kpi-icon" />
               <Award size={15} className="kpi-icon" />
@@ -401,8 +401,8 @@ export default function HomePage() {
       <div className="chart-card card">
         <div className="chart-header">
           <div>
-            <h2>Transaction Quantity Trend</h2>
-            <p className="chart-sub">Volume of cheki recorded over time (Bar Chart)</p>
+            <h2>Trend</h2>
+            <p className="chart-sub">Volume of cheki over time</p>
           </div>
           <div className="btn-group">
             <button 

@@ -56,10 +56,10 @@ export const Sidebar: React.FC = () => {
           display: flex;
           flex-direction: column;
           position: fixed;
-          top: var(--header-height);
+          top: 0;
           bottom: 0;
           left: 0;
-          z-index: 40;
+          z-index: 50;
         }
 
         .sidebar-nav {

@@ -108,7 +108,7 @@ export default function AnalyticsPage() {
         <div className="control-group">
           <label>Metric:</label>
           <div className="btn-group">
-            <button className={`btn-toggle ${metric === 'qty' ? 'active' : ''}`} onClick={() => setMetric('qty')}>Quantity (pcs)</button>
+            <button className={`btn-toggle ${metric === 'qty' ? 'active' : ''}`} onClick={() => setMetric('qty')}>Quantity</button>
             <button className={`btn-toggle ${metric === 'price' ? 'active' : ''}`} onClick={() => setMetric('price')}>Total Spend (THB)</button>
           </div>
         </div>
@@ -193,7 +193,7 @@ export default function AnalyticsPage() {
                   <th>Rank</th>
                   {dimension === 'MEMBER' && <th>Avatar</th>}
                   <th>{dimension}</th>
-                  <th>Quantity (pcs)</th>
+                  <th>Quantity</th>
                   <th>Total Spend (THB)</th>
                   <th>Avg Price / Cheki</th>
                 </tr>

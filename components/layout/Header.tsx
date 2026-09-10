@@ -10,18 +10,6 @@ export const Header: React.FC = () => {
 
   return (
     <header className="app-header">
-      <div className="header-brand">
-        <Link href="/" className="brand-link">
-          <div className="brand-logo">
-            <span>📷</span>
-          </div>
-          <div className="brand-text">
-            <span className="brand-name">Cheki Tracker</span>
-            <span className="brand-badge">v2.0</span>
-          </div>
-        </Link>
-      </div>
-
       <div className="header-actions">
         {isDemoUser && (
           <div className="demo-banner">
@@ -59,11 +47,18 @@ export const Header: React.FC = () => {
           border-bottom: 1px solid var(--border-subtle);
           display: flex;
           align-items: center;
-          justify-content: space-between;
+          justify-content: flex-end;
           padding: 0 24px;
           position: sticky;
           top: 0;
-          z-index: 50;
+          z-index: 40;
+          margin-left: var(--sidebar-width);
+        }
+
+        @media (max-width: 768px) {
+          .app-header {
+            margin-left: 0;
+          }
         }
 
         .header-brand {
