@@ -17,6 +17,7 @@ import {
 import { 
   Award, 
   Building2, 
+  Calendar, 
   Globe, 
   ImageIcon, 
   MapPin, 
@@ -332,6 +333,26 @@ export default function HomePage() {
 
         {/* Card 9: TOP LOCATION */}
         {renderKpiCard('locations')}
+
+        {/* Card 10: MOST CHEKI DAY */}
+        <div className="kpi-card highlight">
+          <div className="kpi-header">
+            <span>MOST CHEKI DAY</span>
+            <Calendar size={16} className="kpi-icon" />
+          </div>
+          <div className="kpi-split">
+            <div className="split-col">
+              <span className="split-val">{kpis.maxDayQty}</span>
+              <span className="split-lbl">PCS</span>
+            </div>
+            <div className="split-divider" />
+            <div className="split-col">
+              <span className="split-val">฿ {kpis.maxDaySpend.toLocaleString()}</span>
+              <span className="split-lbl">SPENT</span>
+            </div>
+          </div>
+          <div className="date-subtext">{kpis.maxDayDate}</div>
+        </div>
       </div>
 
       {/* Separate Extension Breakdown Card (Triggered ON CLICK ONLY) */}

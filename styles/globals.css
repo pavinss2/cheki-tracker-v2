@@ -419,15 +419,84 @@ tr:hover td {
   padding: 10px 0;
 }
 
+.date-subtext {
+  text-align: center;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-top: 4px;
+  letter-spacing: 0.04em;
+}
+
 @media (max-width: 1024px) {
   .kpi-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
 }
 
 @media (max-width: 640px) {
   .kpi-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .kpi-card {
+    padding: 12px 10px;
+    min-height: 145px;
+  }
+
+  .kpi-header {
+    font-size: 0.68rem;
+    margin-bottom: 6px;
+  }
+
+  .kpi-big-value {
+    font-size: 1.5rem;
+    margin: 4px 0 2px 0;
+  }
+
+  .kpi-big-value .unit {
+    font-size: 0.78rem;
+  }
+
+  .split-val {
+    font-size: 1.15rem;
+  }
+
+  .split-lbl {
+    font-size: 0.62rem;
+  }
+
+  .rank-badge {
+    width: 15px;
+    height: 15px;
+    font-size: 0.62rem;
+  }
+
+  .item-left {
+    gap: 4px;
+  }
+
+  .item-name {
+    font-size: 0.76rem;
+  }
+
+  .item-right {
+    font-size: 0.74rem;
+    gap: 2px;
+  }
+
+  .item-val {
+    font-size: 0.74rem;
+  }
+
+  .item-pct {
+    font-size: 0.68rem;
+  }
+
+  .date-subtext {
+    font-size: 0.68rem;
   }
 }
 
