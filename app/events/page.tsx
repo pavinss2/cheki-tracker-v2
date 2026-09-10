@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { LoginPrompt } from '@/components/layout/LoginPrompt';
 import { useChekiData } from '@/hooks/useChekiData';
 import { FilterBar } from '@/components/layout/FilterBar';
 import { CircularSpinner } from '@/components/common/CircularSpinner';
@@ -9,6 +11,7 @@ import { ArrowUpDown } from 'lucide-react';
 type EventSortKey = 'period' | 'event' | 'memberCount' | 'qty' | 'pct' | 'price';
 
 export default function EventsPage() {
+  const { user, isDemoUser } = useAuth();
   const { allTransactions, filteredTransactions, loading } = useChekiData();
   const [viewMode, setViewMode] = useState<'DAILY' | 'MONTHLY'>('DAILY');
   const [sortKey, setSortKey] = useState<EventSortKey>('period');
@@ -83,6 +86,7 @@ export default function EventsPage() {
     return { items, totalQtyAll };
   }, [filteredTransactions, viewMode, sortKey, sortAsc]);
 
+  if (!user && !isDemoUser) return <LoginPrompt />;
   if (loading) return <CircularSpinner />;
 
   return (

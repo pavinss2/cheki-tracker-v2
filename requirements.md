@@ -40,6 +40,10 @@ The application employs a dual-storage strategy to ensure real-time Cloud persis
 - **Timestamping & Sorting**: Every inserted or updated metadata and transaction document appends ISO `createdAt` and `updatedAt` timestamps. Metadata lists in `subscribeMetadata` are sorted by `createdAt`/`updatedAt` descending so newly added records automatically appear at the **most top row**.
 - **Boolean Normalization (`is_active`)**: `is_active` in `dim_member` must strictly be stored as boolean (`true`/`false`), never as strings `"TRUE"`/`"FALSE"`.
 
+### 1.3 Page Authentication & Login Gating
+- **Universal Protection**: All primary page routes (`Home`, `Calendar`, `Analytics`, `Raw Data`, `Events`, `Back Office`) strictly enforce authentication gating via `useAuth()`.
+- **Unauthenticated State**: If `!user && !isDemoUser`, the page immediately renders `<LoginPrompt />` to prevent unauthenticated access to system data.
+
 ---
 
 ## 2. Design System, Aesthetic Tokens & Responsive Layout Rules
