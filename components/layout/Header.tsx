@@ -3,7 +3,6 @@
 import React from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { LogIn, LogOut, User as UserIcon, ShieldAlert } from 'lucide-react';
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const ROUTE_TITLES: Record<string, string> = {
@@ -29,41 +28,147 @@ export const Header: React.FC = () => {
 
   return (
     <header className="app-header">
-      <div className="header-left-zone">
+      <div className="header-left">
         <h1 className="header-page-title">{pageTitle}</h1>
       </div>
 
-      <div className="header-right-zone">
-        <div className="header-actions">
-          {isDemoUser && (
-            <div className="demo-banner">
-              <ShieldAlert size={14} />
-              <span>Demo Mode</span>
-            </div>
-          )}
+      <div className="header-actions">
+        {isDemoUser && (
+          <div className="demo-banner">
+            <ShieldAlert size={14} />
+            <span>Demo Mode</span>
+          </div>
+        )}
 
-          {user ? (
-            <div className="user-profile" title={user.displayName || user.email || 'Logged in User'}>
-              {user.photoURL ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={user.photoURL} alt={user.displayName || 'User'} className="user-avatar" width={28} height={28} />
-              ) : (
-                <div className="user-avatar-placeholder">
-                  <UserIcon size={16} />
-                </div>
-              )}
-              <button onClick={signOutUser} className="btn-icon" title="Sign Out">
-                <LogOut size={16} />
-              </button>
-            </div>
-          ) : (
-            <button onClick={signInWithGoogle} className="btn btn-primary btn-sm">
-              <LogIn size={16} />
-              <span>Sign in with Google</span>
+        {user ? (
+          <div className="user-profile" title={user.displayName || user.email || 'Logged in User'}>
+            {user.photoURL ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={user.photoURL} alt={user.displayName || 'User'} className="user-avatar" width={28} height={28} />
+            ) : (
+              <div className="user-avatar-placeholder">
+                <UserIcon size={16} />
+              </div>
+            )}
+            <button onClick={signOutUser} className="btn-icon" title="Sign Out">
+              <LogOut size={16} />
             </button>
-          )}
-        </div>
+          </div>
+        ) : (
+          <button onClick={signInWithGoogle} className="btn btn-primary btn-sm">
+            <LogIn size={16} />
+            <span>Sign in with Google</span>
+          </button>
+        )}
       </div>
+
+      <style jsx>{`
+        .app-header {
+          height: var(--header-height);
+          background-color: var(--bg-surface-1);
+          border-bottom: 1px solid var(--border-subtle);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0 24px;
+          position: sticky;
+          top: 0;
+          z-index: 45;
+          margin-left: var(--sidebar-width);
+          box-sizing: border-box;
+        }
+
+        .header-left {
+          display: flex;
+          align-items: center;
+          min-width: 0;
+        }
+
+        .header-page-title {
+          font-family: var(--font-display);
+          font-size: 1.35rem;
+          font-weight: 700;
+          color: var(--text-main);
+          margin: 0;
+          line-height: 1.2;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        @media (max-width: 768px) {
+          .app-header {
+            margin-left: 0;
+            padding: 0 16px;
+          }
+        }
+
+        .header-actions {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          flex-shrink: 0;
+        }
+
+        .demo-banner {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background-color: rgba(245, 158, 11, 0.15);
+          color: var(--color-warning);
+          border: 1px solid rgba(245, 158, 11, 0.3);
+          padding: 4px 10px;
+          border-radius: 12px;
+          font-size: 0.78rem;
+          font-weight: 500;
+        }
+
+        .user-profile {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background-color: var(--bg-surface-2);
+          padding: 4px 8px;
+          border-radius: 20px;
+          border: 1px solid var(--border-subtle);
+          flex-shrink: 0;
+        }
+
+        .user-avatar {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          object-fit: cover;
+        }
+
+        .user-avatar-placeholder {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          background: var(--bg-surface-3);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: var(--text-muted);
+        }
+
+        .btn-icon {
+          background: none;
+          border: none;
+          color: var(--text-muted);
+          cursor: pointer;
+          padding: 4px;
+          display: flex;
+          align-items: center;
+          border-radius: 4px;
+          transition: color var(--transition-fast);
+        }
+
+        .btn-icon:hover {
+          color: var(--color-danger);
+        }
+      `}</style>
     </header>
   );
 };
+
