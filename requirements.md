@@ -116,16 +116,19 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 
 ## 6. Back Office (Admin Tab & Dimension Management)
 
-### 6.1 `dim_member` Table Column Sorting
-- The `dim_member` table headers are clickable and sortable for the following columns:
+### 6.1 `dim_member` Table Column Sorting & `date_added` Rule
+- **`date_added` Field**: `dim_member` records include a `date_added` field (`YYYY-MM-DD`). Automatically set to today's date when creating new member records.
+- **Default Sort Order**: By default, the `dim_member` table is **arranged by `date_added` descending (`▼`)**. Newly added members remain at the top of the table.
+- **Sortable Columns**: The `dim_member` table headers are clickable and sortable for all columns:
   1. `Member Name` (`member_name`)
   2. `Color` (`color`)
   3. `Group` (`group`)
   4. `Country` (`country`)
   5. `Company` (`company`)
-  6. `Start Date` (`start_date`)
-  7. `End Date` (`end_date`)
-  8. `Status` (`is_active`)
+  6. `Date Added` (`date_added`)
+  7. `Start Date` (`start_date`)
+  8. `End Date` (`end_date`)
+  9. `Status` (`is_active`)
 - Toggles between ascending (`▲`) and descending (`▼`) sort order.
 
 ### 6.2 Temporary Top Row Draft, Image URL & Locked Fields Rule
@@ -135,6 +138,7 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
   - `country` and `company` fields are **locked (disabled / read-only)** when creating or editing a member.
   - Selecting a `Group` automatically maps and updates `country` and `company` from `dim_group`. Manual editing of country and company is disabled to prevent data mismatch.
 - **Default Field Values for New Member**:
+  - `date_added`: Defaults to **today's date** (`YYYY-MM-DD`).
   - `start_date`: Defaults to **`1000-12-26`**.
   - `end_date`: Defaults to **`9999-12-31`**.
   - `is_active`: Defaults to **`Active` (`true`)**.
@@ -144,19 +148,24 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 - **Explicit Save Button**: The new record is only written to Firestore when the user explicitly clicks the **Save** button in the draft row's actions column.
 - **Cancel Button**: Clicking Cancel (`X`) discards the temporary row without saving to the database.
 
-### 6.3 Delete Confirmation Popup Modal
+### 6.3 Events Tab Table Header Sorting
+- All headers in the Events tab table (`Date`/`Month`, `Event Name`, `Members`, `QTY`, `%`, `Total (THB)`) are clickable and sortable.
+- Default sort: `Date`/`Month` (`period`) descending.
+- Clicking any header toggles between ascending (`▲`) and descending (`▼`) sort order.
+
+### 6.4 Delete Confirmation Popup Modal
 - Deleting any dimension record (`dim_member`, `dim_group`, `dim_company`, `dim_color`, `dim_type`, `dim_country`) displays a custom, non-blocking **Confirm Delete** modal popup displaying:
   - Record ID (e.g. `ID: h6YTWUygR5D5QZ2enZ47`)
   - Item Display Value (e.g. `Value: Siso (22%)`)
   - Explicit **"Confirm Delete"** (danger button) and **"Cancel"** buttons.
 
-### 6.4 `fact_admin_log` Audit Logs Value Display Rule
+### 6.5 `fact_admin_log` Audit Logs Value Display Rule
 - Audit log messages in `fact_admin_log` must record the display value alongside document IDs for all mutations:
   - `Deleted ID h6YTWUygR5D5QZ2enZ47 (Siso (22%))`
   - `Added ID 9mK10xL45z (Catsolute)`
   - `Updated ID p80xK11m (Red)`
 
-### 6.5 Avatar Image Fallback Rule (Capitalized Letter Icon)
+### 6.6 Avatar Image Fallback Rule (Capitalized Letter Icon)
 - All member avatars are rendered via `<MemberAvatar>`.
 - **Error Handling**: If a member avatar URL (`member_image`) is missing, blank, `None`, or fails to render (404, broken link, CDN error), `MemberAvatar` catches `onError` and displays a **capitalized initial letter circle icon** styled with the member's theme color.
 

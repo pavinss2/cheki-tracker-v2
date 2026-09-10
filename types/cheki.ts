@@ -34,6 +34,7 @@ export interface DimMember {
   end_date: string;
   is_active: boolean;
   x_profile?: string;
+  date_added?: string;
 }
 
 export interface DimGroup {

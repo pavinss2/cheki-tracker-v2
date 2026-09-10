@@ -4,10 +4,24 @@ import React, { useState, useMemo } from 'react';
 import { useChekiData } from '@/hooks/useChekiData';
 import { FilterBar } from '@/components/layout/FilterBar';
 import { CircularSpinner } from '@/components/common/CircularSpinner';
+import { ArrowUpDown } from 'lucide-react';
+
+type EventSortKey = 'period' | 'event' | 'memberCount' | 'qty' | 'pct' | 'price';
 
 export default function EventsPage() {
   const { allTransactions, filteredTransactions, loading } = useChekiData();
   const [viewMode, setViewMode] = useState<'DAILY' | 'MONTHLY'>('DAILY');
+  const [sortKey, setSortKey] = useState<EventSortKey>('period');
+  const [sortAsc, setSortAsc] = useState<boolean>(false);
+
+  const handleSort = (key: EventSortKey) => {
+    if (sortKey === key) {
+      setSortAsc(!sortAsc);
+    } else {
+      setSortKey(key);
+      setSortAsc(key === 'event' ? true : false);
+    }
+  };
 
   const eventsPivot = useMemo(() => {
     const map: Record<string, { period: string; event: string; qty: number; price: number; members: Set<string> }> = {};
@@ -43,9 +57,31 @@ export default function EventsPage() {
       memberCount: item.members.size,
     }));
 
-    items.sort((a, b) => (a.period < b.period ? 1 : -1));
+    items.sort((a, b) => {
+      let valA: string | number = '';
+      let valB: string | number = '';
+
+      if (sortKey === 'pct') {
+        valA = parseFloat(a.pct);
+        valB = parseFloat(b.pct);
+      } else if (sortKey === 'event') {
+        valA = a.event.toLowerCase();
+        valB = b.event.toLowerCase();
+      } else if (sortKey === 'period') {
+        valA = a.period;
+        valB = b.period;
+      } else {
+        valA = a[sortKey];
+        valB = b[sortKey];
+      }
+
+      if (valA < valB) return sortAsc ? -1 : 1;
+      if (valA > valB) return sortAsc ? 1 : -1;
+      return 0;
+    });
+
     return { items, totalQtyAll };
-  }, [filteredTransactions, viewMode]);
+  }, [filteredTransactions, viewMode, sortKey, sortAsc]);
 
   if (loading) return <CircularSpinner />;
 
@@ -65,15 +101,27 @@ export default function EventsPage() {
 
       <div className="table-card card">
         <div className="table-wrapper">
-          <table>
+          <table className="events-table">
             <thead>
               <tr>
-                <th>{viewMode === 'DAILY' ? 'Date' : 'Month'}</th>
-                <th>Event Name</th>
-                <th>Members</th>
-                <th>QTY</th>
-                <th>%</th>
-                <th>Total (THB)</th>
+                <th className="sortable-th" onClick={() => handleSort('period')}>
+                  {viewMode === 'DAILY' ? 'Date' : 'Month'} {sortKey === 'period' ? (sortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                </th>
+                <th className="sortable-th" onClick={() => handleSort('event')}>
+                  Event Name {sortKey === 'event' ? (sortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                </th>
+                <th className="sortable-th" onClick={() => handleSort('memberCount')}>
+                  Members {sortKey === 'memberCount' ? (sortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                </th>
+                <th className="sortable-th" onClick={() => handleSort('qty')}>
+                  QTY {sortKey === 'qty' ? (sortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                </th>
+                <th className="sortable-th" onClick={() => handleSort('pct')}>
+                  % {sortKey === 'pct' ? (sortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                </th>
+                <th className="sortable-th" onClick={() => handleSort('price')}>
+                  Total (THB) {sortKey === 'price' ? (sortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -97,12 +145,17 @@ export default function EventsPage() {
           display: flex;
           flex-direction: column;
           gap: 20px;
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
         }
 
         .page-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
+          gap: 12px;
+          flex-wrap: wrap;
         }
 
         .page-title { font-size: 1.6rem; }
@@ -133,8 +186,34 @@ export default function EventsPage() {
           }
         }
 
+        .table-card {
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          overflow: hidden;
+          box-sizing: border-box;
+        }
+
         .table-wrapper {
           overflow-x: auto;
+          width: 100%;
+          max-width: 100%;
+          -webkit-overflow-scrolling: touch;
+          display: block;
+        }
+
+        .events-table {
+          width: 100%;
+          min-width: 650px;
+          border-collapse: collapse;
+        }
+
+        .sortable-th {
+          cursor: pointer;
+          user-select: none;
+          &:hover {
+            color: var(--accent-primary);
+          }
         }
       `}</style>
     </div>

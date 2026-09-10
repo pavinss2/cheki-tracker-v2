@@ -326,7 +326,14 @@ export async function addMetadataDoc<T extends { id: string; userId: string }>(
   isDemo = false
 ): Promise<void> {
   const now = new Date().toISOString();
-  const payload = { ...data, userId, createdAt: now, updatedAt: now };
+  const todayDateStr = now.split('T')[0];
+  const payload = { 
+    ...data, 
+    userId, 
+    createdAt: now, 
+    updatedAt: now,
+    ...(tableName === 'dim_member' && !data.date_added ? { date_added: todayDateStr } : {})
+  };
   const valStr = getItemValueString(data);
 
   if (isDemo || process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes("Demo")) {

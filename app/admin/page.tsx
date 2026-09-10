@@ -10,7 +10,7 @@ import { CircularSpinner } from '@/components/common/CircularSpinner';
 import { MemberAvatar } from '@/components/common/MemberAvatar';
 import { DimMember } from '@/types/cheki';
 
-type MemberSortKey = 'member_name' | 'color' | 'group' | 'country' | 'company' | 'start_date' | 'end_date' | 'is_active';
+type MemberSortKey = 'date_added' | 'member_name' | 'color' | 'group' | 'country' | 'company' | 'start_date' | 'end_date' | 'is_active';
 
 interface TempMemberRow {
   member_name: string;
@@ -23,6 +23,7 @@ interface TempMemberRow {
   is_active: boolean;
   x_profile: string;
   member_image: string;
+  date_added: string;
 }
 
 export default function BackOfficePage() {
@@ -32,9 +33,9 @@ export default function BackOfficePage() {
   const [activeTab, setActiveTab] = useState<'members' | 'groups' | 'companies' | 'colors' | 'types' | 'countries' | 'logs'>('members');
   const [editingItem, setEditingItem] = useState<{ table: string; data: Record<string, unknown> } | null>(null);
   
-  // Sorting state for dim_member
-  const [memberSortKey, setMemberSortKey] = useState<MemberSortKey>('member_name');
-  const [memberSortAsc, setMemberSortAsc] = useState<boolean>(true);
+  // Sorting state for dim_member (Defaults to date_added descending)
+  const [memberSortKey, setMemberSortKey] = useState<MemberSortKey>('date_added');
+  const [memberSortAsc, setMemberSortAsc] = useState<boolean>(false);
 
   // Temporary draft row state for creating a new member (pinned at top row)
   const [tempMember, setTempMember] = useState<TempMemberRow | null>(null);
@@ -67,7 +68,7 @@ export default function BackOfficePage() {
       setMemberSortAsc(!memberSortAsc);
     } else {
       setMemberSortKey(key);
-      setMemberSortAsc(true);
+      setMemberSortAsc(key === 'date_added' ? false : true);
     }
   };
 
@@ -79,6 +80,9 @@ export default function BackOfficePage() {
       if (memberSortKey === 'is_active') {
         valA = a.is_active ? 1 : 0;
         valB = b.is_active ? 1 : 0;
+      } else if (memberSortKey === 'date_added') {
+        valA = a.date_added || '1000-12-26';
+        valB = b.date_added || '1000-12-26';
       } else {
         valA = String(a[memberSortKey] ?? '').toLowerCase();
         valB = String(b[memberSortKey] ?? '').toLowerCase();
@@ -90,8 +94,9 @@ export default function BackOfficePage() {
     });
   }, [members, memberSortKey, memberSortAsc]);
 
-  // Init temporary member draft row (Default dates: 1000-12-26, 9999-12-31)
+  // Init temporary member draft row (Default dates: 1000-12-26, 9999-12-31, date_added: today)
   const handleStartAddMember = () => {
+    const todayStr = new Date().toISOString().split('T')[0];
     setTempMember({
       member_name: '',
       color: 'White',
@@ -102,7 +107,8 @@ export default function BackOfficePage() {
       end_date: '9999-12-31',
       is_active: true,
       x_profile: '',
-      member_image: ''
+      member_image: '',
+      date_added: todayStr,
     });
   };
 
@@ -256,6 +262,9 @@ export default function BackOfficePage() {
                     <th className="sortable-th" onClick={() => handleSortMembers('company')}>
                       Company <span title="Locked & auto-mapped by Group"><Lock size={11} /></span> {memberSortKey === 'company' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                     </th>
+                    <th className="sortable-th" onClick={() => handleSortMembers('date_added')}>
+                      Date Added {memberSortKey === 'date_added' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                    </th>
                     <th className="sortable-th" onClick={() => handleSortMembers('start_date')}>
                       Start Date {memberSortKey === 'start_date' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                     </th>
@@ -367,6 +376,15 @@ export default function BackOfficePage() {
                         <input 
                           type="date" 
                           className="table-input" 
+                          value={tempMember.date_added} 
+                          onChange={(e) => setTempMember({ ...tempMember, date_added: e.target.value })}
+                          title="Date Added"
+                        />
+                      </td>
+                      <td>
+                        <input 
+                          type="date" 
+                          className="table-input" 
                           value={tempMember.start_date} 
                           onChange={(e) => setTempMember({ ...tempMember, start_date: e.target.value })}
                         />
@@ -442,6 +460,7 @@ export default function BackOfficePage() {
                         <td>{m.group}</td>
                         <td>{m.country}</td>
                         <td>{m.company}</td>
+                        <td>{m.date_added || '-'}</td>
                         <td>{m.start_date || '-'}</td>
                         <td>{m.end_date || '-'}</td>
                         <td>{m.is_active ? <span className="status-badge active">Active</span> : <span className="status-badge">Inactive</span>}</td>
@@ -846,6 +865,15 @@ export default function BackOfficePage() {
                       className="table-input disabled"
                       value={String(editingItem.data.company || 'Individual')}
                       title="Company is locked and auto-mapped by Group"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Date Added</label>
+                    <input
+                      type="date"
+                      value={String(editingItem.data.date_added || new Date().toISOString().split('T')[0])}
+                      onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, date_added: e.target.value } })}
                     />
                   </div>
 
