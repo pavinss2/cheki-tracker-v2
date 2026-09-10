@@ -12,7 +12,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/raw': 'Raw Data',
   '/analytics': 'Analytics',
   '/events': 'Events',
-  '/admin': 'Back Office',
+  '/admin': 'Admin',
   '/grid-entry': 'Grid Entry',
 };
 
@@ -21,7 +21,7 @@ export const Header: React.FC = () => {
   const pathname = usePathname();
 
   const pageTitle = ROUTE_TITLES[pathname] || 
-    (pathname.startsWith('/admin') ? 'Back Office' : 
+    (pathname.startsWith('/admin') ? 'Admin' : 
      pathname.startsWith('/raw') ? 'Raw Data' : 
      pathname.startsWith('/analytics') ? 'Analytics' : 
      pathname.startsWith('/calendar') ? 'Calendar' : 
