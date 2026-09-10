@@ -119,6 +119,8 @@ export function useChekiData() {
       if (filters.color && row.color !== filters.color) return false;
       if (filters.nationality && row.nationality !== filters.nationality) return false;
       if (filters.company && row.company !== filters.company) return false;
+      if (filters.type && row.type !== filters.type) return false;
+      if (filters.location && row.location !== filters.location) return false;
 
       if (hasCellFilters) {
         for (const colKey of activeKeys) {

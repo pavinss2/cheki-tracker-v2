@@ -106,5 +106,7 @@ export interface FilterState {
   member: string;
   nationality: string;
   company: string;
+  type: string;
+  location: string;
   activeCellFilters: Record<string, string>;
 }

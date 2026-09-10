@@ -19,6 +19,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({ transactions }) => {
     const members = new Set<string>();
     const nats = new Set<string>();
     const companies = new Set<string>();
+    const types = new Set<string>();
+    const locations = new Set<string>();
 
     transactions.forEach((r) => {
       const matchYear = !filters.year || r.year === filters.year;
@@ -27,13 +29,17 @@ export const FilterBar: React.FC<FilterBarProps> = ({ transactions }) => {
       const matchMember = !filters.member || r.member === filters.member;
       const matchNat = !filters.nationality || r.nationality === filters.nationality;
       const matchCmp = !filters.company || r.company === filters.company;
+      const matchType = !filters.type || r.type === filters.type;
+      const matchLoc = !filters.location || r.location === filters.location;
 
-      if (matchMember && matchGroup && matchColor && matchNat && matchCmp && r.year) years.add(r.year);
-      if (matchYear && matchGroup && matchColor && matchNat && matchCmp && r.member) members.add(r.member);
-      if (matchYear && matchMember && matchColor && matchNat && matchCmp && r.group) groups.add(r.group);
-      if (matchYear && matchMember && matchGroup && matchNat && matchCmp && r.color) colors.add(r.color);
-      if (matchYear && matchMember && matchGroup && matchColor && matchCmp && r.nationality) nats.add(r.nationality);
-      if (matchYear && matchMember && matchGroup && matchColor && matchNat && r.company) companies.add(r.company);
+      if (matchMember && matchGroup && matchColor && matchNat && matchCmp && matchType && matchLoc && r.year) years.add(r.year);
+      if (matchYear && matchGroup && matchColor && matchNat && matchCmp && matchType && matchLoc && r.member) members.add(r.member);
+      if (matchYear && matchMember && matchColor && matchNat && matchCmp && matchType && matchLoc && r.group) groups.add(r.group);
+      if (matchYear && matchMember && matchGroup && matchNat && matchCmp && matchType && matchLoc && r.color) colors.add(r.color);
+      if (matchYear && matchMember && matchGroup && matchColor && matchCmp && matchType && matchLoc && r.nationality) nats.add(r.nationality);
+      if (matchYear && matchMember && matchGroup && matchColor && matchNat && matchType && matchLoc && r.company) companies.add(r.company);
+      if (matchYear && matchMember && matchGroup && matchColor && matchNat && matchCmp && matchLoc && r.type) types.add(r.type);
+      if (matchYear && matchMember && matchGroup && matchColor && matchNat && matchCmp && matchType && r.location) locations.add(r.location);
     });
 
     return {
@@ -43,12 +49,14 @@ export const FilterBar: React.FC<FilterBarProps> = ({ transactions }) => {
       members: Array.from(members).sort(),
       nationalities: Array.from(nats).sort(),
       companies: Array.from(companies).sort(),
+      types: Array.from(types).sort(),
+      locations: Array.from(locations).sort(),
     };
   }, [transactions, filters]);
 
   const activeTokens = Object.entries(filters.activeCellFilters);
   const hasAnyFilter = Boolean(
-    filters.year || filters.group || filters.color || filters.member || filters.nationality || filters.company || activeTokens.length > 0
+    filters.year || filters.group || filters.color || filters.member || filters.nationality || filters.company || filters.type || filters.location || activeTokens.length > 0
   );
 
   return (
@@ -60,6 +68,16 @@ export const FilterBar: React.FC<FilterBarProps> = ({ transactions }) => {
             <option value="">-- All Years --</option>
             {options.years.map((y) => (
               <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="filter-item">
+          <label>Member</label>
+          <select value={filters.member} onChange={(e) => setFilter('member', e.target.value)}>
+            <option value="">-- All Members --</option>
+            {options.members.map((m) => (
+              <option key={m} value={m}>{m}</option>
             ))}
           </select>
         </div>
@@ -85,21 +103,21 @@ export const FilterBar: React.FC<FilterBarProps> = ({ transactions }) => {
         </div>
 
         <div className="filter-item">
-          <label>Member</label>
-          <select value={filters.member} onChange={(e) => setFilter('member', e.target.value)}>
-            <option value="">-- All Members --</option>
-            {options.members.map((m) => (
-              <option key={m} value={m}>{m}</option>
+          <label>Type</label>
+          <select value={filters.type} onChange={(e) => setFilter('type', e.target.value)}>
+            <option value="">-- All Types --</option>
+            {options.types.map((t) => (
+              <option key={t} value={t}>{t}</option>
             ))}
           </select>
         </div>
 
         <div className="filter-item">
-          <label>Nationality</label>
-          <select value={filters.nationality} onChange={(e) => setFilter('nationality', e.target.value)}>
-            <option value="">-- All Nationalities --</option>
-            {options.nationalities.map((n) => (
-              <option key={n} value={n}>{n}</option>
+          <label>Location</label>
+          <select value={filters.location} onChange={(e) => setFilter('location', e.target.value)}>
+            <option value="">-- All Locations --</option>
+            {options.locations.map((l) => (
+              <option key={l} value={l}>{l}</option>
             ))}
           </select>
         </div>
@@ -113,6 +131,16 @@ export const FilterBar: React.FC<FilterBarProps> = ({ transactions }) => {
             ))}
           </select>
         </div>
+
+        <div className="filter-item">
+          <label>Nationality</label>
+          <select value={filters.nationality} onChange={(e) => setFilter('nationality', e.target.value)}>
+            <option value="">-- All Nationalities --</option>
+            {options.nationalities.map((n) => (
+              <option key={n} value={n}>{n}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {activeTokens.length > 0 && (
@@ -120,7 +148,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ transactions }) => {
           <span className="tokens-title">Row Drilldowns:</span>
           {activeTokens.map(([col, val]) => (
             <span key={col} className="token-tag">
-              <strong>{col}:</strong> &quot;{val}&quot;
+              <strong>{col.charAt(0).toUpperCase() + col.slice(1)}:</strong> &quot;{val}&quot;
               <button onClick={() => removeCellFilter(col)}><X size={12} /></button>
             </span>
           ))}
@@ -142,15 +170,15 @@ export const FilterBar: React.FC<FilterBarProps> = ({ transactions }) => {
           border: 1px solid var(--border-subtle);
           border-radius: var(--radius-md);
           padding: 16px;
-          margin-bottom: 24px;
+          margin-bottom: 1px;
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 10px;
         }
 
         .filter-grid {
           display: grid;
-          grid-template-columns: repeat(6, 1fr);
+          grid-template-columns: repeat(4, 1fr);
           gap: 12px;
         }
 
@@ -226,11 +254,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({ transactions }) => {
 
         @media (max-width: 1024px) {
           .filter-grid {
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
           }
         }
 
-        @media (max-width: 600px) {
+        @media (max-width: 768px) {
           .filter-grid {
             grid-template-columns: repeat(2, 1fr);
           }

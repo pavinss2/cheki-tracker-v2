@@ -18,6 +18,8 @@ const initialFilters: FilterState = {
   member: '',
   nationality: '',
   company: '',
+  type: '',
+  location: '',
   activeCellFilters: {},
 };
 
