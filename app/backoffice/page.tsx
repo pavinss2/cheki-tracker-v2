@@ -25,7 +25,8 @@ import {
   DimCompany, 
   DimColor, 
   DimType, 
-  DimCountry 
+  DimCountry,
+  DimLocation 
 } from '@/types/cheki';
 import { 
   Plus, 
@@ -38,6 +39,7 @@ import {
   Palette, 
   Layers, 
   Tag, 
+  MapPin,
   X, 
   Save, 
   ArrowUpDown, 
@@ -72,9 +74,10 @@ export default function BackOfficePage() {
   const [colors, setColors] = useState<DimColor[]>([]);
   const [types, setTypes] = useState<DimType[]>([]);
   const [countries, setCountries] = useState<DimCountry[]>([]);
+  const [locations, setLocations] = useState<DimLocation[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [activeTab, setActiveTab] = useState<'members' | 'groups' | 'companies' | 'colors' | 'types' | 'countries' | 'logs'>('members');
+  const [activeTab, setActiveTab] = useState<'members' | 'groups' | 'companies' | 'colors' | 'types' | 'countries' | 'locations' | 'logs'>('members');
   const [editingItem, setEditingItem] = useState<{ table: string; data: Record<string, unknown> } | null>(null);
 
   // Sorting state for dim_member
@@ -88,6 +91,7 @@ export default function BackOfficePage() {
   const [tempColor, setTempColor] = useState<{ color: string; color_code: string } | null>(null);
   const [tempType, setTempType] = useState<{ type: string } | null>(null);
   const [tempCountry, setTempCountry] = useState<{ country: string; displayed_country: string } | null>(null);
+  const [tempLocation, setTempLocation] = useState<{ location: string } | null>(null);
 
   // Custom popup for delete confirmation
   const [deleteConfirmModal, setDeleteConfirmModal] = useState<{
@@ -107,6 +111,12 @@ export default function BackOfficePage() {
     const unsubClr = subscribeDefaultMetadata<DimColor>('dim_color', DEFAULT_COLORS, setColors, isDemoUser);
     const unsubTyp = subscribeDefaultMetadata<DimType>('dim_type', DEFAULT_TYPES, setTypes, isDemoUser);
     const unsubCnt = subscribeDefaultMetadata<DimCountry>('dim_country', DEFAULT_COUNTRIES, setCountries, isDemoUser);
+    const unsubLoc = subscribeDefaultMetadata<DimLocation>('dim_location', [
+      { location: 'Bangkok' },
+      { location: 'Tokyo' },
+      { location: 'Seoul' },
+      { location: 'Taipei' }
+    ], setLocations, isDemoUser);
 
     setLoading(false);
 
@@ -117,6 +127,7 @@ export default function BackOfficePage() {
       unsubClr();
       unsubTyp();
       unsubCnt();
+      unsubLoc();
     };
   }, [isDemoUser]);
 
@@ -244,6 +255,16 @@ export default function BackOfficePage() {
     }
   };
 
+  const handleSaveTempLocation = async () => {
+    if (!tempLocation || !tempLocation.location.trim()) return;
+    try {
+      await addDefaultMetadataDoc('dim_location', tempLocation, isDemoUser);
+      setTempLocation(null);
+    } catch (err) {
+      alert("Error saving location: " + (err instanceof Error ? err.message : String(err)));
+    }
+  };
+
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingItem) return;
@@ -315,6 +336,9 @@ export default function BackOfficePage() {
         </button>
         <button className={`tab-btn ${activeTab === 'countries' ? 'active' : ''}`} onClick={() => setActiveTab('countries')}>
           <Flag size={16} /> Countries ({countries.length})
+        </button>
+        <button className={`tab-btn ${activeTab === 'locations' ? 'active' : ''}`} onClick={() => setActiveTab('locations')}>
+          <MapPin size={16} /> Locations ({locations.length})
         </button>
         <button className={`tab-btn ${activeTab === 'logs' ? 'active' : ''}`} onClick={() => setActiveTab('logs')}>
           <Shield size={16} /> System Logs ({logs.length})
@@ -856,6 +880,65 @@ export default function BackOfficePage() {
                             <Edit2 size={14} />
                           </button>
                           <button className="btn-icon danger" onClick={() => setDeleteConfirmModal({ table: 'dim_country', id: c.id, displayValue: getItemValueString(c as unknown as Record<string, unknown>) })}>
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+        {/* DEFAULT LOCATIONS TAB */}
+        {activeTab === 'locations' && (
+          <div>
+            <div className="tab-header">
+              <h2>Default Locations (default_dim_location)</h2>
+              <button className="btn btn-primary btn-sm" onClick={() => setTempLocation({ location: '' })} disabled={Boolean(tempLocation)}>
+                <Plus size={14} /> Add Default Location
+              </button>
+            </div>
+            <div className="table-wrapper">
+              <table className="dim-table">
+                <thead>
+                  <tr>
+                    <th>Location Name</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tempLocation && (
+                    <tr className="temp-row">
+                      <td>
+                        <input 
+                          type="text" 
+                          className="table-input bold" 
+                          placeholder="Location Name *" 
+                          autoFocus
+                          value={tempLocation.location} 
+                          onChange={(e) => setTempLocation({ location: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <div className="action-btns">
+                          <button className="btn btn-primary btn-xs" onClick={handleSaveTempLocation}><Save size={13} /> Save</button>
+                          <button className="btn btn-secondary btn-xs" onClick={() => setTempLocation(null)}><X size={13} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+
+                  {locations.map((loc) => (
+                    <tr key={loc.id}>
+                      <td className="bold">{loc.location}</td>
+                      <td>
+                        <div className="action-btns">
+                          <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_location', data: { ...loc } })}>
+                            <Edit2 size={14} />
+                          </button>
+                          <button className="btn-icon danger" onClick={() => setDeleteConfirmModal({ table: 'dim_location', id: loc.id, displayValue: getItemValueString(loc as unknown as Record<string, unknown>) })}>
                             <Trash2 size={14} />
                           </button>
                         </div>

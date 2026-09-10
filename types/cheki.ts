@@ -88,6 +88,15 @@ export interface DimCountry {
   isDefault?: boolean;
 }
 
+export interface DimLocation {
+  id: string;
+  userId: string;
+  location: string;
+  is_active?: boolean;
+  is_default?: boolean;
+  isDefault?: boolean;
+}
+
 export interface PriceRuleCondition {
   field: 'type' | 'country' | 'group' | 'location' | 'member' | 'company';
   operator: 'equals' | 'contains';

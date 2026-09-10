@@ -2,14 +2,14 @@
 
 import React, { useState, useMemo } from 'react';
 import { useChekiData } from '@/hooks/useChekiData';
-import { addMetadataDoc, updateMetadataDoc, deleteMetadataDoc, getAdminLogs, getItemValueString } from '@/lib/dataStore';
+import { addMetadataDoc, updateMetadataDoc, deleteMetadataDoc, getAdminLogs, getItemValueString, importFromDefaultMetadata, clearUserCustomMetadata } from '@/lib/dataStore';
+import { DEFAULT_COUNTRIES, DEFAULT_COMPANIES, DEFAULT_GROUPS, DEFAULT_MEMBERS } from '@/lib/seedData';
 import { useAuth } from '@/context/AuthContext';
 import { LoginPrompt } from '@/components/layout/LoginPrompt';
-import { Plus, Edit2, Trash2, Shield, Users, Building, MapPin, Layers, X, Save, ArrowUpDown, ExternalLink, Lock } from 'lucide-react';
+import { Plus, Edit2, Trash2, Shield, Users, Building, Layers, X, Save, ArrowUpDown, ExternalLink, Lock, Download, ChevronRight, Sparkles, RefreshCw } from 'lucide-react';
 import { CircularSpinner } from '@/components/common/CircularSpinner';
 import { MemberAvatar } from '@/components/common/MemberAvatar';
 import { formatDisplayName } from '@/lib/imageUtils';
-import { DimMember } from '@/types/cheki';
 
 type MemberSortKey = 'date_added' | 'member_name' | 'color' | 'group' | 'country' | 'company' | 'start_date' | 'end_date' | 'is_active';
 
@@ -52,15 +52,15 @@ export default function BackOfficePage() {
     displayValue: string;
   } | null>(null);
 
-  const logs = getAdminLogs(userId);
+  // Import Wizard Modal State
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importStep, setImportStep] = useState<1 | 2 | 3>(1);
+  const [selectedCountry, setSelectedCountry] = useState<string>('');
+  const [selectedCompany, setSelectedCompany] = useState<string>('');
+  const [isImporting, setIsImporting] = useState(false);
+  const [importSuccessMsg, setImportSuccessMsg] = useState<string | null>(null);
 
-  const handleToggleActive = async (tableName: string, item: any, newActive: boolean) => {
-    try {
-      await updateMetadataDoc(tableName, item.id, userId, { ...item, is_active: newActive }, isDemoUser);
-    } catch (err) {
-      alert("Failed updating active status: " + (err instanceof Error ? err.message : String(err)));
-    }
-  };
+  const logs = getAdminLogs(userId);
 
   // Group lookup map for auto-populating country & company when group is selected
   const groupLookup = useMemo(() => {
@@ -70,6 +70,44 @@ export default function BackOfficePage() {
     });
     return map;
   }, [groups]);
+
+  // Execute Import from Default Metadata Wizard
+  const handleExecuteImport = async (selection: { country?: string; company?: string; group?: string }) => {
+    setIsImporting(true);
+    try {
+      const res = await importFromDefaultMetadata(
+        userId,
+        selection,
+        DEFAULT_MEMBERS,
+        DEFAULT_GROUPS,
+        DEFAULT_COMPANIES,
+        isDemoUser
+      );
+      setImportSuccessMsg(`Successfully imported ${res.count} items from Default settings!`);
+      setTimeout(() => {
+        setImportSuccessMsg(null);
+        setIsImportModalOpen(false);
+        setImportStep(1);
+        setSelectedCountry('');
+        setSelectedCompany('');
+      }, 1800);
+    } catch (err) {
+      alert("Failed importing: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // Reset/Clear user custom dim_* metadata
+  const handleResetCustomData = async () => {
+    if (!confirm("Are you sure you want to clear all your custom dim_* data? Your view will rely on Back Office global defaults.")) return;
+    try {
+      await clearUserCustomMetadata(userId, isDemoUser);
+      alert("Custom data cleared! Now using global Back Office default settings.");
+    } catch (err) {
+      alert("Error clearing custom data: " + (err instanceof Error ? err.message : String(err)));
+    }
+  };
 
   // Handle column sorting
   const handleSortMembers = (key: MemberSortKey) => {
@@ -183,8 +221,39 @@ export default function BackOfficePage() {
   if (!user && !isDemoUser) return <LoginPrompt />;
   if (loading) return <CircularSpinner />;
 
+  // Filter choices for Import Wizard
+  const availableCountries = Array.from(new Set(DEFAULT_COUNTRIES.map(c => c.displayed_country || c.country)));
+  const availableCompanies = Array.from(new Set(
+    DEFAULT_GROUPS
+      .filter(g => !selectedCountry || g.country === selectedCountry || g.country.includes(selectedCountry))
+      .map(g => g.company)
+  ));
+  const availableGroups = DEFAULT_GROUPS.filter(g => {
+    if (selectedCountry && (g.country !== selectedCountry && !g.country.includes(selectedCountry))) return false;
+    if (selectedCompany && g.company !== selectedCompany) return false;
+    return true;
+  });
+
   return (
     <div className="admin-page">
+      {/* Admin Header Action Bar */}
+      <div className="admin-header-bar card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 18px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <h2 style={{ fontSize: '1.1rem', margin: 0 }}>⚙️ Admin Workspace — Custom Dimensions</h2>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button 
+            className="btn btn-secondary btn-sm" 
+            onClick={() => { setIsImportModalOpen(true); setImportStep(1); setSelectedCountry(''); setSelectedCompany(''); }}
+          >
+            <Download size={14} /> Import from Default
+          </button>
+          <button className="btn btn-outline btn-sm danger-text" onClick={handleResetCustomData} title="Clear user custom data to rely purely on default_dim_*">
+            <RefreshCw size={14} /> Reset Custom Data
+          </button>
+        </div>
+      </div>
+
       {/* Admin Tabs */}
       <div className="tabs-bar">
         <button className={`tab-btn ${activeTab === 'members' ? 'active' : ''}`} onClick={() => setActiveTab('members')}>
@@ -443,16 +512,9 @@ export default function BackOfficePage() {
                         <td>{m.start_date || '-'}</td>
                         <td>{m.end_date || '-'}</td>
                         <td>
-                          <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                            <input 
-                              type="checkbox" 
-                              checked={Boolean(m.is_active ?? true)} 
-                              onChange={(e) => handleToggleActive('dim_member', m, e.target.checked)} 
-                            />
-                            <span className={`status-badge ${m.is_active !== false ? 'active' : ''}`}>
-                              {m.is_active !== false ? 'Active' : 'Inactive'}
-                            </span>
-                          </label>
+                          <span className={`status-badge ${m.is_active !== false ? 'active' : ''}`}>
+                            {m.is_active !== false ? 'Active' : 'Inactive'}
+                          </span>
                         </td>
                         <td>
                           {xUrl ? (
@@ -519,16 +581,9 @@ export default function BackOfficePage() {
                         <td>{g.country}</td>
                         <td>{g.company}</td>
                         <td>
-                          <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                            <input 
-                              type="checkbox" 
-                              checked={Boolean(g.is_active ?? true)} 
-                              onChange={(e) => handleToggleActive('dim_group', g, e.target.checked)} 
-                            />
-                            <span className={`status-badge ${g.is_active !== false ? 'active' : ''}`}>
-                              {g.is_active !== false ? 'Active' : 'Inactive'}
-                            </span>
-                          </label>
+                          <span className={`status-badge ${g.is_active !== false ? 'active' : ''}`}>
+                            {g.is_active !== false ? 'Active' : 'Inactive'}
+                          </span>
                         </td>
                         <td>
                           <div className="action-btns">
@@ -583,16 +638,9 @@ export default function BackOfficePage() {
                         </td>
                         <td><strong>{c.company}</strong></td>
                         <td>
-                          <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                            <input 
-                              type="checkbox" 
-                              checked={Boolean(c.is_active ?? true)} 
-                              onChange={(e) => handleToggleActive('dim_company', c, e.target.checked)} 
-                            />
-                            <span className={`status-badge ${c.is_active !== false ? 'active' : ''}`}>
-                              {c.is_active !== false ? 'Active' : 'Inactive'}
-                            </span>
-                          </label>
+                          <span className={`status-badge ${c.is_active !== false ? 'active' : ''}`}>
+                            {c.is_active !== false ? 'Active' : 'Inactive'}
+                          </span>
                         </td>
                         <td>
                           <div className="action-btns">
@@ -931,6 +979,154 @@ export default function BackOfficePage() {
               <button type="button" className="btn btn-secondary" onClick={() => setInlineNewModal(null)}>Cancel</button>
               <button type="button" className="btn btn-primary" onClick={handleSaveInlineOption}>Save Choice (Confirm)</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Wizard Modal Overlay */}
+      {isImportModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsImportModalOpen(false)}>
+          <div className="modal-card" style={{ maxWidth: '520px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Download size={18} /> Import from Default Settings
+              </h2>
+              <button className="btn-close" onClick={() => setIsImportModalOpen(false)}><X size={18} /></button>
+            </div>
+
+            {importSuccessMsg ? (
+              <div style={{ padding: '24px 0', textAlign: 'center' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>✨</div>
+                <h3 style={{ color: 'var(--color-success)', margin: '0 0 4px 0' }}>{importSuccessMsg}</h3>
+              </div>
+            ) : (
+              <div>
+                <div style={{ display: 'flex', gap: '4px', marginBottom: '16px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px', alignItems: 'center' }}>
+                  <span className={`badge-pill ${importStep === 1 ? 'gold-outline' : 'dark'}`}>1. Country</span>
+                  <ChevronRight size={14} style={{ opacity: 0.5 }} />
+                  <span className={`badge-pill ${importStep === 2 ? 'gold-outline' : 'dark'}`}>2. Company</span>
+                  <ChevronRight size={14} style={{ opacity: 0.5 }} />
+                  <span className={`badge-pill ${importStep === 3 ? 'gold-outline' : 'dark'}`}>3. Group</span>
+                </div>
+
+                {importStep === 1 && (
+                  <div>
+                    <p style={{ fontSize: '0.88rem', color: 'var(--text-subtle)', marginBottom: '12px' }}>
+                      Select a Country to narrow down choices, or click <strong>Import All Default Data</strong> to copy all default metadata.
+                    </p>
+                    <div className="form-group" style={{ marginBottom: '16px' }}>
+                      <label>Select Country</label>
+                      <select 
+                        className="table-select" 
+                        value={selectedCountry} 
+                        onChange={(e) => setSelectedCountry(e.target.value)}
+                      >
+                        <option value="">-- Choose Country --</option>
+                        {availableCountries.map(c => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', marginTop: '20px' }}>
+                      <button 
+                        className="btn btn-outline" 
+                        onClick={() => handleExecuteImport({})} 
+                        disabled={isImporting}
+                      >
+                        <Sparkles size={14} /> Import All Default Data
+                      </button>
+                      <button 
+                        className="btn btn-primary" 
+                        onClick={() => setImportStep(2)} 
+                        disabled={!selectedCountry}
+                      >
+                        Next: Select Company <ChevronRight size={14} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {importStep === 2 && (
+                  <div>
+                    <p style={{ fontSize: '0.88rem', color: 'var(--text-subtle)', marginBottom: '12px' }}>
+                      Country: <strong>{selectedCountry}</strong>
+                    </p>
+                    <div className="form-group" style={{ marginBottom: '16px' }}>
+                      <label>Select Company</label>
+                      <select 
+                        className="table-select" 
+                        value={selectedCompany} 
+                        onChange={(e) => setSelectedCompany(e.target.value)}
+                      >
+                        <option value="">-- Choose Company --</option>
+                        {availableCompanies.map(comp => (
+                          <option key={comp} value={comp}>{comp}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', marginTop: '20px' }}>
+                      <button className="btn btn-secondary" onClick={() => setImportStep(1)}>Back</button>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button 
+                          className="btn btn-outline" 
+                          onClick={() => handleExecuteImport({ country: selectedCountry })} 
+                          disabled={isImporting}
+                        >
+                          <Sparkles size={14} /> Import All in {selectedCountry}
+                        </button>
+                        <button 
+                          className="btn btn-primary" 
+                          onClick={() => setImportStep(3)} 
+                          disabled={!selectedCompany}
+                        >
+                          Next: Select Group <ChevronRight size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {importStep === 3 && (
+                  <div>
+                    <p style={{ fontSize: '0.88rem', color: 'var(--text-subtle)', marginBottom: '12px' }}>
+                      Country: <strong>{selectedCountry}</strong> | Company: <strong>{selectedCompany}</strong>
+                    </p>
+
+                    <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '8px', marginBottom: '16px' }}>
+                      {availableGroups.length === 0 ? (
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No default groups found.</div>
+                      ) : (
+                        availableGroups.map(grp => (
+                          <div key={grp.group} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', borderBottom: '1px solid var(--border-subtle)' }}>
+                            <span style={{ fontSize: '0.88rem', fontWeight: 500 }}>{grp.group}</span>
+                            <button 
+                              className="btn btn-secondary btn-xs" 
+                              onClick={() => handleExecuteImport({ country: selectedCountry, company: selectedCompany, group: grp.group })}
+                              disabled={isImporting}
+                            >
+                              Import Group
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', marginTop: '20px' }}>
+                      <button className="btn btn-secondary" onClick={() => setImportStep(2)}>Back</button>
+                      <button 
+                        className="btn btn-primary" 
+                        onClick={() => handleExecuteImport({ country: selectedCountry, company: selectedCompany })} 
+                        disabled={isImporting}
+                      >
+                        <Sparkles size={14} /> Import All in {selectedCompany}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -304,8 +304,20 @@ export function subscribeMetadata<T>(
       snapshot.forEach((doc) => {
         items.push({ id: doc.id, ...doc.data() } as unknown as T);
       });
-      if (items.length === 0) {
-        onData(sortNewestTop(seed));
+
+      if (seed && seed.length > 0) {
+        const combined = [...items, ...seed];
+        const seen = new Set<string>();
+        const deduplicated: T[] = [];
+        combined.forEach((item) => {
+          const val = getItemValueString(item as Record<string, unknown>).toLowerCase();
+          const key = val || String((item as any).id);
+          if (!seen.has(key)) {
+            seen.add(key);
+            deduplicated.push(item);
+          }
+        });
+        onData(sortNewestTop(deduplicated));
       } else {
         onData(sortNewestTop(items));
       }
@@ -701,5 +713,83 @@ export async function seedUserDataToFirestore(userId: string): Promise<{ success
     console.error("Failed to seed Firestore data:", error);
     return { success: false, message: `Error syncing data to Firestore: ${error.message}` };
   }
+}
+
+export async function clearUserCustomMetadata(userId: string, isDemo = false): Promise<void> {
+  const tables = ['dim_member', 'dim_group', 'dim_company'];
+  for (const t of tables) {
+    if (isDemo || process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes("Demo")) {
+      setLocalData(`${t}_${userId || 'demo'}`, []);
+      notifyListeners(`${t}_${userId || 'demo'}`);
+    } else {
+      try {
+        const snap = await getDocs(query(collection(db, t), where("userId", "==", userId)));
+        const batch = writeBatch(db);
+        snap.forEach(d => batch.delete(d.ref));
+        await batch.commit();
+      } catch (err) {
+        console.warn(`Error clearing ${t}:`, err);
+      }
+    }
+  }
+}
+
+export async function importFromDefaultMetadata(
+  userId: string,
+  selection: {
+    country?: string;
+    company?: string;
+    group?: string;
+  },
+  defaultMembers: any[],
+  defaultGroups: any[],
+  defaultCompanies: any[],
+  isDemo = false
+): Promise<{ count: number }> {
+  // 1. Determine matching groups
+  const matchingGroups = defaultGroups.filter((g) => {
+    if (selection.country && g.country !== selection.country) return false;
+    if (selection.company && g.company !== selection.company) return false;
+    if (selection.group && g.group !== selection.group) return false;
+    return true;
+  });
+
+  const matchingGroupNames = new Set(matchingGroups.map(g => g.group));
+
+  // 2. Determine matching companies
+  const matchingCompanies = defaultCompanies.filter((c) => {
+    if (selection.company) return c.company === selection.company;
+    return matchingGroups.some(g => g.company === c.company);
+  });
+
+  // 3. Determine matching members
+  const matchingMembers = defaultMembers.filter((m) => {
+    if (selection.group) return m.group === selection.group;
+    return matchingGroupNames.has(m.group);
+  });
+
+  let count = 0;
+
+  // Save to user dim_* collections
+  for (const g of matchingGroups) {
+    const { id, isDefault, is_default, ...data } = g;
+    await addMetadataDoc('dim_group', userId, data, isDemo);
+    count++;
+  }
+
+  for (const c of matchingCompanies) {
+    const { id, isDefault, is_default, ...data } = c;
+    await addMetadataDoc('dim_company', userId, data, isDemo);
+    count++;
+  }
+
+  for (const m of matchingMembers) {
+    const { id, isDefault, is_default, ...data } = m;
+    await addMetadataDoc('dim_member', userId, data, isDemo);
+    count++;
+  }
+
+  logAdminAction(userId, 'IMPORT_DEFAULT_METADATA', `Imported ${count} items from Default settings`, isDemo);
+  return { count };
 }
 

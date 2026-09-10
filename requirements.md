@@ -160,16 +160,20 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 ### 6.1 Back Office Tab (`/backoffice`) & Super Admin Access
 - **Super Admin Restriction**: Access to `/backoffice` is strictly restricted to certified super admins (`pavin.ss2@gmail.com`). Non-super admin users attempting to visit `/backoffice` receive an "Access Restricted" alert card.
 - **Default Metadata Management (`default_dim_*`)**:
-  - Back Office manages app-wide global default dimension tables: `default_dim_member`, `default_dim_group`, `default_dim_company`, `default_dim_color`, `default_dim_type`, `default_dim_country`. (`dim_location` has been completely deprecated and removed).
+  - Back Office manages app-wide global default dimension tables: `default_dim_member`, `default_dim_group`, `default_dim_company`, `default_dim_color`, `default_dim_type`, `default_dim_country`, `default_dim_location`.
   - Audit logs for default metadata mutations are recorded in `fact_admin_log`.
-- **Top-Row Inline Draft Rows**: Creating new values in Back Office pins a temporary draft row (`<tr className="temp-row">`) at the very top of the table for all dimensions (`tempMember`, `tempGroup`, `tempCompany`, `tempColor`, `tempType`, `tempCountry`). The existing table remains 100% visible and interactive underneath during creation.
-- **Exclusive Dimensions**: `Color` (`default_dim_color`), `Type` (`default_dim_type`), and `Countries` (`default_dim_country`) are managed **exclusively** by the super admin in the Back Office tab. They are completely hidden and removed from the regular user Admin tab.
+- **Top-Row Inline Draft Rows**: Creating new values in Back Office pins a temporary draft row (`<tr className="temp-row">`) at the very top of the table for all dimensions (`tempMember`, `tempGroup`, `tempCompany`, `tempColor`, `tempType`, `tempCountry`, `tempLocation`). The existing table remains 100% visible and interactive underneath during creation.
+- **Exclusive Dimensions**: `Location` (`default_dim_location`), `Color` (`default_dim_color`), `Type` (`default_dim_type`), and `Countries` (`default_dim_country`) are managed **exclusively** by the super admin in the Back Office tab. They are completely hidden and removed from the regular user Admin tab.
 
-### 6.2 Admin Tab (`/admin`), Inherited Badges & Active/Inactive Toggles
+### 6.2 Admin Tab (`/admin`), Import Wizard & Read-Only Status Badges
 - Regular users use `/admin` to manage their custom dimensions: Members, Groups, Companies, and view their mutation audit logs (`fact_admin_log`).
 - **Prominent Inherited Default Display**: Items originating from Back Office global defaults are rendered with a prominent `⚡ Default` badge in the Origin column.
-- **Active / Inactive Checkboxes**: Every dimension row includes an **Active Status checkbox**. Users can toggle active/inactive status for both inherited default choices and custom choices. All items default to active (`true`).
-- **Merged Dimension Resolution (`subscribeMergedMetadata`)**: Across all operational app views (filters, forms, analytics, raw data, calendar), the system merges Back Office global defaults (`default_dim_*`) with user custom choices (`dim_*`), deduplicating by item string value so user custom items seamlessly extend or customize system defaults.
+- **Read-Only Active Status Badges**: Table rows display read-only status badges (`Active` / `Inactive`). Direct inline active status checkboxes are removed from table rows. Active status can only be toggled inside the structured Edit Modal form.
+- **Import from Default Settings Wizard**:
+  - A 3-step wizard modal (`Country` $\rightarrow$ `Company` $\rightarrow$ `Group`) allows users to import subsets of default metadata into their custom `dim_*` tables.
+  - An **"Import All"** button is accessible at any step of the journey (`Import All Default Data`, `Import All in [Country]`, `Import All in [Company]`).
+- **Reset Custom Data**: Provides a top bar action to clear user custom `dim_*` data (`clearUserCustomMetadata`), allowing users to rely strictly on Back Office global defaults.
+- **Merged Dimension Resolution (`subscribeMergedMetadata`)**: Across all operational app views (filters, forms, analytics, raw data, calendar), the system merges Back Office global defaults (`default_dim_*`) with user custom choices (`dim_*`), deduplicating by item string value so user custom items seamlessly extend or customize system defaults. Adding new items merges with existing default items without hiding default records.
 
 ### 6.3 `dim_member` Table Column Sorting & `date_added` Rule
 - **`date_added` Field**: `dim_member` records include a `date_added` field (`YYYY-MM-DD`). Automatically set to today's date when creating new member records.
