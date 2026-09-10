@@ -5,8 +5,9 @@ import { useChekiData } from '@/hooks/useChekiData';
 import { addMetadataDoc, updateMetadataDoc, deleteMetadataDoc, getAdminLogs, seedUserDataToFirestore } from '@/lib/dataStore';
 import { useAuth } from '@/context/AuthContext';
 import { LoginPrompt } from '@/components/layout/LoginPrompt';
-import { Plus, Edit2, Trash2, Shield, Users, Building, Flag, Palette, Layers, Tag, X, Database } from 'lucide-react';
+import { Plus, Edit2, Trash2, Shield, Users, Building, Flag, Palette, Layers, Tag, X, Database, ExternalLink } from 'lucide-react';
 import { CircularSpinner } from '@/components/common/CircularSpinner';
+import { MemberAvatar } from '@/components/common/MemberAvatar';
 
 export default function BackOfficePage() {
   const { user, isDemoUser } = useAuth();
@@ -75,6 +76,25 @@ export default function BackOfficePage() {
   if (!user && !isDemoUser) return <LoginPrompt />;
   if (loading) return <CircularSpinner />;
 
+  const handleAddMember = () => {
+    const today = new Date().toISOString().split('T')[0];
+    setEditingItem({
+      table: 'dim_member',
+      data: {
+        member_name: '',
+        color: 'White',
+        group: '',
+        country: '🇹🇭 TH',
+        company: 'Individual',
+        start_date: today,
+        end_date: today,
+        is_active: true,
+        x_profile: '',
+        member_image: ''
+      }
+    });
+  };
+
   return (
     <div className="admin-page">
       <div className="page-header">
@@ -115,7 +135,7 @@ export default function BackOfficePage() {
           <div>
             <div className="tab-header">
               <h2>dim_member</h2>
-              <button className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_member', data: { member_name: '', color: 'White', group: '', country: '🇹🇭 TH', company: 'Individual', is_active: true } })}>
+              <button className="btn btn-primary btn-sm" onClick={handleAddMember}>
                 <Plus size={14} /> Add Member
               </button>
             </div>
@@ -128,35 +148,54 @@ export default function BackOfficePage() {
                   <th>Group</th>
                   <th>Country</th>
                   <th>Company</th>
-                  <th>Active</th>
+                  <th>Start Date</th>
+                  <th>End Date</th>
+                  <th>Status</th>
+                  <th>X Profile</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {members.map((m) => (
-                  <tr key={m.id}>
-                    <td>
-                      {m.member_image && m.member_image !== 'None' ? (
-                        // eslint-disable-next-next/no-img-element
-                        <img src={m.member_image} alt={m.member_name} className="avatar-img" />
-                      ) : (
-                        <div className="avatar-placeholder">{m.member_name.substring(0, 1)}</div>
-                      )}
-                    </td>
-                    <td><strong>{m.member_name}</strong></td>
-                    <td>{m.color}</td>
-                    <td>{m.group}</td>
-                    <td>{m.country}</td>
-                    <td>{m.company}</td>
-                    <td>{m.is_active ? <span className="status-badge active">Active</span> : <span className="status-badge">Inactive</span>}</td>
-                    <td>
-                      <div className="action-btns">
-                        <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_member', data: { ...m } })}><Edit2 size={15} /></button>
-                        <button className="btn-icon danger" onClick={() => handleDeleteDoc('dim_member', m.id)}><Trash2 size={15} /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {members.map((m) => {
+                  const colorObj = colors.find(c => c.color === m.color);
+                  const xUrl = m.x_profile 
+                    ? (m.x_profile.startsWith('http') ? m.x_profile : `https://x.com/${m.x_profile.replace('@', '')}`)
+                    : '';
+
+                  return (
+                    <tr key={m.id}>
+                      <td>
+                        <MemberAvatar 
+                          src={m.member_image} 
+                          name={m.member_name} 
+                          size={36} 
+                          colorHex={colorObj?.color_code} 
+                        />
+                      </td>
+                      <td><strong>{m.member_name}</strong></td>
+                      <td>{m.color}</td>
+                      <td>{m.group}</td>
+                      <td>{m.country}</td>
+                      <td>{m.company}</td>
+                      <td>{m.start_date || '-'}</td>
+                      <td>{m.end_date || '-'}</td>
+                      <td>{m.is_active ? <span className="status-badge active">Active</span> : <span className="status-badge">Inactive</span>}</td>
+                      <td>
+                        {xUrl ? (
+                          <a href={xUrl} target="_blank" rel="noreferrer" className="x-link" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <ExternalLink size={13} /> Link
+                          </a>
+                        ) : '-'}
+                      </td>
+                      <td>
+                        <div className="action-btns">
+                          <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_member', data: { ...m } })}><Edit2 size={15} /></button>
+                          <button className="btn-icon danger" onClick={() => handleDeleteDoc('dim_member', m.id)}><Trash2 size={15} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -462,6 +501,47 @@ export default function BackOfficePage() {
                       ))}
                       <option value="__CREATE_NEW__">+ Create New Company...</option>
                     </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Start Date *</label>
+                    <input
+                      type="date"
+                      required
+                      value={String(editingItem.data.start_date || new Date().toISOString().split('T')[0])}
+                      onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, start_date: e.target.value } })}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>End Date *</label>
+                    <input
+                      type="date"
+                      required
+                      value={String(editingItem.data.end_date || new Date().toISOString().split('T')[0])}
+                      onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, end_date: e.target.value } })}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Status</label>
+                    <select
+                      value={editingItem.data.is_active !== false ? 'active' : 'inactive'}
+                      onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, is_active: e.target.value === 'active' } })}
+                    >
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label>X / Twitter Profile</label>
+                    <input
+                      type="text"
+                      value={String(editingItem.data.x_profile || '')}
+                      onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, x_profile: e.target.value } })}
+                      placeholder="https://x.com/username or @username"
+                    />
                   </div>
 
                   <div className="form-group span-2">
