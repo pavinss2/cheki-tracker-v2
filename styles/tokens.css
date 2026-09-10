@@ -15,9 +15,9 @@
   --accent-primary-hover: #e6b95d;
   --accent-primary-subtle: rgba(212, 168, 75, 0.15);
 
-  /* Secondary Accent - Crisp Slate Blue */
-  --accent-blue: #38bdf8;
-  --accent-blue-subtle: rgba(56, 189, 248, 0.15);
+  /* Secondary Accent - Crisp White */
+  --accent-blue: #ffffff;
+  --accent-blue-subtle: rgba(255, 255, 255, 0.15);
 
   /* Semantic Colors */
   --color-success: #10b981;

@@ -345,7 +345,7 @@ export default function AnalyticsPage() {
         .col-number {
           font-weight: 700;
           font-size: 1.05rem;
-          color: #58a6ff;
+          color: #ffffff;
           width: 50px;
           text-align: right;
           flex-shrink: 0;

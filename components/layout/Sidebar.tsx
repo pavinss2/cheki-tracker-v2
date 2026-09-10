@@ -82,15 +82,16 @@ export const Sidebar: React.FC = () => {
           gap: 12px;
           padding: 14px 18px;
           border-radius: var(--radius-sm);
-          color: #38bdf8;
+          color: #ffffff;
           font-weight: 500;
           font-size: 0.95rem;
           transition: all var(--transition-fast);
         }
 
-        .nav-item :global(.nav-icon) {
-          color: #38bdf8;
-          transition: color var(--transition-fast);
+        .nav-item :global(svg) {
+          color: #ffffff;
+          stroke: #ffffff;
+          transition: color var(--transition-fast), stroke var(--transition-fast);
         }
 
         .nav-item:hover {
@@ -98,18 +99,20 @@ export const Sidebar: React.FC = () => {
           color: #ffffff;
         }
 
-        .nav-item:hover :global(.nav-icon) {
-          color: #ffffff;
-        }
-
         .nav-item.active {
-          background-color: rgba(212, 168, 75, 0.12);
-          color: #d4a84b;
+          background-color: rgba(212, 168, 75, 0.15);
+          color: #d4a84b !important;
           font-weight: 700;
+          border-left: 3px solid #d4a84b;
         }
 
-        .nav-item.active :global(.nav-icon) {
-          color: #d4a84b;
+        .nav-item.active :global(svg) {
+          color: #d4a84b !important;
+          stroke: #d4a84b !important;
+        }
+
+        .nav-item.active .nav-label {
+          color: #d4a84b !important;
         }
 
         .nav-badge {

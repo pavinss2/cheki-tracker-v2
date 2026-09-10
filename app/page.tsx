@@ -677,7 +677,7 @@ export default function HomePage() {
         .breakdown-count-badge {
           font-size: 0.72rem;
           font-weight: 700;
-          color: #58a6ff;
+          color: #ffffff;
           letter-spacing: 0.05em;
         }
 
