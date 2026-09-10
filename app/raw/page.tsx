@@ -162,17 +162,17 @@ export default function RawDataPage() {
                         <span className="no-img">-</span>
                       )}
                     </td>
-                    <td>{r.date}</td>
-                    <td className="clickable-cell" onClick={() => addCellFilter('Member', r.member)}>{r.member}</td>
-                    <td className="clickable-cell" onClick={() => addCellFilter('Group', r.group)}>{r.group}</td>
-                    <td>
+                    <td className="clickable-cell" onClick={() => addCellFilter('year', r.year)} title={`Drilldown by Year: ${r.year}`}>{r.date}</td>
+                    <td className="clickable-cell" onClick={() => addCellFilter('member', r.member)} title={`Drilldown by Member: ${r.member}`}>{r.member}</td>
+                    <td className="clickable-cell" onClick={() => addCellFilter('group', r.group)} title={`Drilldown by Group: ${r.group}`}>{r.group}</td>
+                    <td className="clickable-cell" onClick={() => addCellFilter('color', r.color)} title={`Drilldown by Color: ${r.color}`}>
                       <span className="color-badge" style={{ backgroundColor: r.color?.toLowerCase() === 'white' ? '#fff' : r.color?.toLowerCase() }}>
                         {r.color}
                       </span>
                     </td>
                     <td>{r.event || '-'}</td>
-                    <td>{r.type}</td>
-                    <td>{r.location}</td>
+                    <td className="clickable-cell" onClick={() => addCellFilter('type', r.type)} title={`Drilldown by Type: ${r.type}`}>{r.type}</td>
+                    <td className="clickable-cell" onClick={() => addCellFilter('location', r.location)} title={`Drilldown by Location: ${r.location}`}>{r.location}</td>
                     <td><strong>{r.quantity}</strong></td>
                     <td>฿{r.totalPrice?.toLocaleString()}</td>
                     <td>

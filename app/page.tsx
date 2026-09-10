@@ -333,7 +333,6 @@ export default function HomePage() {
           <div className="kpi-header">
             <span>TOTAL CHEKI</span>
             <div className="header-icons">
-              <ImageIcon size={15} className="kpi-icon" />
               <Award size={15} className="kpi-icon" />
             </div>
           </div>
@@ -756,7 +755,15 @@ export default function HomePage() {
         }
 
         @media (max-width: 640px) {
-          .kpi-grid { grid-template-columns: 1fr; }
+          .kpi-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+          }
+
+          .combined-overview-card,
+          .kpi-grid > .kpi-card:first-child {
+            grid-column: 1 / -1;
+          }
         }
       `}</style>
     </div>
