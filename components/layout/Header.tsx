@@ -156,11 +156,13 @@ export const Header: React.FC = () => {
         }
 
         .header-actions {
+          position: absolute;
+          right: 24px;
+          top: 0;
+          bottom: 0;
           display: flex;
           align-items: center;
           gap: 16px;
-          flex-shrink: 0;
-          margin-left: auto;
         }
 
         .demo-banner {
