@@ -19,7 +19,7 @@ const NAV_ITEMS = [
   { label: 'Raw Data', href: '/raw',  icon: Table },
   { label: 'Analytics', href: '/analytics', icon: BarChart2 },
   { label: 'Events', href: '/events', icon: CalendarDays },
-  { label: 'Back Office', href: '/admin', icon: Settings },
+  { label: 'Admin', href: '/admin', icon: Settings },
 ];
 
 export const Sidebar: React.FC = () => {

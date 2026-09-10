@@ -1,6 +1,10 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    match /fact_cheki_transaction/{docId} {
+      allow read, delete: if true;
+      allow create, update: if (request.resource.data.member != "" && request.resource.data.member != null) || (request.resource.data.date != "" && request.resource.data.date != null);
+    }
     match /{document=**} {
       allow read, write: if true;
     }

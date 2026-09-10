@@ -1,13 +1,29 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useChekiData } from '@/hooks/useChekiData';
-import { addMetadataDoc, updateMetadataDoc, deleteMetadataDoc, getAdminLogs, seedUserDataToFirestore } from '@/lib/dataStore';
+import { addMetadataDoc, updateMetadataDoc, deleteMetadataDoc, getAdminLogs, getItemValueString } from '@/lib/dataStore';
 import { useAuth } from '@/context/AuthContext';
 import { LoginPrompt } from '@/components/layout/LoginPrompt';
-import { Plus, Edit2, Trash2, Shield, Users, Building, Flag, Palette, Layers, Tag, X, Database, ExternalLink } from 'lucide-react';
+import { Plus, Edit2, Trash2, Shield, Users, Building, Flag, Palette, Layers, Tag, X, Save, ArrowUpDown, ExternalLink, Check } from 'lucide-react';
 import { CircularSpinner } from '@/components/common/CircularSpinner';
 import { MemberAvatar } from '@/components/common/MemberAvatar';
+import { DimMember } from '@/types/cheki';
+
+type MemberSortKey = 'member_name' | 'color' | 'group' | 'country' | 'company' | 'start_date' | 'end_date' | 'is_active';
+
+interface TempMemberRow {
+  member_name: string;
+  color: string;
+  group: string;
+  country: string;
+  company: string;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+  x_profile: string;
+  member_image: string;
+}
 
 export default function BackOfficePage() {
   const { user, isDemoUser } = useAuth();
@@ -15,12 +31,100 @@ export default function BackOfficePage() {
 
   const [activeTab, setActiveTab] = useState<'members' | 'groups' | 'companies' | 'colors' | 'types' | 'countries' | 'logs'>('members');
   const [editingItem, setEditingItem] = useState<{ table: string; data: Record<string, unknown> } | null>(null);
-  const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  
+  // Sorting state for dim_member
+  const [memberSortKey, setMemberSortKey] = useState<MemberSortKey>('member_name');
+  const [memberSortAsc, setMemberSortAsc] = useState<boolean>(true);
+
+  // Temporary draft row state for creating a new member (pinned at top row)
+  const [tempMember, setTempMember] = useState<TempMemberRow | null>(null);
+  const [isSavingTemp, setIsSavingTemp] = useState(false);
 
   // Quick inline new option modal for creating missing choices on the fly
   const [inlineNewModal, setInlineNewModal] = useState<{ table: string; fieldKey: string; name: string } | null>(null);
 
+  // Custom popup for delete confirmation
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState<{
+    table: string;
+    id: string;
+    displayValue: string;
+  } | null>(null);
+
   const logs = getAdminLogs(userId);
+
+  // Group lookup map for auto-populating country & company when group is selected
+  const groupLookup = useMemo(() => {
+    const map: Record<string, { company: string; country: string }> = {};
+    groups.forEach((g) => {
+      map[g.group] = { company: g.company, country: g.country };
+    });
+    return map;
+  }, [groups]);
+
+  // Handle column sorting
+  const handleSortMembers = (key: MemberSortKey) => {
+    if (memberSortKey === key) {
+      setMemberSortAsc(!memberSortAsc);
+    } else {
+      setMemberSortKey(key);
+      setMemberSortAsc(true);
+    }
+  };
+
+  const sortedMembers = useMemo(() => {
+    return [...members].sort((a, b) => {
+      let valA: string | number = '';
+      let valB: string | number = '';
+
+      if (memberSortKey === 'is_active') {
+        valA = a.is_active ? 1 : 0;
+        valB = b.is_active ? 1 : 0;
+      } else {
+        valA = String(a[memberSortKey] ?? '').toLowerCase();
+        valB = String(b[memberSortKey] ?? '').toLowerCase();
+      }
+
+      if (valA < valB) return memberSortAsc ? -1 : 1;
+      if (valA > valB) return memberSortAsc ? 1 : -1;
+      return 0;
+    });
+  }, [members, memberSortKey, memberSortAsc]);
+
+  // Init temporary member draft row (Default dates: 1000-12-26, 9999-12-31)
+  const handleStartAddMember = () => {
+    setTempMember({
+      member_name: '',
+      color: 'White',
+      group: '',
+      country: '🇹🇭 TH',
+      company: 'Individual',
+      start_date: '1000-12-26',
+      end_date: '9999-12-31',
+      is_active: true,
+      x_profile: '',
+      member_image: ''
+    });
+  };
+
+  // Confirm & Save Temporary Member Row to Database
+  const handleSaveTempMember = async () => {
+    if (!tempMember) return;
+    if (!tempMember.member_name.trim()) {
+      alert("Please enter a Member Name.");
+      return;
+    }
+
+    setIsSavingTemp(true);
+    try {
+      await addMetadataDoc('dim_member', userId, tempMember as unknown as Record<string, unknown>, isDemoUser);
+      setTempMember(null);
+    } catch (err) {
+      console.error("Save temp member failed:", err);
+      alert("Failed saving member: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setIsSavingTemp(false);
+    }
+  };
 
   const handleSaveDoc = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,11 +157,17 @@ export default function BackOfficePage() {
       if (table === 'dim_color') await addMetadataDoc('dim_color', userId, { color: name.trim(), color_code: '#ffffff' }, isDemoUser);
       if (table === 'dim_country') await addMetadataDoc('dim_country', userId, { country: name.trim(), displayed_country: name.trim() }, isDemoUser);
 
-      // Auto-select in current editing item
+      // Auto-select in current editing item or temporary member row
       if (editingItem) {
         setEditingItem({
           ...editingItem,
           data: { ...editingItem.data, [fieldKey]: name.trim() },
+        });
+      }
+      if (tempMember && fieldKey in tempMember) {
+        setTempMember({
+          ...tempMember,
+          [fieldKey]: name.trim(),
         });
       }
 
@@ -67,33 +177,20 @@ export default function BackOfficePage() {
     }
   };
 
-  const handleDeleteDoc = async (table: string, id: string) => {
-    if (confirm(`Delete this item from ${table}?`)) {
-      await deleteMetadataDoc(table, id, userId, isDemoUser);
+  const confirmAndDelete = async () => {
+    if (!deleteConfirmModal) return;
+    const { table, id, displayValue } = deleteConfirmModal;
+    try {
+      await deleteMetadataDoc(table, id, userId, displayValue, isDemoUser);
+      setDeleteConfirmModal(null);
+    } catch (err) {
+      console.error("Delete failed:", err);
+      alert("Failed deleting record: " + (err instanceof Error ? err.message : String(err)));
     }
   };
 
   if (!user && !isDemoUser) return <LoginPrompt />;
   if (loading) return <CircularSpinner />;
-
-  const handleAddMember = () => {
-    const today = new Date().toISOString().split('T')[0];
-    setEditingItem({
-      table: 'dim_member',
-      data: {
-        member_name: '',
-        color: 'White',
-        group: '',
-        country: '🇹🇭 TH',
-        company: 'Individual',
-        start_date: today,
-        end_date: today,
-        is_active: true,
-        x_profile: '',
-        member_image: ''
-      }
-    });
-  };
 
   return (
     <div className="admin-page">
@@ -135,7 +232,7 @@ export default function BackOfficePage() {
           <div>
             <div className="tab-header">
               <h2>dim_member</h2>
-              <button className="btn btn-primary btn-sm" onClick={handleAddMember}>
+              <button className="btn btn-primary btn-sm" onClick={handleStartAddMember} disabled={Boolean(tempMember)}>
                 <Plus size={14} /> Add Member
               </button>
             </div>
@@ -143,20 +240,181 @@ export default function BackOfficePage() {
               <thead>
                 <tr>
                   <th>Avatar</th>
-                  <th>Member Name</th>
-                  <th>Color</th>
-                  <th>Group</th>
-                  <th>Country</th>
-                  <th>Company</th>
-                  <th>Start Date</th>
-                  <th>End Date</th>
-                  <th>Status</th>
+                  <th className="sortable-th" onClick={() => handleSortMembers('member_name')}>
+                    Member Name {memberSortKey === 'member_name' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                  </th>
+                  <th className="sortable-th" onClick={() => handleSortMembers('color')}>
+                    Color {memberSortKey === 'color' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                  </th>
+                  <th className="sortable-th" onClick={() => handleSortMembers('group')}>
+                    Group {memberSortKey === 'group' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                  </th>
+                  <th className="sortable-th" onClick={() => handleSortMembers('country')}>
+                    Country {memberSortKey === 'country' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                  </th>
+                  <th className="sortable-th" onClick={() => handleSortMembers('company')}>
+                    Company {memberSortKey === 'company' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                  </th>
+                  <th className="sortable-th" onClick={() => handleSortMembers('start_date')}>
+                    Start Date {memberSortKey === 'start_date' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                  </th>
+                  <th className="sortable-th" onClick={() => handleSortMembers('end_date')}>
+                    End Date {memberSortKey === 'end_date' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                  </th>
+                  <th className="sortable-th" onClick={() => handleSortMembers('is_active')}>
+                    Status {memberSortKey === 'is_active' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                  </th>
                   <th>X Profile</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {members.map((m) => {
+                {/* Temporary Unsaved New Member Row Pinned at Top Row */}
+                {tempMember && (
+                  <tr className="temp-row">
+                    <td>
+                      <MemberAvatar 
+                        src={tempMember.member_image} 
+                        name={tempMember.member_name || 'New'} 
+                        size={36} 
+                        colorHex={colors.find(c => c.color === tempMember.color)?.color_code} 
+                      />
+                    </td>
+                    <td>
+                      <input 
+                        type="text" 
+                        className="table-input bold" 
+                        placeholder="Member Name *" 
+                        autoFocus
+                        value={tempMember.member_name} 
+                        onChange={(e) => setTempMember({ ...tempMember, member_name: e.target.value })}
+                      />
+                    </td>
+                    <td>
+                      <select 
+                        className="table-select"
+                        value={tempMember.color}
+                        onChange={(e) => {
+                          if (e.target.value === '__CREATE_NEW__') {
+                            setInlineNewModal({ table: 'dim_color', fieldKey: 'color', name: '' });
+                          } else {
+                            setTempMember({ ...tempMember, color: e.target.value });
+                          }
+                        }}
+                      >
+                        {colors.map((c) => (
+                          <option key={c.id} value={c.color}>{c.color}</option>
+                        ))}
+                        <option value="__CREATE_NEW__">+ Create New Color...</option>
+                      </select>
+                    </td>
+                    <td>
+                      <select 
+                        className="table-select"
+                        value={tempMember.group}
+                        onChange={(e) => {
+                          const grpVal = e.target.value;
+                          if (grpVal === '__CREATE_NEW__') {
+                            setInlineNewModal({ table: 'dim_group', fieldKey: 'group', name: '' });
+                          } else {
+                            const mapped = groupLookup[grpVal];
+                            setTempMember({ 
+                              ...tempMember, 
+                              group: grpVal,
+                              company: mapped?.company || tempMember.company,
+                              country: mapped?.country || tempMember.country
+                            });
+                          }
+                        }}
+                      >
+                        <option value="">-- Select Group --</option>
+                        {groups.map((g) => (
+                          <option key={g.id} value={g.group}>{g.group}</option>
+                        ))}
+                        <option value="__CREATE_NEW__">+ Create New Group...</option>
+                      </select>
+                    </td>
+                    <td>
+                      <select 
+                        className="table-select"
+                        value={tempMember.country}
+                        onChange={(e) => setTempMember({ ...tempMember, country: e.target.value })}
+                      >
+                        {countries.map((c) => (
+                          <option key={c.id} value={c.displayed_country}>{c.displayed_country} ({c.country})</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>
+                      <select 
+                        className="table-select"
+                        value={tempMember.company}
+                        onChange={(e) => setTempMember({ ...tempMember, company: e.target.value })}
+                      >
+                        {companies.map((c) => (
+                          <option key={c.id} value={c.company}>{c.company}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>
+                      <input 
+                        type="date" 
+                        className="table-input" 
+                        value={tempMember.start_date} 
+                        onChange={(e) => setTempMember({ ...tempMember, start_date: e.target.value })}
+                      />
+                    </td>
+                    <td>
+                      <input 
+                        type="date" 
+                        className="table-input" 
+                        value={tempMember.end_date} 
+                        onChange={(e) => setTempMember({ ...tempMember, end_date: e.target.value })}
+                      />
+                    </td>
+                    <td>
+                      <select 
+                        className="table-select"
+                        value={tempMember.is_active ? 'active' : 'inactive'}
+                        onChange={(e) => setTempMember({ ...tempMember, is_active: e.target.value === 'active' })}
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </td>
+                    <td>
+                      <input 
+                        type="text" 
+                        className="table-input" 
+                        placeholder="https://x.com/..." 
+                        value={tempMember.x_profile} 
+                        onChange={(e) => setTempMember({ ...tempMember, x_profile: e.target.value })}
+                      />
+                    </td>
+                    <td>
+                      <div className="action-btns">
+                        <button 
+                          className="btn btn-primary btn-xs" 
+                          onClick={handleSaveTempMember}
+                          disabled={isSavingTemp}
+                          title="Save New Member to Database"
+                        >
+                          <Save size={13} /> {isSavingTemp ? 'Saving...' : 'Save'}
+                        </button>
+                        <button 
+                          className="btn btn-secondary btn-xs" 
+                          onClick={() => setTempMember(null)}
+                          title="Cancel"
+                        >
+                          <X size={13} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+
+                {/* Sorted Member List */}
+                {sortedMembers.map((m) => {
                   const colorObj = colors.find(c => c.color === m.color);
                   const xUrl = m.x_profile 
                     ? (m.x_profile.startsWith('http') ? m.x_profile : `https://x.com/${m.x_profile.replace('@', '')}`)
@@ -190,7 +448,12 @@ export default function BackOfficePage() {
                       <td>
                         <div className="action-btns">
                           <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_member', data: { ...m } })}><Edit2 size={15} /></button>
-                          <button className="btn-icon danger" onClick={() => handleDeleteDoc('dim_member', m.id)}><Trash2 size={15} /></button>
+                          <button 
+                            className="btn-icon danger" 
+                            onClick={() => setDeleteConfirmModal({ table: 'dim_member', id: m.id, displayValue: getItemValueString(m as unknown as Record<string, unknown>) })}
+                          >
+                            <Trash2 size={15} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -228,7 +491,12 @@ export default function BackOfficePage() {
                     <td>
                       <div className="action-btns">
                         <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_group', data: { ...g } })}><Edit2 size={15} /></button>
-                        <button className="btn-icon danger" onClick={() => handleDeleteDoc('dim_group', g.id)}><Trash2 size={15} /></button>
+                        <button 
+                          className="btn-icon danger" 
+                          onClick={() => setDeleteConfirmModal({ table: 'dim_group', id: g.id, displayValue: getItemValueString(g as unknown as Record<string, unknown>) })}
+                        >
+                          <Trash2 size={15} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -261,7 +529,12 @@ export default function BackOfficePage() {
                     <td>
                       <div className="action-btns">
                         <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_company', data: { ...c } })}><Edit2 size={15} /></button>
-                        <button className="btn-icon danger" onClick={() => handleDeleteDoc('dim_company', c.id)}><Trash2 size={15} /></button>
+                        <button 
+                          className="btn-icon danger" 
+                          onClick={() => setDeleteConfirmModal({ table: 'dim_company', id: c.id, displayValue: getItemValueString(c as unknown as Record<string, unknown>) })}
+                        >
+                          <Trash2 size={15} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -298,7 +571,12 @@ export default function BackOfficePage() {
                     <td>
                       <div className="action-btns">
                         <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_color', data: { ...c } })}><Edit2 size={15} /></button>
-                        <button className="btn-icon danger" onClick={() => handleDeleteDoc('dim_color', c.id)}><Trash2 size={15} /></button>
+                        <button 
+                          className="btn-icon danger" 
+                          onClick={() => setDeleteConfirmModal({ table: 'dim_color', id: c.id, displayValue: getItemValueString(c as unknown as Record<string, unknown>) })}
+                        >
+                          <Trash2 size={15} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -331,7 +609,12 @@ export default function BackOfficePage() {
                     <td>
                       <div className="action-btns">
                         <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_type', data: { ...t } })}><Edit2 size={15} /></button>
-                        <button className="btn-icon danger" onClick={() => handleDeleteDoc('dim_type', t.id)}><Trash2 size={15} /></button>
+                        <button 
+                          className="btn-icon danger" 
+                          onClick={() => setDeleteConfirmModal({ table: 'dim_type', id: t.id, displayValue: getItemValueString(t as unknown as Record<string, unknown>) })}
+                        >
+                          <Trash2 size={15} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -366,7 +649,12 @@ export default function BackOfficePage() {
                     <td>
                       <div className="action-btns">
                         <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_country', data: { ...c } })}><Edit2 size={15} /></button>
-                        <button className="btn-icon danger" onClick={() => handleDeleteDoc('dim_country', c.id)}><Trash2 size={15} /></button>
+                        <button 
+                          className="btn-icon danger" 
+                          onClick={() => setDeleteConfirmModal({ table: 'dim_country', id: c.id, displayValue: getItemValueString(c as unknown as Record<string, unknown>) })}
+                        >
+                          <Trash2 size={15} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -395,7 +683,7 @@ export default function BackOfficePage() {
                   <tr key={l.id}>
                     <td>{new Date(l.timestamp).toLocaleString()}</td>
                     <td><span className="log-badge">{l.actionType}</span></td>
-                    <td>{l.actionDetail}</td>
+                    <td><strong>{l.actionDetail}</strong></td>
                   </tr>
                 ))}
               </tbody>
@@ -404,7 +692,37 @@ export default function BackOfficePage() {
         )}
       </div>
 
-      {/* Structured Edit Form Modal with Predefined Dropdowns & Create New Option */}
+      {/* Delete Confirmation Modal Popup */}
+      {deleteConfirmModal && (
+        <div className="modal-overlay" onClick={() => setDeleteConfirmModal(null)}>
+          <div className="modal-card small" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 style={{ color: 'var(--color-danger, #ef4444)' }}>Confirm Delete</h2>
+              <button className="btn-close" onClick={() => setDeleteConfirmModal(null)}><X size={18} /></button>
+            </div>
+            <p style={{ margin: '12px 0 6px 0', fontSize: '0.9rem', color: 'var(--text-main)' }}>
+              Are you sure you want to delete this record from <strong>{deleteConfirmModal.table}</strong>?
+            </p>
+            <div style={{ padding: '10px 14px', background: 'var(--bg-surface-2)', borderRadius: '6px', fontSize: '0.85rem', marginBottom: '16px' }}>
+              <div><strong>ID:</strong> {deleteConfirmModal.id}</div>
+              <div><strong>Value:</strong> {deleteConfirmModal.displayValue || '(empty)'}</div>
+            </div>
+            <div className="form-actions">
+              <button type="button" className="btn btn-secondary" onClick={() => setDeleteConfirmModal(null)}>Cancel</button>
+              <button 
+                type="button" 
+                className="btn btn-primary" 
+                style={{ backgroundColor: 'var(--color-danger, #ef4444)', borderColor: 'var(--color-danger, #ef4444)' }} 
+                onClick={confirmAndDelete}
+              >
+                Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Structured Edit Form Modal for Modifying Existing Records */}
       {editingItem && (
         <div className="modal-overlay" onClick={() => setEditingItem(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
@@ -453,7 +771,17 @@ export default function BackOfficePage() {
                         if (e.target.value === '__CREATE_NEW__') {
                           setInlineNewModal({ table: 'dim_group', fieldKey: 'group', name: '' });
                         } else {
-                          setEditingItem({ ...editingItem, data: { ...editingItem.data, group: e.target.value } });
+                          const grpVal = e.target.value;
+                          const mapped = groupLookup[grpVal];
+                          setEditingItem({ 
+                            ...editingItem, 
+                            data: { 
+                              ...editingItem.data, 
+                              group: grpVal,
+                              company: mapped?.company || editingItem.data.company,
+                              country: mapped?.country || editingItem.data.country,
+                            } 
+                          });
                         }
                       }}
                     >
@@ -508,7 +836,7 @@ export default function BackOfficePage() {
                     <input
                       type="date"
                       required
-                      value={String(editingItem.data.start_date || new Date().toISOString().split('T')[0])}
+                      value={String(editingItem.data.start_date || '1000-12-26')}
                       onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, start_date: e.target.value } })}
                     />
                   </div>
@@ -518,7 +846,7 @@ export default function BackOfficePage() {
                     <input
                       type="date"
                       required
-                      value={String(editingItem.data.end_date || new Date().toISOString().split('T')[0])}
+                      value={String(editingItem.data.end_date || '9999-12-31')}
                       onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, end_date: e.target.value } })}
                     />
                   </div>
@@ -608,7 +936,7 @@ export default function BackOfficePage() {
 
               {/* Generic fallback for other tables */}
               {editingItem.table !== 'dim_member' && editingItem.table !== 'dim_group' && (
-                Object.keys(editingItem.data).filter(k => k !== 'id' && k !== 'userId' && k !== 'updatedAt').map((key) => (
+                Object.keys(editingItem.data).filter(k => k !== 'id' && k !== 'userId' && k !== 'updatedAt' && k !== 'createdAt').map((key) => (
                   <div key={key} className="form-group">
                     <label>{key.replace('_', ' ').toUpperCase()}</label>
                     <input
@@ -625,7 +953,7 @@ export default function BackOfficePage() {
 
               <div className="form-actions span-2">
                 <button type="button" className="btn btn-secondary" onClick={() => setEditingItem(null)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Save Record</button>
+                <button type="submit" className="btn btn-primary">Save Record (Confirm)</button>
               </div>
             </form>
           </div>
@@ -640,8 +968,8 @@ export default function BackOfficePage() {
               <h2>+ Create New {inlineNewModal.table.replace('dim_', '').toUpperCase()}</h2>
               <button className="btn-close" onClick={() => setInlineNewModal(null)}><X size={18} /></button>
             </div>
-            <div className="form-group">
-              <label>Name / Value</label>
+            <div className="form-group" style={{ marginBottom: '16px' }}>
+              <label>Name / Value *</label>
               <input
                 type="text"
                 autoFocus
@@ -652,7 +980,7 @@ export default function BackOfficePage() {
             </div>
             <div className="form-actions">
               <button type="button" className="btn btn-secondary" onClick={() => setInlineNewModal(null)}>Cancel</button>
-              <button type="button" className="btn btn-primary" onClick={handleCreateInlineChoice}>Add Choice</button>
+              <button type="button" className="btn btn-primary" onClick={handleCreateInlineChoice}>Save Choice (Confirm)</button>
             </div>
           </div>
         </div>
@@ -661,7 +989,6 @@ export default function BackOfficePage() {
       <style jsx>{`
         .admin-page { display: flex; flex-direction: column; gap: 20px; }
         .page-title { font-size: 1.6rem; }
-        .page-subtitle { color: var(--text-muted); font-size: 0.88rem; margin-top: -12px; }
 
         .tabs-bar { display: flex; gap: 8px; flex-wrap: wrap; }
         .tab-btn {
@@ -671,14 +998,54 @@ export default function BackOfficePage() {
 
         .tab-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 
-        .avatar-img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
-        .avatar-placeholder { width: 32px; height: 32px; border-radius: 50%; background: var(--bg-surface-3); display: flex; align-items: center; justify-content: center; font-weight: 700; }
+        .sortable-th {
+          cursor: pointer;
+          user-select: none;
+          &:hover { color: var(--accent-primary); }
+        }
+
+        .temp-row {
+          background: rgba(212, 168, 75, 0.08);
+          border-left: 3px solid var(--accent-primary);
+        }
+
+        .table-input {
+          width: 100%;
+          padding: 4px 8px;
+          background: var(--bg-surface-2);
+          border: 1px solid var(--border-subtle);
+          border-radius: 4px;
+          color: var(--text-main);
+          font-size: 0.82rem;
+          &.bold { font-weight: 600; }
+          &:focus { border-color: var(--accent-primary); outline: none; }
+        }
+
+        .table-select {
+          width: 100%;
+          padding: 4px 6px;
+          background: var(--bg-surface-2);
+          border: 1px solid var(--border-subtle);
+          border-radius: 4px;
+          color: var(--text-main);
+          font-size: 0.82rem;
+          &:focus { border-color: var(--accent-primary); outline: none; }
+        }
+
+        .btn-xs {
+          padding: 4px 8px;
+          font-size: 0.75rem;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+        }
+
         .status-badge { padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; background: var(--bg-surface-3); color: var(--text-subtle); &.active { background: rgba(16, 185, 129, 0.15); color: var(--color-success); } }
         .color-swatch { width: 24px; height: 24px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); }
         .log-badge { background: var(--bg-surface-3); padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-family: monospace; color: var(--accent-blue); }
 
-        .action-btns { display: flex; gap: 6px; }
-        .btn-icon { background: none; border: none; color: var(--text-muted); cursor: pointer; &:hover { color: var(--accent-primary); } &.danger:hover { color: var(--color-danger); } }
+        .action-btns { display: flex; gap: 6px; align-items: center; }
+        .btn-icon { background: none; border: none; color: var(--text-muted); cursor: pointer; &:hover { color: var(--accent-primary); } &.danger:hover { color: var(--color-danger, #ef4444); } }
 
         .modal-overlay {
           position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px;

@@ -1,7 +1,7 @@
 # Cheki Tracker v2 — Complete System Requirements & Technical Specification
 
 > [!NOTE]
-> This document serves as the authoritative specification for **Cheki Tracker v2**, detailing all functional, non-functional, hidden, and implicit business logic, design tokens, data models, and workflow specifications.
+> This document serves as the authoritative specification for **Cheki Tracker v2**, detailing all functional, non-functional, hidden, and implicit business logic, design tokens, data models, workflow specifications, and user-requested feature changes.
 
 ---
 
@@ -13,7 +13,6 @@ The application employs a dual-storage strategy to ensure real-time Cloud persis
 1. **Google Cloud Firestore Database (Primary Production)**
    - **Firebase Project ID**: `cheki-tracker-39407`
    - **Hosting Endpoint**: [https://cheki-tracker-39407.web.app](https://cheki-tracker-39407.web.app)
-   - **Security Rules**: Permits read and write operations for authenticated and demo sessions (`allow read, write: if true;`).
    - **Collections Structure**:
      - `fact_cheki_transaction`: Main purchase and cheki records.
      - `fact_admin_log`: Audit logs for tracking mutations.
@@ -30,9 +29,16 @@ The application employs a dual-storage strategy to ensure real-time Cloud persis
    - Keys prefixed with `cheki_tracker_v2_*` (e.g., `cheki_tracker_v2_transactions`, `cheki_tracker_v2_dim_member`).
    - Seeded initially from [lib/seedData.ts](file:///Users/pavin/01%20Pavin%20Coding/cheki-tracker-v2/lib/seedData.ts).
 
-### 1.2 Data Integrity & Blank Record Cleanup Rules
-- **Automatic Blank Transaction Filtering**: Any transaction record where **both `member` AND `date` are empty** is considered invalid and is automatically excluded from analytics and purged during database syncs.
-- **Timestamping**: Every inserted or updated document automatically appends ISO `createdAt` and `updatedAt` timestamps.
+### 1.2 Data Integrity & Blank Transaction Prevention Rules
+- **Definition of Blank Transaction**: Any transaction document where **both `member` AND `date` are empty or whitespace**.
+- **Frontend & Backend Constraints**:
+  - `addTransaction` and `batchUpsertTransactions` in `lib/dataStore.ts` strictly filter out and reject blank rows before writing to Cloud Firestore or LocalStorage.
+  - `subscribeTransactions` automatically filters out any invalid/blank documents if present in storage.
+  - `app/raw/page.tsx` filters `blankRows` upon "Save All" so unfilled rows are never submitted to backend.
+- **Firestore Security Rules Enforcement (`firestore.rules`)**:
+  - Requires `request.resource.data.member != ""` OR `request.resource.data.date != ""` for `create` and `update` operations on `fact_cheki_transaction`.
+- **Timestamping & Sorting**: Every inserted or updated metadata and transaction document appends ISO `createdAt` and `updatedAt` timestamps. Metadata lists in `subscribeMetadata` are sorted by `createdAt`/`updatedAt` descending so newly added records automatically appear at the **most top row**.
+- **Boolean Normalization (`is_active`)**: `is_active` in `dim_member` must strictly be stored as boolean (`true`/`false`), never as strings `"TRUE"`/`"FALSE"`.
 
 ---
 
@@ -108,41 +114,63 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 
 ---
 
-## 6. Back Office (Admin Tab & `dim_member` Management)
+## 6. Back Office (Admin Tab & Dimension Management)
 
-### 6.1 `dim_member` UI & Modal Fields
-When creating or editing a record in `dim_member`, the UI provides form controls for:
-- `member_name` (Text, required)
-- `color` (Select dropdown)
-- `group` (Select dropdown)
-- `country` (Select dropdown)
-- `company` (Select dropdown)
-- `start_date` (Date picker, required)
-- `end_date` (Date picker, required)
-- `is_active` (Select dropdown: `Active` / `Inactive`, required)
-- `x_profile` (Text input for X / Twitter profile URL or handle)
-- `member_image` (URL input)
+### 6.1 `dim_member` Table Column Sorting
+- The `dim_member` table headers are clickable and sortable for the following columns:
+  1. `Member Name` (`member_name`)
+  2. `Color` (`color`)
+  3. `Group` (`group`)
+  4. `Country` (`country`)
+  5. `Company` (`company`)
+  6. `Start Date` (`start_date`)
+  7. `End Date` (`end_date`)
+  8. `Status` (`is_active`)
+- Toggles between ascending (`▲`) and descending (`▼`) sort order.
 
-### 6.2 New Member Creation Autofill Rule
-When clicking **"+ Add Member"**:
-- `start_date` automatically populates as **Today's Date** (`YYYY-MM-DD`).
-- `end_date` automatically populates as **Today's Date** (`YYYY-MM-DD`).
-- `is_active` automatically populates as **`Active` (`true`)**.
-- Users can click any date field to select a different date using the native date picker.
+### 6.2 Temporary Top Row Draft & Save Button Rule
+- Clicking **"+ Add Member"** does NOT immediately save to the database.
+- It pins a **temporary draft row at the very top of the table** with inline input fields and select dropdowns.
+- **Default Field Values for New Member**:
+  - `start_date`: Defaults to **`1000-12-26`**.
+  - `end_date`: Defaults to **`9999-12-31`**.
+  - `is_active`: Defaults to **`Active` (`true`)**.
+  - `color`: Defaults to `'White'`.
+  - `country`: Defaults to `'🇹🇭 TH'`.
+  - `company`: Defaults to `'Individual'`.
+- **Explicit Save Button**: The new record is only written to Firestore when the user explicitly clicks the **Save** button in the draft row's actions column.
+- **Cancel Button**: Clicking Cancel (`X`) discards the temporary row without saving to the database.
 
-### 6.3 Avatar Image Fallback Rule (Capitalized Letter Icon)
+### 6.3 Delete Confirmation Popup Modal
+- Deleting any dimension record (`dim_member`, `dim_group`, `dim_company`, `dim_color`, `dim_type`, `dim_country`) displays a custom, non-blocking **Confirm Delete** modal popup displaying:
+  - Record ID (e.g. `ID: h6YTWUygR5D5QZ2enZ47`)
+  - Item Display Value (e.g. `Value: Siso (22%)`)
+  - Explicit **"Confirm Delete"** (danger button) and **"Cancel"** buttons.
+
+### 6.4 `fact_admin_log` Audit Logs Value Display Rule
+- Audit log messages in `fact_admin_log` must record the display value alongside document IDs for all mutations:
+  - `Deleted ID h6YTWUygR5D5QZ2enZ47 (Siso (22%))`
+  - `Added ID 9mK10xL45z (Catsolute)`
+  - `Updated ID p80xK11m (Red)`
+
+### 6.5 Avatar Image Fallback Rule (Capitalized Letter Icon)
 - All member avatars are rendered via `<MemberAvatar>`.
-- **Error Handling**: If a member avatar URL (`member_image`) is missing, blank, `None`, or fails to render (404, broken link, CDN error), `MemberAvatar` catches the `onError` event and displays a **capitalized initial letter circle icon** styled with the member's theme color border.
+- **Error Handling**: If a member avatar URL (`member_image`) is missing, blank, `None`, or fails to render (404, broken link, CDN error), `MemberAvatar` catches `onError` and displays a **capitalized initial letter circle icon** styled with the member's theme color.
 
-### 6.4 Inline Choice Creation
-- Dropdowns for Group, Company, Color, and Country include a `+ Create New...` option that opens a quick modal to create missing dimension options on the fly.
+### 6.6 Inline Choice Creation
+- Dropdowns for Group, Company, Color, and Country include a `+ Create New...` option opening a quick modal to create missing dimension options on the fly. Must click **Save Choice (Confirm)** to save.
 
 ---
 
-## 7. Verification & Release Criteria
+## 7. Mandatory Documentation Rule
+- **Continuous Spec Updates**: `requirements.md` MUST be updated immediately whenever the user requests a new feature, UI adjustment, or backend fix.
+
+---
+
+## 8. Verification & Release Criteria
 
 Before any code deployment is finalized:
 1. **TypeScript Validation**: Must pass `npx tsc --noEmit` with 0 errors.
 2. **Production Bundle**: Static export must compile cleanly via `npm run build`.
-3. **Git Sync**: Changes committed and pushed to `main` branch.
-4. **Firebase Deployment**: Live application deployed to Firebase Hosting (`https://cheki-tracker-39407.web.app`).
+3. **Git Sync**: Changes committed and pushed to repository.
+4. **Firebase Deployment**: Live application deployed to Firebase Hosting (`https://cheki-tracker-39407.web.app`) & Firestore Security Rules (`firestore.rules`).

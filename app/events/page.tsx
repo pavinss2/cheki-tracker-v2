@@ -70,10 +70,10 @@ export default function EventsPage() {
               <tr>
                 <th>{viewMode === 'DAILY' ? 'Date' : 'Month'}</th>
                 <th>Event Name</th>
-                <th>Attended Members</th>
-                <th>Quantity (pcs)</th>
-                <th>% Share</th>
-                <th>Total Spend (THB)</th>
+                <th>Members</th>
+                <th>QTY</th>
+                <th>%</th>
+                <th>Total (THB)</th>
               </tr>
             </thead>
             <tbody>

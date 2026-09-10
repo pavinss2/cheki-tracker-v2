@@ -79,20 +79,27 @@ export function subscribeToLocalStore(key: string, callback: () => void): () => 
 // TRANSACTIONS
 // ----------------------------------------------------
 
+export function isValidTransaction(t: Partial<Transaction>): boolean {
+  if (!t) return false;
+  const hasMember = Boolean(t.member && t.member.trim() !== "");
+  const hasDate = Boolean(t.date && t.date.trim() !== "");
+  return hasMember || hasDate;
+}
+
 export function subscribeTransactions(
   userId: string,
   onData: (items: Transaction[]) => void,
   isDemo: boolean = false
 ): () => void {
   if (isDemo || !userId || process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes("Demo")) {
-    const seed = INITIAL_TRANSACTIONS.map((t, idx) => ({
+    const seed = INITIAL_TRANSACTIONS.filter(isValidTransaction).map((t, idx) => ({
       ...t,
       id: `trans_${idx + 1}`,
       userId: userId || 'demo-user-id',
       createdAt: new Date().toISOString(),
     }));
     const load = () => {
-      const items = getLocalData<Transaction>(`transactions_${userId || 'demo'}`, seed);
+      const items = getLocalData<Transaction>(`transactions_${userId || 'demo'}`, seed).filter(isValidTransaction);
       onData(items);
     };
     load();
@@ -104,19 +111,22 @@ export function subscribeTransactions(
     return onSnapshot(q, (snapshot) => {
       const items: Transaction[] = [];
       snapshot.forEach((doc) => {
-        items.push({ id: doc.id, ...doc.data() } as Transaction);
+        const d = doc.data() as Transaction;
+        if (isValidTransaction(d)) {
+          items.push({ ...d, id: doc.id });
+        }
       });
       // Sort newest date first
       items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       onData(items);
     }, (error) => {
       console.warn("Firestore transactions subscription failed, fallback to local:", error);
-      const seed = INITIAL_TRANSACTIONS.map((t, idx) => ({
+      const seed = INITIAL_TRANSACTIONS.filter(isValidTransaction).map((t, idx) => ({
         ...t,
         id: `trans_${idx + 1}`,
         userId,
       }));
-      onData(getLocalData<Transaction>(`transactions_${userId}`, seed));
+      onData(getLocalData<Transaction>(`transactions_${userId}`, seed).filter(isValidTransaction));
     });
   } catch {
     return () => {};
@@ -124,6 +134,10 @@ export function subscribeTransactions(
 }
 
 export async function addTransaction(data: Omit<Transaction, 'id'>, isDemo = false): Promise<Transaction> {
+  if (!isValidTransaction(data)) {
+    throw new Error("Cannot save blank transaction (both member and date are empty).");
+  }
+
   const month = data.date ? data.date.substring(0, 7) : "";
   const year = data.date ? data.date.substring(0, 4) : "";
   const payload = {
@@ -195,7 +209,15 @@ export async function deleteTransaction(id: string, userId: string, isDemo = fal
 }
 
 export async function batchUpsertTransactions(userId: string, rows: Omit<Transaction, 'id' | 'userId'>[], isDemo = false): Promise<void> {
-  const processed = rows.map((r, idx) => ({
+  // Enforce strict backend validation: filter out any blank transaction rows
+  const validRows = rows.filter(isValidTransaction);
+
+  if (validRows.length === 0) {
+    console.warn("No valid non-blank transactions to batch upsert.");
+    return;
+  }
+
+  const processed = validRows.map((r, idx) => ({
     ...r,
     userId,
     month: r.date ? r.date.substring(0, 7) : "",
@@ -213,7 +235,7 @@ export async function batchUpsertTransactions(userId: string, rows: Omit<Transac
     }));
     setLocalData(key, [...newItems, ...current]);
     notifyListeners(key);
-    logAdminAction(userId, "BATCH_UPSERT_TRANSACTIONS", `Saved ${rows.length} rows from grid editor`, true);
+    logAdminAction(userId, "BATCH_UPSERT_TRANSACTIONS", `Saved ${validRows.length} rows from grid editor`, true);
     return;
   }
 
@@ -223,12 +245,26 @@ export async function batchUpsertTransactions(userId: string, rows: Omit<Transac
     batch.set(docRef, item);
   });
   await batch.commit();
-  logAdminAction(userId, "BATCH_UPSERT_TRANSACTIONS", `Saved ${rows.length} rows from grid editor`);
+  logAdminAction(userId, "BATCH_UPSERT_TRANSACTIONS", `Saved ${validRows.length} rows from grid editor`);
 }
 
 // ----------------------------------------------------
 // METADATA DIM TABLES
 // ----------------------------------------------------
+
+export function getItemValueString(data: Record<string, unknown>): string {
+  if (!data) return '';
+  if (data.member_name) return `${data.member_name}${data.group ? ` (${data.group})` : ''}`;
+  if (data.group) return String(data.group);
+  if (data.company) return String(data.company);
+  if (data.color) return String(data.color);
+  if (data.type || data.Type) return String(data.type || data.Type);
+  if (data.country || data.displayed_country) return String(data.displayed_country || data.country);
+  if (data.location) return String(data.location);
+  const keys = Object.keys(data).filter(k => k !== 'id' && k !== 'userId' && k !== 'createdAt' && k !== 'updatedAt');
+  if (keys.length > 0) return String(data[keys[0]]);
+  return '';
+}
 
 export function subscribeMetadata<T>(
   tableName: string,
@@ -243,9 +279,19 @@ export function subscribeMetadata<T>(
     userId: userId || 'demo-user-id',
   })) as unknown as T[];
 
+  const sortNewestTop = (list: T[]) => {
+    return [...list].sort((a: any, b: any) => {
+      const timeA = new Date(a.createdAt || a.updatedAt || 0).getTime();
+      const timeB = new Date(b.createdAt || b.updatedAt || 0).getTime();
+      if (timeA !== timeB) return timeB - timeA;
+      return 0; // maintain order if no timestamp
+    });
+  };
+
   if (isDemo || !userId || process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes("Demo")) {
     const load = () => {
-      onData(getLocalData<T>(`${tableName}_${userId || 'demo'}`, seed));
+      const raw = getLocalData<T>(`${tableName}_${userId || 'demo'}`, seed);
+      onData(sortNewestTop(raw));
     };
     load();
     return subscribeToLocalStore(`${tableName}_${userId || 'demo'}`, load);
@@ -259,16 +305,16 @@ export function subscribeMetadata<T>(
         items.push({ id: doc.id, ...doc.data() } as unknown as T);
       });
       if (items.length === 0) {
-        // Auto-seed if brand new user
-        onData(seed);
+        onData(sortNewestTop(seed));
       } else {
-        onData(items);
+        onData(sortNewestTop(items));
       }
     }, () => {
-      onData(getLocalData<T>(`${tableName}_${userId}`, seed));
+      const raw = getLocalData<T>(`${tableName}_${userId}`, seed);
+      onData(sortNewestTop(raw));
     });
   } catch {
-    onData(seed);
+    onData(sortNewestTop(seed));
     return () => {};
   }
 }
@@ -279,19 +325,23 @@ export async function addMetadataDoc<T extends { id: string; userId: string }>(
   data: Record<string, unknown>,
   isDemo = false
 ): Promise<void> {
-  const payload = { ...data, userId, updatedAt: new Date().toISOString() };
+  const now = new Date().toISOString();
+  const payload = { ...data, userId, createdAt: now, updatedAt: now };
+  const valStr = getItemValueString(data);
+
   if (isDemo || process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes("Demo")) {
     const key = `${tableName}_${userId || 'demo'}`;
     const current = getLocalData<T>(key, []);
-    const newDoc = { ...payload, id: `${tableName}_${Date.now()}` } as unknown as T;
+    const newId = `${tableName}_${Date.now()}`;
+    const newDoc = { ...payload, id: newId } as unknown as T;
     setLocalData(key, [newDoc, ...current]);
     notifyListeners(key);
-    logAdminAction(userId, `ADD_${tableName.toUpperCase()}`, `Added ${JSON.stringify(data)}`, true);
+    logAdminAction(userId, `ADD_${tableName.toUpperCase()}`, `Added ID ${newId} (${valStr})`, true);
     return;
   }
 
-  await addDoc(collection(db, tableName), payload);
-  logAdminAction(userId, `ADD_${tableName.toUpperCase()}`, `Added to ${tableName}`);
+  const docRef = await addDoc(collection(db, tableName), payload);
+  logAdminAction(userId, `ADD_${tableName.toUpperCase()}`, `Added ID ${docRef.id} (${valStr})`);
 }
 
 export async function updateMetadataDoc(
@@ -302,37 +352,42 @@ export async function updateMetadataDoc(
   isDemo = false
 ): Promise<void> {
   const payload = { ...data, updatedAt: new Date().toISOString() };
+  const valStr = getItemValueString(data);
+
   if (isDemo || process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes("Demo")) {
     const key = `${tableName}_${userId || 'demo'}`;
     const current = getLocalData<Record<string, unknown> & { id: string }>(key, []);
     const updated = current.map(item => item.id === id ? { ...item, ...payload } : item);
     setLocalData(key, updated);
     notifyListeners(key);
-    logAdminAction(userId, `UPDATE_${tableName.toUpperCase()}`, `Updated ID ${id}`, true);
+    logAdminAction(userId, `UPDATE_${tableName.toUpperCase()}`, `Updated ID ${id} (${valStr})`, true);
     return;
   }
 
   await updateDoc(doc(db, tableName, id), payload);
-  logAdminAction(userId, `UPDATE_${tableName.toUpperCase()}`, `Updated ID ${id}`);
+  logAdminAction(userId, `UPDATE_${tableName.toUpperCase()}`, `Updated ID ${id} (${valStr})`);
 }
 
 export async function deleteMetadataDoc(
   tableName: string,
   id: string,
   userId: string,
+  itemValue?: string,
   isDemo = false
 ): Promise<void> {
+  const valSuffix = itemValue ? ` (${itemValue})` : '';
+
   if (isDemo || process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes("Demo")) {
     const key = `${tableName}_${userId || 'demo'}`;
     const current = getLocalData<{ id: string }>(key, []);
     setLocalData(key, current.filter(item => item.id !== id));
     notifyListeners(key);
-    logAdminAction(userId, `DELETE_${tableName.toUpperCase()}`, `Deleted ID ${id}`, true);
+    logAdminAction(userId, `DELETE_${tableName.toUpperCase()}`, `Deleted ID ${id}${valSuffix}`, true);
     return;
   }
 
   await deleteDoc(doc(db, tableName, id));
-  logAdminAction(userId, `DELETE_${tableName.toUpperCase()}`, `Deleted ID ${id}`);
+  logAdminAction(userId, `DELETE_${tableName.toUpperCase()}`, `Deleted ID ${id}${valSuffix}`);
 }
 
 // ----------------------------------------------------

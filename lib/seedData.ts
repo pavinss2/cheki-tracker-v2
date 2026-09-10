@@ -295,7 +295,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "22%",
     "country": "🇰🇷 KR",
     "company": "Individual",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/2i20_is2bi"
@@ -307,7 +307,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "22%",
     "country": "🇰🇷 KR",
     "company": "Individual",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/chanyiyo_is2bi"
@@ -319,7 +319,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Angevil",
     "country": "🇹🇭 TH",
     "company": "A lot of Tone",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/icezu_angevil"
@@ -331,7 +331,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Angevil",
     "country": "🇹🇭 TH",
     "company": "A lot of Tone",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/misakx_da_re"
@@ -343,7 +343,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Angevil",
     "country": "🇹🇭 TH",
     "company": "A lot of Tone",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/MiuLUMINUS"
@@ -355,7 +355,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Angevil",
     "country": "🇹🇭 TH",
     "company": "A lot of Tone",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/NeneLUMINUS"
@@ -367,7 +367,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Castella",
     "country": "🇹🇭 TH",
     "company": "A lot of Tone",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/Nadear_CMJ"
@@ -379,7 +379,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Dream:0n",
     "country": "🇹🇭 TH",
     "company": "Catsolute",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/moya_dream0n"
@@ -391,7 +391,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Dream:0n",
     "country": "🇹🇭 TH",
     "company": "Catsolute",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/Ploy_dream0n"
@@ -403,7 +403,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Dream:0n",
     "country": "🇹🇭 TH",
     "company": "Catsolute",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/snowy_dream0n"
@@ -415,34 +415,34 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Dream:0n",
     "country": "🇹🇭 TH",
     "company": "Catsolute",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/jasmine_dream0n"
   },
   {
     "member_name": "Chihiro",
-    "member_image": "#N/A",
+    "member_image": "",
     "color": "White",
     "group": "Eclipse",
     "country": "🇹🇼 TW",
     "company": "Individual",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "2026-02-28",
     "is_active": false,
-    "x_profile": "N/A"
+    "x_profile": ""
   },
   {
     "member_name": "Megu",
-    "member_image": "#N/A",
+    "member_image": "",
     "color": "Red",
     "group": "Fructose",
     "country": "🇹🇼 TW",
     "company": "SSR",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
-    "x_profile": "N/A"
+    "x_profile": ""
   },
   {
     "member_name": "Yua",
@@ -451,14 +451,14 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Fructose",
     "country": "🇹🇼 TW",
     "company": "SSR",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/lenaloka1220"
   },
   {
     "member_name": "Chihiro",
-    "member_image": "#N/A",
+    "member_image": "",
     "color": "Blue",
     "group": "Genpa SYNC",
     "country": "🇹🇼 TW",
@@ -466,7 +466,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "start_date": "2026-03-01",
     "end_date": "9999-12-31",
     "is_active": true,
-    "x_profile": "N/A"
+    "x_profile": ""
   },
   {
     "member_name": "Ruby 🎸",
@@ -475,7 +475,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "H7KD",
     "country": "🇰🇷 KR",
     "company": "EDEN",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/YOiSHOi_RUBY"
@@ -487,7 +487,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "H7KD",
     "country": "🇰🇷 KR",
     "company": "EDEN",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/H7KD_yoru"
@@ -511,7 +511,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Jinks",
     "country": "🇯🇵 JP",
     "company": "Individual",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/hono_JINKS"
@@ -523,7 +523,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Kagereru",
     "country": "🇰🇷 KR",
     "company": "Atelier",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/KageReru_mini"
@@ -535,7 +535,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "KISEO",
     "country": "🇰🇷 KR",
     "company": "Individual",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/KISEO_AMU"
@@ -547,7 +547,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "KISEO",
     "country": "🇰🇷 KR",
     "company": "Individual",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/KISEO_NARA"
@@ -559,7 +559,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "KISEO",
     "country": "🇰🇷 KR",
     "company": "Individual",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/KISEO_NEGI"
@@ -571,7 +571,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "KISEO",
     "country": "🇰🇷 KR",
     "company": "Individual",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/KISEO_ZERO"
@@ -583,7 +583,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "KOKOIYA",
     "country": "🇰🇷 KR",
     "company": "Sooso Ent",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/kokoiya_haruna"
@@ -595,7 +595,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "KOKOIYA",
     "country": "🇰🇷 KR",
     "company": "Sooso Ent",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/ioona_HINA"
@@ -607,7 +607,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "KOKOIYA",
     "country": "🇰🇷 KR",
     "company": "Sooso Ent",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/ioona_MATSU"
@@ -619,7 +619,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Meikai",
     "country": "🇹🇼 TW",
     "company": "Individual",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "2026-02-28",
     "is_active": false,
     "x_profile": "https://x.com/inori_meikai"
@@ -631,7 +631,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "MEMORIA",
     "country": "🇰🇷 KR",
     "company": "Atelier",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/COCO_MEMORIA"
@@ -643,7 +643,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "MEMORIA",
     "country": "🇰🇷 KR",
     "company": "Atelier",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/ROSE_MEMORIA"
@@ -655,7 +655,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Mewro",
     "country": "🇰🇷 KR",
     "company": "Individual",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/Mewro_H1AH"
@@ -667,7 +667,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Mewro",
     "country": "🇰🇷 KR",
     "company": "Individual",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/Mewro_NAB2"
@@ -679,7 +679,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Mewro",
     "country": "🇰🇷 KR",
     "company": "Individual",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/Mewro_N3ON"
@@ -691,7 +691,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Mirai Mirai",
     "country": "🇹🇭 TH",
     "company": "Catsolute",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/gracenae_mirai"
@@ -703,7 +703,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Mirai Mirai",
     "country": "🇹🇭 TH",
     "company": "Catsolute",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/kartun_mirai"
@@ -715,7 +715,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Mirai Mirai",
     "country": "🇹🇭 TH",
     "company": "Catsolute",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/Kris_miraimirai"
@@ -727,7 +727,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Mirai Mirai",
     "country": "🇹🇭 TH",
     "company": "Catsolute",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/Pear_miraimirai"
@@ -739,7 +739,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Mirai Mirai",
     "country": "🇹🇭 TH",
     "company": "Catsolute",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/pixels_mirai"
@@ -751,22 +751,22 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Mirai Mirai",
     "country": "🇹🇭 TH",
     "company": "Catsolute",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/sai_miraimirai"
   },
   {
     "member_name": "Chikane",
-    "member_image": "#N/A",
+    "member_image": "",
     "color": "N/A",
     "group": "N/A",
     "country": "🇯🇵 JP",
     "company": "Individual",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
-    "x_profile": "N/A"
+    "x_profile": ""
   },
   {
     "member_name": "Rai",
@@ -775,7 +775,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Nekiru",
     "country": "🇰🇷 KR",
     "company": "Sooso Ent",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/Nekiru_RAI"
@@ -787,46 +787,46 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Nekiru",
     "country": "🇰🇷 KR",
     "company": "Sooso Ent",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/Nekiru_YUZU_"
   },
   {
     "member_name": "Lili",
-    "member_image": "#N/A",
+    "member_image": "",
     "color": "Red",
     "group": "Neko Pon",
     "country": "🇹🇭 TH",
     "company": "GenAI",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
-    "x_profile": "N/A"
+    "x_profile": ""
   },
   {
     "member_name": "Notepleng",
-    "member_image": "#N/A",
+    "member_image": "",
     "color": "Blue",
     "group": "Neko Pon",
     "country": "🇹🇭 TH",
     "company": "GenAI",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
-    "x_profile": "N/A"
+    "x_profile": ""
   },
   {
     "member_name": "Cherri",
-    "member_image": "#N/A",
+    "member_image": "",
     "color": "Pink",
     "group": "NeoBooster",
     "country": "🇨🇳 CN",
     "company": "Individual",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
-    "x_profile": "N/A"
+    "x_profile": ""
   },
   {
     "member_name": "Kuyo",
@@ -835,7 +835,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "NO LiMIT",
     "country": "🇰🇷 KR",
     "company": "EDEN",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/NoLimit_Kuyo"
@@ -847,7 +847,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "NO LiMIT",
     "country": "🇰🇷 KR",
     "company": "EDEN",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/NoLimit_7uka"
@@ -859,7 +859,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "NO LiMIT",
     "country": "🇰🇷 KR",
     "company": "EDEN",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/NoLimit_YRK"
@@ -871,7 +871,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "NO LiMIT",
     "country": "🇰🇷 KR",
     "company": "EDEN",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/NoLimit_Zer0"
@@ -883,7 +883,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Nox:0ff",
     "country": "🇹🇭 TH",
     "company": "Catsolute",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/Bowie_Nox0ff"
@@ -902,27 +902,27 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
   },
   {
     "member_name": "Sekine",
-    "member_image": "#N/A",
+    "member_image": "",
     "color": "White",
     "group": "ReaLume",
     "country": "🇨🇳 CN",
     "company": "Individual",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
-    "x_profile": "N/A"
+    "x_profile": ""
   },
   {
     "member_name": "Otori",
-    "member_image": "#N/A",
+    "member_image": "",
     "color": "Blue",
     "group": "ReaLume",
     "country": "🇨🇳 CN",
     "company": "Individual",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
-    "x_profile": "N/A"
+    "x_profile": ""
   },
   {
     "member_name": "Imy",
@@ -931,7 +931,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Silver Lining",
     "country": "🇹🇭 TH",
     "company": "Individual",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/Imy_SVLN"
@@ -943,7 +943,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Solanin",
     "country": "🇰🇷 KR",
     "company": "Individual",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/solanin_riyu"
@@ -955,7 +955,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Solanin",
     "country": "🇰🇷 KR",
     "company": "Individual",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/solanin_ruby"
@@ -967,7 +967,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Sora Sora",
     "country": "🇹🇭 TH",
     "company": "Catsolute",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/ame_sorasora"
@@ -979,7 +979,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Sora Sora",
     "country": "🇹🇭 TH",
     "company": "Catsolute",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/Jennie_sorasora"
@@ -991,7 +991,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Sora Sora",
     "country": "🇹🇭 TH",
     "company": "Catsolute",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/Minmin_SoraSora"
@@ -1003,7 +1003,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Sora Sora",
     "country": "🇹🇭 TH",
     "company": "Catsolute",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/Pin_SoraSora"
@@ -1015,7 +1015,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Sora Sora",
     "country": "🇹🇭 TH",
     "company": "Catsolute",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "2026-01-10",
     "is_active": false,
     "x_profile": "https://x.com/Yiwha_Nox0ff"
@@ -1027,7 +1027,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "TGG",
     "country": "🇹🇭 TH",
     "company": "IC45",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/pimgalet"
@@ -1039,7 +1039,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "THERAREZ",
     "country": "🇹🇼 TW",
     "company": "Individual",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/therarez_kamu"
@@ -1051,7 +1051,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "XINXIN",
     "country": "🇯🇵 JP",
     "company": "Individual",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/xinxin_azu"
@@ -1063,7 +1063,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Yami Yami",
     "country": "🇹🇭 TH",
     "company": "Catsolute",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/eri_yamiyami"
@@ -1075,7 +1075,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Yami Yami",
     "country": "🇹🇭 TH",
     "company": "Catsolute",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/haru_ymym"
@@ -1087,7 +1087,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Yami Yami",
     "country": "🇹🇭 TH",
     "company": "Catsolute",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/janyamiyami"
@@ -1099,7 +1099,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Yami Yami",
     "country": "🇹🇭 TH",
     "company": "Catsolute",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/kwang_yamiyami"
@@ -1111,7 +1111,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Yami Yami",
     "country": "🇹🇭 TH",
     "company": "Catsolute",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/nori_yamiyami"
@@ -1123,7 +1123,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Yami Yami",
     "country": "🇹🇭 TH",
     "company": "Catsolute",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/praew_yamiyami"
@@ -1135,7 +1135,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Yami Yami",
     "country": "🇹🇭 TH",
     "company": "Catsolute",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/punch_yamiyami"
@@ -1147,7 +1147,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Yami Yami",
     "country": "🇹🇭 TH",
     "company": "Catsolute",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/tonliw_yamiyami"
@@ -1159,7 +1159,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Yami Yami",
     "country": "🇹🇭 TH",
     "company": "Catsolute",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/xiuzhen_yami"
@@ -1171,7 +1171,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Nox:0ff",
     "country": "🇹🇭 TH",
     "company": "Catsolute",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/Time_Nox0ff"
@@ -1183,7 +1183,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Nekiru",
     "country": "🇰🇷 KR",
     "company": "Sooso Ent",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/Nekiru_SOHA"
@@ -1195,7 +1195,7 @@ export const DEFAULT_MEMBERS: Omit<DimMember, 'id' | 'userId'>[] = [
     "group": "Nekiru",
     "country": "🇰🇷 KR",
     "company": "Sooso Ent",
-    "start_date": "1000-12-26",
+    "start_date": "1001-01-01",
     "end_date": "9999-12-31",
     "is_active": true,
     "x_profile": "https://x.com/Nekiru_EVER__"
@@ -29104,3 +29104,4 @@ export const INITIAL_TRANSACTIONS: Omit<Transaction, 'id' | 'userId'>[] = [
     "company": ""
   }
 ];
+
