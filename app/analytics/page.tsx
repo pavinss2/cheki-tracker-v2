@@ -1,0 +1,340 @@
+'use client';
+
+import React, { useState, useMemo } from 'react';
+import { useChekiData } from '@/hooks/useChekiData';
+import { FilterBar } from '@/components/layout/FilterBar';
+import { useAuth } from '@/context/AuthContext';
+import { LoginPrompt } from '@/components/layout/LoginPrompt';
+import { MemberAvatar } from '@/components/common/MemberAvatar';
+import { Award, Trophy } from 'lucide-react';
+
+export default function AnalyticsPage() {
+  const { user, isDemoUser } = useAuth();
+  const { allTransactions, filteredTransactions, members, colors, loading } = useChekiData();
+
+  const [dimension, setDimension] = useState<'MEMBER' | 'GROUP' | 'COLOR'>('MEMBER');
+  const [metric, setMetric] = useState<'qty' | 'price'>('qty');
+  const [viewMode, setViewMode] = useState<'GRAPH' | 'TABLE'>('GRAPH');
+
+  const colorHexMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    colors.forEach((c) => {
+      map[c.color] = c.color_code;
+    });
+    return map;
+  }, [colors]);
+
+  const memberMetaMap = useMemo(() => {
+    const map: Record<string, { image: string; colorHex: string }> = {};
+    members.forEach((m) => {
+      const hex = colorHexMap[m.color] || '#58a6ff';
+      map[m.member_name] = {
+        image: m.member_image && m.member_image !== 'None' ? m.member_image : '',
+        colorHex: hex,
+      };
+    });
+    return map;
+  }, [members, colorHexMap]);
+
+  const aggregatedData = useMemo(() => {
+    const map: Record<string, { name: string; qty: number; price: number; colorHex: string; image: string }> = {};
+
+    filteredTransactions.forEach((r) => {
+      let key = r.member || 'Unknown';
+      if (dimension === 'GROUP') key = r.group || 'Unknown';
+      if (dimension === 'COLOR') key = r.color || 'Unknown';
+
+      if (!map[key]) {
+        let hex = '#58a6ff';
+        let img = '';
+        if (dimension === 'MEMBER' && memberMetaMap[key]) {
+          hex = memberMetaMap[key].colorHex;
+          img = memberMetaMap[key].image;
+        } else if (dimension === 'COLOR' && colorHexMap[key]) {
+          hex = colorHexMap[key];
+        }
+
+        map[key] = {
+          name: key,
+          qty: 0,
+          price: 0,
+          colorHex: hex,
+          image: img,
+        };
+      }
+
+      map[key].qty += (r.quantity || 1);
+      map[key].price += (r.totalPrice || 0);
+    });
+
+    const items = Object.values(map).filter(
+      (item) => item.name && item.name !== 'Unknown' && item.name.trim() !== ''
+    );
+    items.sort((a, b) => (metric === 'qty' ? b.qty - a.qty : b.price - a.price));
+    return items;
+  }, [filteredTransactions, dimension, metric, memberMetaMap, colorHexMap]);
+
+  const maxVal = useMemo(() => {
+    if (aggregatedData.length === 0) return 1;
+    const top = aggregatedData[0];
+    return metric === 'qty' ? top.qty : top.price;
+  }, [aggregatedData, metric]);
+
+  if (!user && !isDemoUser) return <LoginPrompt />;
+  if (loading) return <div className="loading-state">Loading Analytics...</div>;
+
+  return (
+    <div className="analytics-page">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Analytics</h1>
+        </div>
+      </div>
+
+      <FilterBar transactions={allTransactions} />
+
+      {/* Control Bar */}
+      <div className="controls-card card">
+        <div className="control-group">
+          <label>Dimension:</label>
+          <div className="btn-group">
+            <button className={`btn-toggle ${dimension === 'MEMBER' ? 'active' : ''}`} onClick={() => setDimension('MEMBER')}>Member</button>
+            <button className={`btn-toggle ${dimension === 'GROUP' ? 'active' : ''}`} onClick={() => setDimension('GROUP')}>Group</button>
+            <button className={`btn-toggle ${dimension === 'COLOR' ? 'active' : ''}`} onClick={() => setDimension('COLOR')}>Color</button>
+          </div>
+        </div>
+
+        <div className="control-group">
+          <label>Metric:</label>
+          <div className="btn-group">
+            <button className={`btn-toggle ${metric === 'qty' ? 'active' : ''}`} onClick={() => setMetric('qty')}>Quantity (pcs)</button>
+            <button className={`btn-toggle ${metric === 'price' ? 'active' : ''}`} onClick={() => setMetric('price')}>Total Spend (THB)</button>
+          </div>
+        </div>
+
+        <div className="control-group">
+          <label>Mode:</label>
+          <div className="btn-group">
+            <button className={`btn-toggle ${viewMode === 'GRAPH' ? 'active' : ''}`} onClick={() => setViewMode('GRAPH')}>Bar Graph</button>
+            <button className={`btn-toggle ${viewMode === 'TABLE' ? 'active' : ''}`} onClick={() => setViewMode('TABLE')}>Data Table</button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main View - Aligned Columns Layout Matching Attached Image: Rank(#), Trophy, Member Image, Name, Bar, Number */}
+      {viewMode === 'GRAPH' ? (
+        <div className="chart-card card">
+          <h2>{dimension} Ranking ({metric === 'qty' ? 'Quantity' : 'Total Spend'})</h2>
+
+          <div className="custom-bar-list">
+            {aggregatedData.map((item, idx) => {
+              const val = metric === 'qty' ? item.qty : item.price;
+              const pct = maxVal > 0 ? (val / maxVal) * 100 : 0;
+              const rank = idx + 1;
+
+              return (
+                <div key={item.name} className="leaderboard-row">
+                  {/* Column 1: Rank(#) */}
+                  <span className="col-rank">#{rank}</span>
+
+                  {/* Column 2: Trophy */}
+                  <div className="col-trophy">
+                    {rank === 1 && <Trophy size={18} color="#f59e0b" fill="#f59e0b" />}
+                    {rank === 2 && <Trophy size={18} color="#9ca3af" fill="#9ca3af" />}
+                    {rank === 3 && <Trophy size={18} color="#d97706" fill="#d97706" />}
+                  </div>
+
+                  {/* Column 3: Member Image / Avatar Fallback */}
+                  {dimension === 'MEMBER' && (
+                    <div className="col-avatar">
+                      <MemberAvatar 
+                        src={item.image} 
+                        name={item.name} 
+                        size={36} 
+                        colorHex={item.colorHex} 
+                      />
+                    </div>
+                  )}
+
+                  {/* Column 4: Member Name */}
+                  <span className="col-name">{item.name}</span>
+
+                  {/* Column 5: Progress Bar */}
+                  <div className="col-bar-container">
+                    <div className="bar-track">
+                      <div
+                        className="bar-fill"
+                        style={{
+                          width: `${pct}%`,
+                          backgroundColor: item.colorHex || '#58a6ff',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Column 6: Number */}
+                  <span className="col-number">
+                    {metric === 'qty' ? val : `฿${val.toLocaleString()}`}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div className="table-card card">
+          <h2>{dimension} Pivot Table</h2>
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  {dimension === 'MEMBER' && <th>Avatar</th>}
+                  <th>{dimension}</th>
+                  <th>Quantity (pcs)</th>
+                  <th>Total Spend (THB)</th>
+                  <th>Avg Price / Cheki</th>
+                </tr>
+              </thead>
+              <tbody>
+                {aggregatedData.map((item, idx) => (
+                  <tr key={item.name}>
+                    <td>
+                      <span className="rank-badge">
+                        {idx < 3 ? <Award size={14} className="gold" /> : idx + 1}
+                      </span>
+                    </td>
+                    {dimension === 'MEMBER' && (
+                      <td>
+                        <MemberAvatar src={item.image} name={item.name} size={30} colorHex={item.colorHex} />
+                      </td>
+                    )}
+                    <td><strong>{item.name}</strong></td>
+                    <td>{item.qty} pcs</td>
+                    <td>฿{item.price.toLocaleString()} THB</td>
+                    <td>฿{item.qty > 0 ? Math.round(item.price / item.qty).toLocaleString() : 0}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        .analytics-page {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+
+        .page-title { font-size: 1.6rem; }
+
+        .controls-card {
+          display: flex;
+          gap: 24px;
+          flex-wrap: wrap;
+          align-items: center;
+        }
+
+        .control-group { display: flex; align-items: center; gap: 8px; }
+        .control-group label { font-size: 0.78rem; font-weight: 600; color: var(--text-subtle); }
+
+        .btn-group {
+          display: flex;
+          background-color: var(--bg-surface-2);
+          padding: 3px;
+          border-radius: var(--radius-sm);
+          border: 1px solid var(--border-subtle);
+        }
+
+        .btn-toggle {
+          background: none; border: none; color: var(--text-muted); padding: 6px 12px; font-size: 0.78rem; font-weight: 500; border-radius: 4px; cursor: pointer;
+          &.active { background-color: var(--bg-surface-3); color: var(--text-main); font-weight: 600; }
+        }
+
+        /* Leaderboard List Column Alignment (Rank, Trophy, Member Image, Name, Bar, Number) */
+        .custom-bar-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          margin-top: 18px;
+        }
+
+        .leaderboard-row {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          padding: 6px 0;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .col-rank {
+          font-size: 0.9rem;
+          font-weight: 700;
+          color: var(--text-subtle);
+          width: 36px;
+          flex-shrink: 0;
+        }
+
+        .col-trophy {
+          width: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .col-avatar {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .col-name {
+          font-weight: 600;
+          font-size: 0.92rem;
+          color: var(--text-main);
+          width: 120px;
+          flex-shrink: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .col-bar-container {
+          flex: 1;
+          display: flex;
+          align-items: center;
+        }
+
+        .bar-track {
+          width: 100%;
+          height: 18px;
+          background-color: #1e212b;
+          border-radius: 9px;
+          overflow: hidden;
+          border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .bar-fill {
+          height: 100%;
+          border-radius: 9px;
+          transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .col-number {
+          font-weight: 700;
+          font-size: 1.05rem;
+          color: #58a6ff;
+          width: 50px;
+          text-align: right;
+          flex-shrink: 0;
+        }
+
+        .table-wrapper { margin-top: 16px; overflow-x: auto; }
+      `}</style>
+    </div>
+  );
+}
