@@ -408,7 +408,7 @@ export default function RawDataPage() {
         <button className="btn btn-secondary" onClick={() => setShowRuleModal(true)}>
           <Settings size={16} /> Price Rules
         </button>
-        <button className="btn btn-secondary" onClick={() => setShowPasteModal(true)}>
+        <button className="btn btn-secondary btn-paste-tsv" onClick={() => setShowPasteModal(true)}>
           <Clipboard size={16} /> Paste TSV
         </button>
         <button className="btn btn-secondary" onClick={handleAddBlankRow}>
@@ -783,6 +783,12 @@ export default function RawDataPage() {
           gap: 12px;
           flex-wrap: wrap;
           align-items: center;
+        }
+
+        @media (max-width: 768px) {
+          .btn-paste-tsv {
+            display: none !important;
+          }
         }
 
         .success-banner {

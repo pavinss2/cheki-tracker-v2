@@ -50,6 +50,8 @@ The application employs a dual-storage strategy to ensure real-time Cloud persis
 - **Active Navigation Accent**: **Gold / Amber (`#d4a84b`)** with a subtle background tint (`rgba(212, 168, 75, 0.18)`).
 
 ### 2.2 Sidebar & Navigation Bar Rules
+- **Navigation Order**: The tab navigation order across desktop sidebar (`Sidebar`) and mobile bottom bar (`MobileNav`) is strictly:
+  `Home` $\rightarrow$ `Calendar` $\rightarrow$ `Analytics` $\rightarrow$ `Raw Data` $\rightarrow$ `Events` $\rightarrow$ `Admin`.
 - **Sidebar Tab Active State**:
   - **No Left Border**: Left border highlight line is explicitly removed.
   - Active tab text and SVG icons are rendered in **Gold / Amber (`#d4a84b`)**.
@@ -69,9 +71,10 @@ The application employs a dual-storage strategy to ensure real-time Cloud persis
 ### 2.4 Global App Header & Raw Data Header Actions Placement
 - **Global App Header Title Integration**:
   - Individual page title headings (`<h1 className="page-title">`) are removed from content card areas across all tab views.
-  - The current page title (e.g. `Home`, `Calendar`, `Raw Data`, `Analytics`, `Events`, `Back Office`) is dynamically displayed on the **top-left of the global application header bar (`app-header`)**.
+  - The current page title (e.g. `Home`, `Calendar`, `Analytics`, `Raw Data`, `Events`, `Back Office`) is dynamically displayed on the **top-left of the global application header bar (`app-header`)**.
 - **Raw Data Action Controls Placement**:
   - In the Raw Data tab, all integrated action controls (`Price Rules`, `Paste TSV`, `Add Blank Row`, `Save All`) are positioned in `.raw-actions-bar` directly **underneath the `<FilterBar>`**.
+  - **Mobile Paste TSV Hiding Rule**: The `Paste TSV` button (`.btn-paste-tsv`) is **hidden on mobile viewports ($\le 768\text{px}$)** (`display: none !important`) to save horizontal layout space.
 
 ---
 

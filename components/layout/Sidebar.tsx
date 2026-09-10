@@ -16,8 +16,8 @@ import {
 const NAV_ITEMS = [
   { label: 'Home', href: '/', icon: Home },
   { label: 'Calendar', href: '/calendar', icon: Calendar },
-  { label: 'Raw Data', href: '/raw',  icon: Table },
   { label: 'Analytics', href: '/analytics', icon: BarChart2 },
+  { label: 'Raw Data', href: '/raw', icon: Table },
   { label: 'Events', href: '/events', icon: CalendarDays },
   { label: 'Admin', href: '/admin', icon: Settings },
 ];
