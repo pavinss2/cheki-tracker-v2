@@ -191,7 +191,7 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
   - Rank #2: Silver trophy icon (`#e2e8f0`), Silver avatar border (`#e2e8f0`).
   - Rank #3: Bronze trophy icon (`#d97706`), Bronze avatar border (`#d97706`).
   - Rank #4+: No trophy icon displayed, Crisp white avatar border (`#ffffff`).
-- **Unbolded Metric Numbers**: Values in `.col-number` are rendered unbolded (`font-weight: 400`) in light blue (`#58a6ff`) matching screenshot specs.
+- **Unbolded Dimension Names & Metric Numbers**: Both the dimension item names (`.col-name`) and values (`.col-number`) are rendered unbolded (`font-weight: 400`) for a clean visual hierarchy matching screenshot specs.
 - **Curved Pill Graph Angles**: Both `.bar-track` (`background-color: #262626`) and `.bar-fill` enforce fully rounded pill angles (`border-radius: 9999px`).
 - **Enlarged Elements & Compact Row Spacing**: MemberAvatar size set to `34px`, Trophy icon size set to `20px`, member name font size set to `0.98rem`, with row gap set to `6px` (`gap: 6px`) to ensure optimal fit on mobile screens.
 

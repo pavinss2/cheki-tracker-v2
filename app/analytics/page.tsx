@@ -234,7 +234,7 @@ export default function AnalyticsPage() {
 
         .col-rank {
           font-size: 0.88rem;
-          font-weight: 700;
+          font-weight: 400;
           color: var(--text-subtle);
           min-width: 24px;
           flex-shrink: 0;
@@ -256,7 +256,7 @@ export default function AnalyticsPage() {
         }
 
         .col-name {
-          font-weight: 600;
+          font-weight: 400;
           font-size: 0.98rem;
           color: var(--text-main);
           max-width: 95px;
