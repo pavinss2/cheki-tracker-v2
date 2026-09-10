@@ -80,3 +80,12 @@ export function groupTransactionsByImage(rows: Transaction[]): GroupedChekiPhoto
 
   return Array.from(map.values());
 }
+
+/**
+ * Helper to strip parenthetical text from display names,
+ * e.g., "Zero (NOLiMIT)" -> "Zero", "Siso (22%)" -> "Siso"
+ */
+export function formatDisplayName(name: string | undefined | null): string {
+  if (!name || typeof name !== 'string') return '';
+  return name.replace(/\s*\([^)]*\)/g, '').trim();
+}

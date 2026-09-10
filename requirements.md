@@ -180,6 +180,14 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
   - Filter bars across all pages (`FilterBar`) automatically wrap into a fitted 2-column grid (`grid-template-columns: repeat(2, 1fr)`) on mobile screens ($\le 768\text{px}$).
   - All select dropdowns in the filter bar use `width: 100%; max-width: 100%; min-width: 0; text-overflow: ellipsis;` so filters fit neatly within the mobile viewport without overflowing or getting cut off.
 
+### 6.8 Parenthetical Display Name Formatting Rule (`formatDisplayName`)
+- **Parenthesis Stripping Rule**: Any member name containing text inside parentheses (e.g. `"Zero (NOLiMIT)"`, `"Siso (22%)"`) will automatically have the parentheses and enclosed content removed for UI display (e.g. `"Zero (NOLiMIT)"` renders as `"Zero"`, `"Siso (22%)"` renders as `"Siso"`).
+- **Implementation**: Handled centrally via `formatDisplayName(name)` in [lib/imageUtils.ts](file:///Users/pavin/01%20Pavin%20Coding/cheki-tracker-v2/lib/imageUtils.ts) (`name.replace(/\s*\([^)]*\)/g, '').trim()`) and applied across Analytics Leaderboard / Bar Graph rows, Data Tables, Member Avatars, Admin `dim_member` table, and Raw Data transaction tables.
+
+### 6.9 Compact Mobile Analytics Leaderboard Layout
+- **Mobile Progress Bar Visibility**: In `Analytics` tab (Bar Graph View), the leaderboard row layout (`.leaderboard-row`) on mobile displays is optimized by tightening spacing (`gap: 8px`), reducing fixed widths (`.col-rank: min-width: 26px`, `.col-trophy: 18px`, `.col-avatar: 28px`, `.col-name: max-width: 85px`, `.col-number: min-width: 28px`), and expanding `.col-bar-container` (`flex: 1; min-width: 60px`).
+- **Result**: Ensures horizontal progress bars (`bar-track` / `bar-fill`) remain clearly visible and readable alongside rank, trophy icon, avatar, member name, and numeric metrics across all mobile viewports.
+
 ---
 
 ## 7. Mandatory Documentation Rule

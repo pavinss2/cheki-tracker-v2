@@ -8,6 +8,7 @@ import { LoginPrompt } from '@/components/layout/LoginPrompt';
 import { MemberAvatar } from '@/components/common/MemberAvatar';
 import { Award, Trophy } from 'lucide-react';
 import { CircularSpinner } from '@/components/common/CircularSpinner';
+import { formatDisplayName } from '@/lib/imageUtils';
 
 export default function AnalyticsPage() {
   const { user, isDemoUser } = useAuth();
@@ -151,14 +152,14 @@ export default function AnalyticsPage() {
                       <MemberAvatar 
                         src={item.image} 
                         name={item.name} 
-                        size={36} 
+                        size={28} 
                         colorHex={item.colorHex} 
                       />
                     </div>
                   )}
 
                   {/* Column 4: Member Name */}
-                  <span className="col-name">{item.name}</span>
+                  <span className="col-name">{dimension === 'MEMBER' ? formatDisplayName(item.name) : item.name}</span>
 
                   {/* Column 5: Progress Bar */}
                   <div className="col-bar-container">
@@ -211,7 +212,7 @@ export default function AnalyticsPage() {
                         <MemberAvatar src={item.image} name={item.name} size={30} colorHex={item.colorHex} />
                       </td>
                     )}
-                    <td><strong>{item.name}</strong></td>
+                    <td><strong>{dimension === 'MEMBER' ? formatDisplayName(item.name) : item.name}</strong></td>
                     <td>{item.qty} pcs</td>
                     <td>฿{item.price.toLocaleString()} THB</td>
                     <td>฿{item.qty > 0 ? Math.round(item.price / item.qty).toLocaleString() : 0}</td>
@@ -262,28 +263,28 @@ export default function AnalyticsPage() {
         .custom-bar-list {
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 10px;
           margin-top: 18px;
         }
 
         .leaderboard-row {
           display: flex;
           align-items: center;
-          gap: 14px;
+          gap: 8px;
           padding: 6px 0;
           border-bottom: 1px solid rgba(255, 255, 255, 0.03);
         }
 
         .col-rank {
-          font-size: 0.9rem;
+          font-size: 0.85rem;
           font-weight: 700;
           color: var(--text-subtle);
-          width: 36px;
+          min-width: 26px;
           flex-shrink: 0;
         }
 
         .col-trophy {
-          width: 24px;
+          width: 18px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -299,9 +300,10 @@ export default function AnalyticsPage() {
 
         .col-name {
           font-weight: 600;
-          font-size: 0.92rem;
+          font-size: 0.85rem;
           color: var(--text-main);
-          width: 120px;
+          max-width: 85px;
+          min-width: 44px;
           flex-shrink: 0;
           white-space: nowrap;
           overflow: hidden;
@@ -310,22 +312,23 @@ export default function AnalyticsPage() {
 
         .col-bar-container {
           flex: 1;
+          min-width: 60px;
           display: flex;
           align-items: center;
         }
 
         .bar-track {
           width: 100%;
-          height: 18px;
+          height: 16px;
           background-color: #1e212b;
-          border-radius: 9px;
+          border-radius: 8px;
           overflow: hidden;
           border: 1px solid rgba(255,255,255,0.05);
         }
 
         .bar-fill {
           height: 100%;
-          border-radius: 9px;
+          border-radius: 8px;
           transform-origin: left;
           animation: barEmerge 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
           transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -344,9 +347,9 @@ export default function AnalyticsPage() {
 
         .col-number {
           font-weight: 700;
-          font-size: 1.05rem;
-          color: #ffffff;
-          width: 50px;
+          font-size: 0.95rem;
+          color: #58a6ff;
+          min-width: 28px;
           text-align: right;
           flex-shrink: 0;
         }

@@ -28,7 +28,7 @@ import {
   FileSpreadsheet
 } from 'lucide-react';
 
-import { extractDirectImageUrl, groupTransactionsByImage } from '@/lib/imageUtils';
+import { extractDirectImageUrl, groupTransactionsByImage, formatDisplayName } from '@/lib/imageUtils';
 import { LightboxGallery, LightboxItem } from '@/components/common/LightboxGallery';
 import { CircularSpinner } from '@/components/common/CircularSpinner';
 import { PriceRuleBuilderModal } from '@/components/grid-editor/PriceRuleBuilderModal';
@@ -585,7 +585,7 @@ export default function RawDataPage() {
                       )}
                     </td>
                     <td className="clickable-cell" onClick={() => addCellFilter('year', r.year)} title={`Drilldown by Year: ${r.year}`}>{r.date}</td>
-                    <td className="clickable-cell" onClick={() => addCellFilter('member', r.member)} title={`Drilldown by Member: ${r.member}`}>{r.member}</td>
+                    <td className="clickable-cell" onClick={() => addCellFilter('member', r.member)} title={`Drilldown by Member: ${r.member}`}>{formatDisplayName(r.member)}</td>
                     <td className="clickable-cell" onClick={() => addCellFilter('group', r.group)} title={`Drilldown by Group: ${r.group}`}>{r.group}</td>
                     <td className="clickable-cell" onClick={() => addCellFilter('color', r.color)} title={`Drilldown by Color: ${r.color}`}>
                       <span className="color-badge" style={{ backgroundColor: r.color?.toLowerCase() === 'white' ? '#fff' : r.color?.toLowerCase() }}>

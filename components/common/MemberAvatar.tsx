@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { extractDirectImageUrl } from '@/lib/imageUtils';
+import { extractDirectImageUrl, formatDisplayName } from '@/lib/imageUtils';
 
 interface MemberAvatarProps {
   src?: string;
@@ -20,7 +20,8 @@ export const MemberAvatar: React.FC<MemberAvatarProps> = ({
 }) => {
   const [hasError, setHasError] = useState(false);
   const cleanUrl = extractDirectImageUrl(src);
-  const initial = (name || '?').trim().charAt(0).toUpperCase();
+  const displayName = formatDisplayName(name);
+  const initial = (displayName || name || '?').trim().charAt(0).toUpperCase();
 
   const showFallback = !cleanUrl || hasError;
 

@@ -8,6 +8,7 @@ import { LoginPrompt } from '@/components/layout/LoginPrompt';
 import { Plus, Edit2, Trash2, Shield, Users, Building, Flag, Palette, Layers, Tag, X, Save, ArrowUpDown, ExternalLink, Lock } from 'lucide-react';
 import { CircularSpinner } from '@/components/common/CircularSpinner';
 import { MemberAvatar } from '@/components/common/MemberAvatar';
+import { formatDisplayName } from '@/lib/imageUtils';
 import { DimMember } from '@/types/cheki';
 
 type MemberSortKey = 'date_added' | 'member_name' | 'color' | 'group' | 'country' | 'company' | 'start_date' | 'end_date' | 'is_active';
@@ -455,7 +456,7 @@ export default function BackOfficePage() {
                             colorHex={colorObj?.color_code} 
                           />
                         </td>
-                        <td><strong>{m.member_name}</strong></td>
+                        <td><strong>{formatDisplayName(m.member_name)}</strong></td>
                         <td>{m.color}</td>
                         <td>{m.group}</td>
                         <td>{m.country}</td>
