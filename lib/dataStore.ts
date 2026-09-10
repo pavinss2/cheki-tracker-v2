@@ -397,6 +397,97 @@ export async function deleteMetadataDoc(
   logAdminAction(userId, `DELETE_${tableName.toUpperCase()}`, `Deleted ID ${id}${valSuffix}`);
 }
 
+export function subscribeDefaultMetadata<T>(
+  tableName: string,
+  defaultSeed: Omit<T, 'id' | 'userId'>[],
+  onData: (items: T[]) => void,
+  isDemo: boolean = false
+): () => void {
+  const defaultTable = `default_${tableName}`;
+  return subscribeMetadata<T>(defaultTable, 'global', defaultSeed, onData, isDemo);
+}
+
+export function subscribeMergedMetadata<T>(
+  tableName: string,
+  userId: string,
+  defaultSeed: Omit<T, 'id' | 'userId'>[],
+  onData: (items: T[]) => void,
+  isDemo: boolean = false
+): () => void {
+  const seed = defaultSeed.map((item, idx) => ({
+    ...item,
+    id: `default_${tableName}_${idx + 1}`,
+    userId: 'global',
+    isDefault: true,
+  })) as unknown as T[];
+
+  let defaultItems: T[] = seed;
+  let userItems: T[] = [];
+
+  const emitMerged = () => {
+    const combined = [...userItems, ...defaultItems];
+    const seen = new Set<string>();
+    const deduplicated: T[] = [];
+
+    combined.forEach((item) => {
+      const val = getItemValueString(item as Record<string, unknown>).toLowerCase();
+      const key = val || String((item as any).id);
+      if (!seen.has(key)) {
+        seen.add(key);
+        deduplicated.push(item);
+      }
+    });
+
+    onData(deduplicated);
+  };
+
+  const defaultTable = `default_${tableName}`;
+  const unsubDefault = subscribeMetadata<T>(defaultTable, 'global', defaultSeed, (items) => {
+    defaultItems = items.map(i => ({ ...i, isDefault: true }));
+    emitMerged();
+  }, isDemo);
+
+  const unsubUser = subscribeMetadata<T>(tableName, userId, [], (items) => {
+    userItems = items.map(i => ({ ...i, isDefault: false }));
+    emitMerged();
+  }, isDemo);
+
+  return () => {
+    unsubDefault();
+    unsubUser();
+  };
+}
+
+export async function addDefaultMetadataDoc<T extends { id: string; userId: string }>(
+  tableName: string,
+  data: Record<string, unknown>,
+  isDemo = false
+): Promise<void> {
+  const defaultTable = `default_${tableName}`;
+  return addMetadataDoc<T>(defaultTable, 'global', { ...data, isDefault: true }, isDemo);
+}
+
+export async function updateDefaultMetadataDoc(
+  tableName: string,
+  id: string,
+  data: Record<string, unknown>,
+  isDemo = false
+): Promise<void> {
+  const defaultTable = `default_${tableName}`;
+  return updateMetadataDoc(defaultTable, id, 'global', { ...data, isDefault: true }, isDemo);
+}
+
+export async function deleteDefaultMetadataDoc(
+  tableName: string,
+  id: string,
+  itemValue?: string,
+  isDemo = false
+): Promise<void> {
+  const defaultTable = `default_${tableName}`;
+  return deleteMetadataDoc(defaultTable, id, 'global', itemValue, isDemo);
+}
+
+
 // ----------------------------------------------------
 // PRICE RULES
 // ----------------------------------------------------

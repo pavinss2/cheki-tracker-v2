@@ -5,7 +5,7 @@ import { useChekiData } from '@/hooks/useChekiData';
 import { addMetadataDoc, updateMetadataDoc, deleteMetadataDoc, getAdminLogs, getItemValueString } from '@/lib/dataStore';
 import { useAuth } from '@/context/AuthContext';
 import { LoginPrompt } from '@/components/layout/LoginPrompt';
-import { Plus, Edit2, Trash2, Shield, Users, Building, Flag, Palette, Layers, Tag, X, Save, ArrowUpDown, ExternalLink, Lock } from 'lucide-react';
+import { Plus, Edit2, Trash2, Shield, Users, Building, MapPin, Layers, X, Save, ArrowUpDown, ExternalLink, Lock } from 'lucide-react';
 import { CircularSpinner } from '@/components/common/CircularSpinner';
 import { MemberAvatar } from '@/components/common/MemberAvatar';
 import { formatDisplayName } from '@/lib/imageUtils';
@@ -29,9 +29,9 @@ interface TempMemberRow {
 
 export default function BackOfficePage() {
   const { user, isDemoUser } = useAuth();
-  const { members, companies, groups, colors, types, countries, userId, loading } = useChekiData();
+  const { members, companies, groups, colors, types, countries, locations, userId, loading } = useChekiData();
 
-  const [activeTab, setActiveTab] = useState<'members' | 'groups' | 'companies' | 'colors' | 'types' | 'countries' | 'logs'>('members');
+  const [activeTab, setActiveTab] = useState<'members' | 'groups' | 'companies' | 'locations' | 'logs'>('members');
   const [editingItem, setEditingItem] = useState<{ table: string; data: Record<string, unknown> } | null>(null);
   
   // Sorting state for dim_member (Defaults to date_added descending)
@@ -126,74 +126,50 @@ export default function BackOfficePage() {
       await addMetadataDoc('dim_member', userId, tempMember as unknown as Record<string, unknown>, isDemoUser);
       setTempMember(null);
     } catch (err) {
-      console.error("Save temp member failed:", err);
+      console.error("Failed saving member:", err);
       alert("Failed saving member: " + (err instanceof Error ? err.message : String(err)));
     } finally {
       setIsSavingTemp(false);
     }
   };
 
-  const handleSaveDoc = async (e: React.FormEvent) => {
+  // Quick inline creation of missing choice (Color, Group, Company)
+  const handleSaveInlineOption = async () => {
+    if (!inlineNewModal || !inlineNewModal.name.trim()) return;
+    const { table, fieldKey, name } = inlineNewModal;
+    const cleanName = name.trim();
+
+    try {
+      if (table === 'dim_color') {
+        await addMetadataDoc('dim_color', userId, { color: cleanName, color_code: '#ffffff' }, isDemoUser);
+        if (tempMember) setTempMember({ ...tempMember, color: cleanName });
+      } else if (table === 'dim_group') {
+        await addMetadataDoc('dim_group', userId, { group: cleanName, country: '🇹🇭 TH', company: 'Individual' }, isDemoUser);
+        if (tempMember) setTempMember({ ...tempMember, group: cleanName });
+      } else if (table === 'dim_company') {
+        await addMetadataDoc('dim_company', userId, { company: cleanName }, isDemoUser);
+      }
+      setInlineNewModal(null);
+    } catch (err) {
+      alert("Failed to create option: " + (err instanceof Error ? err.message : String(err)));
+    }
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingItem) return;
 
     const { table, data } = editingItem;
-    const docId = data.id as string | undefined;
-
-    try {
-      if (docId) {
-        const { id: _i, ...rest } = data;
-        await updateMetadataDoc(table, docId, userId, rest, isDemoUser);
-      } else {
-        await addMetadataDoc(table, userId, data, isDemoUser);
-      }
-      setEditingItem(null);
-    } catch (err) {
-      console.error("Save doc failed:", err);
-      alert("Failed saving metadata item: " + (err instanceof Error ? err.message : String(err)));
-    }
+    const id = data.id as string;
+    await updateMetadataDoc(table, id, userId, data, isDemoUser);
+    setEditingItem(null);
   };
 
-  const handleCreateInlineChoice = async () => {
-    if (!inlineNewModal || !inlineNewModal.name.trim()) return;
-    const { table, fieldKey, name } = inlineNewModal;
-
-    try {
-      if (table === 'dim_company') await addMetadataDoc('dim_company', userId, { company: name.trim() }, isDemoUser);
-      if (table === 'dim_group') await addMetadataDoc('dim_group', userId, { group: name.trim(), country: '🇹🇭 TH', company: 'Individual' }, isDemoUser);
-      if (table === 'dim_color') await addMetadataDoc('dim_color', userId, { color: name.trim(), color_code: '#ffffff' }, isDemoUser);
-      if (table === 'dim_country') await addMetadataDoc('dim_country', userId, { country: name.trim(), displayed_country: name.trim() }, isDemoUser);
-
-      // Auto-select in current editing item or temporary member row
-      if (editingItem) {
-        setEditingItem({
-          ...editingItem,
-          data: { ...editingItem.data, [fieldKey]: name.trim() },
-        });
-      }
-      if (tempMember && fieldKey in tempMember) {
-        setTempMember({
-          ...tempMember,
-          [fieldKey]: name.trim(),
-        });
-      }
-
-      setInlineNewModal(null);
-    } catch (err) {
-      console.error("Failed creating inline choice:", err);
-    }
-  };
-
-  const confirmAndDelete = async () => {
+  const handleConfirmDelete = async () => {
     if (!deleteConfirmModal) return;
     const { table, id, displayValue } = deleteConfirmModal;
-    try {
-      await deleteMetadataDoc(table, id, userId, displayValue, isDemoUser);
-      setDeleteConfirmModal(null);
-    } catch (err) {
-      console.error("Delete failed:", err);
-      alert("Failed deleting record: " + (err instanceof Error ? err.message : String(err)));
-    }
+    await deleteMetadataDoc(table, id, userId, displayValue, isDemoUser);
+    setDeleteConfirmModal(null);
   };
 
   if (!user && !isDemoUser) return <LoginPrompt />;
@@ -212,14 +188,8 @@ export default function BackOfficePage() {
         <button className={`tab-btn ${activeTab === 'companies' ? 'active' : ''}`} onClick={() => setActiveTab('companies')}>
           <Building size={16} /> Companies ({companies.length})
         </button>
-        <button className={`tab-btn ${activeTab === 'colors' ? 'active' : ''}`} onClick={() => setActiveTab('colors')}>
-          <Palette size={16} /> Colors ({colors.length})
-        </button>
-        <button className={`tab-btn ${activeTab === 'types' ? 'active' : ''}`} onClick={() => setActiveTab('types')}>
-          <Tag size={16} /> Types ({types.length})
-        </button>
-        <button className={`tab-btn ${activeTab === 'countries' ? 'active' : ''}`} onClick={() => setActiveTab('countries')}>
-          <Flag size={16} /> Countries ({countries.length})
+        <button className={`tab-btn ${activeTab === 'locations' ? 'active' : ''}`} onClick={() => setActiveTab('locations')}>
+          <MapPin size={16} /> Locations ({locations.length})
         </button>
         <button className={`tab-btn ${activeTab === 'logs' ? 'active' : ''}`} onClick={() => setActiveTab('logs')}>
           <Shield size={16} /> Audit Logs ({logs.length})
@@ -570,119 +540,33 @@ export default function BackOfficePage() {
           </div>
         )}
 
-        {/* COLORS TAB */}
-        {activeTab === 'colors' && (
+        {/* LOCATIONS TAB */}
+        {activeTab === 'locations' && (
           <div>
             <div className="tab-header">
-              <h2>dim_color</h2>
-              <button className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_color', data: { color: '', color_code: '#ffffff' } })}>
-                <Plus size={14} /> Add Color
+              <h2>dim_location</h2>
+              <button className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_location', data: { location: '' } })}>
+                <Plus size={14} /> Add Location
               </button>
             </div>
             <div className="table-wrapper">
               <table className="dim-table">
                 <thead>
                   <tr>
-                    <th>Color Name</th>
-                    <th>Color Hex Code</th>
-                    <th>Preview</th>
+                    <th>Location Name</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {colors.map((c) => (
-                    <tr key={c.id}>
-                      <td><strong>{c.color}</strong></td>
-                      <td><code>{c.color_code}</code></td>
-                      <td><div className="color-swatch" style={{ backgroundColor: c.color_code }} /></td>
+                  {locations.map((loc) => (
+                    <tr key={loc.id}>
+                      <td><strong>{loc.location}</strong></td>
                       <td>
                         <div className="action-btns">
-                          <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_color', data: { ...c } })}><Edit2 size={15} /></button>
+                          <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_location', data: { ...loc } })}><Edit2 size={15} /></button>
                           <button 
                             className="btn-icon danger" 
-                            onClick={() => setDeleteConfirmModal({ table: 'dim_color', id: c.id, displayValue: getItemValueString(c as unknown as Record<string, unknown>) })}
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* TYPES TAB */}
-        {activeTab === 'types' && (
-          <div>
-            <div className="tab-header">
-              <h2>dim_type</h2>
-              <button className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_type', data: { type: '' } })}>
-                <Plus size={14} /> Add Type
-              </button>
-            </div>
-            <div className="table-wrapper">
-              <table className="dim-table">
-                <thead>
-                  <tr>
-                    <th>Type Name</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {types.map((t) => (
-                    <tr key={t.id}>
-                      <td><strong>{t.type}</strong></td>
-                      <td>
-                        <div className="action-btns">
-                          <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_type', data: { ...t } })}><Edit2 size={15} /></button>
-                          <button 
-                            className="btn-icon danger" 
-                            onClick={() => setDeleteConfirmModal({ table: 'dim_type', id: t.id, displayValue: getItemValueString(t as unknown as Record<string, unknown>) })}
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* COUNTRIES TAB */}
-        {activeTab === 'countries' && (
-          <div>
-            <div className="tab-header">
-              <h2>dim_country</h2>
-              <button className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_country', data: { country: '', displayed_country: '' } })}>
-                <Plus size={14} /> Add Country
-              </button>
-            </div>
-            <div className="table-wrapper">
-              <table className="dim-table">
-                <thead>
-                  <tr>
-                    <th>Country Name</th>
-                    <th>Display Code & Emoji</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {countries.map((c) => (
-                    <tr key={c.id}>
-                      <td><strong>{c.country}</strong></td>
-                      <td>{c.displayed_country}</td>
-                      <td>
-                        <div className="action-btns">
-                          <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_country', data: { ...c } })}><Edit2 size={15} /></button>
-                          <button 
-                            className="btn-icon danger" 
-                            onClick={() => setDeleteConfirmModal({ table: 'dim_country', id: c.id, displayValue: getItemValueString(c as unknown as Record<string, unknown>) })}
+                            onClick={() => setDeleteConfirmModal({ table: 'dim_location', id: loc.id, displayValue: getItemValueString(loc as unknown as Record<string, unknown>) })}
                           >
                             <Trash2 size={15} />
                           </button>
@@ -747,7 +631,7 @@ export default function BackOfficePage() {
                 type="button" 
                 className="btn btn-primary" 
                 style={{ backgroundColor: 'var(--color-danger, #ef4444)', borderColor: 'var(--color-danger, #ef4444)' }} 
-                onClick={confirmAndDelete}
+                onClick={handleConfirmDelete}
               >
                 Confirm Delete
               </button>
@@ -765,7 +649,7 @@ export default function BackOfficePage() {
               <button className="btn-close" onClick={() => setEditingItem(null)}><X size={18} /></button>
             </div>
 
-            <form onSubmit={handleSaveDoc} className="form-grid">
+            <form onSubmit={handleSaveEdit} className="form-grid">
               {editingItem.table === 'dim_member' && (
                 <>
                   <div className="form-group span-2">
@@ -1011,7 +895,7 @@ export default function BackOfficePage() {
             </div>
             <div className="form-actions">
               <button type="button" className="btn btn-secondary" onClick={() => setInlineNewModal(null)}>Cancel</button>
-              <button type="button" className="btn btn-primary" onClick={handleCreateInlineChoice}>Save Choice (Confirm)</button>
+              <button type="button" className="btn btn-primary" onClick={handleSaveInlineOption}>Save Choice (Confirm)</button>
             </div>
           </div>
         </div>

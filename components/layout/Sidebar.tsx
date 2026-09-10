@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 import { 
   Home, 
   Calendar, 
@@ -10,10 +11,11 @@ import {
   BarChart2, 
   Grid, 
   Settings, 
-  CalendarDays 
+  CalendarDays,
+  Shield
 } from 'lucide-react';
 
-const NAV_ITEMS = [
+const BASE_NAV_ITEMS = [
   { label: 'Home', href: '/', icon: Home },
   { label: 'Calendar', href: '/calendar', icon: Calendar },
   { label: 'Analytics', href: '/analytics', icon: BarChart2 },
@@ -24,12 +26,17 @@ const NAV_ITEMS = [
 
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
+  const { isSuperAdmin } = useAuth();
+
+  const navItems = isSuperAdmin
+    ? [...BASE_NAV_ITEMS, { label: 'Back Office', href: '/backoffice', icon: Shield }]
+    : BASE_NAV_ITEMS;
 
   return (
     <aside className="app-sidebar">
       <nav className="sidebar-nav">
         {/* <div className="nav-group-title">MAIN NAVIGATION</div> */}
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
 

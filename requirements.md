@@ -155,9 +155,20 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 
 ---
 
-## 6. Back Office (Admin Tab & Dimension Management)
+## 6. Admin, Back Office & Dimension Management Architecture
 
-### 6.1 `dim_member` Table Column Sorting & `date_added` Rule
+### 6.1 Back Office Tab (`/backoffice`) & Super Admin Access
+- **Super Admin Restriction**: Access to `/backoffice` is strictly restricted to certified super admins (`pavin.ss2@gmail.com`). Non-super admin users attempting to visit `/backoffice` receive an "Access Restricted" alert card.
+- **Default Metadata Management (`default_dim_*`)**:
+  - Back Office manages app-wide global default dimension tables: `default_dim_member`, `default_dim_group`, `default_dim_company`, `default_dim_color`, `default_dim_type`, `default_dim_country`, `default_dim_location`.
+  - Audit logs for default metadata mutations are written to `default_fact_admin_log`.
+- **Exclusive Dimensions**: `Color` (`default_dim_color`), `Type` (`default_dim_type`), and `Countries` (`default_dim_country`) are managed **exclusively** by the super admin in the Back Office tab. They are completely hidden and removed from the regular user Admin tab.
+
+### 6.2 Admin Tab (`/admin`) & User Custom Metadata
+- Regular users use `/admin` to manage their custom dimensions: Members, Groups, Companies, Locations, and view their mutation audit logs (`fact_admin_log`).
+- **Merged Dimension Resolution (`subscribeMergedMetadata`)**: Across all operational app views (filters, forms, analytics, raw data, calendar), the system merges Back Office global defaults (`default_dim_*`) with user custom choices (`dim_*`), deduplicating by item string value so user custom items seamlessly extend or customize system defaults.
+
+### 6.3 `dim_member` Table Column Sorting & `date_added` Rule
 - **`date_added` Field**: `dim_member` records include a `date_added` field (`YYYY-MM-DD`). Automatically set to today's date when creating new member records.
 - **Default Sort Order**: By default, the `dim_member` table is **arranged by `date_added` descending (`▼`)**. Newly added members remain at the top of the table.
 - **Column Order**: `Avatar & Image URL`, `Member Name`, `Color`, `Group`, `Country`, `Company`, `Start Date`, `End Date`, `Status`, `X Profile`, `Date Added` (most right-hand side before `Actions`), `Actions`.
@@ -173,7 +184,7 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
   9. `Date Added` (`date_added` - positioned right before `Actions`)
 - Toggles between ascending (`▲`) and descending (`▼`) sort order.
 
-### 6.2 Temporary Top Row Draft, Image URL & Locked Fields Rule
+### 6.4 Temporary Top Row Draft, Image URL & Locked Fields Rule
 - Clicking **"+ Add Member"** pins a **temporary draft row at the very top of the table** with inline input fields.
 - **Image URL Field**: Provides a direct URL text input (`member_image`) in the draft top row as well as the edit modal form.
 - **Locked Fields Rule (Country & Company)**:
@@ -190,28 +201,28 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 - **Explicit Save Button**: The new record is only written to Firestore when the user explicitly clicks the **Save** button in the draft row's actions column.
 - **Cancel Button**: Clicking Cancel (`X`) discards the temporary row without saving to the database.
 
-### 6.3 Events Tab Table Header Sorting
+### 6.5 Events Tab Table Header Sorting
 - All headers in the Events tab table (`Date`/`Month`, `Event Name`, `Members`, `QTY`, `%`, `Total (THB)`) are clickable and sortable.
 - Default sort: `Date`/`Month` (`period`) descending.
 - Clicking any header toggles between ascending (`▲`) and descending (`▼`) sort order.
 
-### 6.4 Delete Confirmation Popup Modal
+### 6.6 Delete Confirmation Popup Modal
 - Deleting any dimension record (`dim_member`, `dim_group`, `dim_company`, `dim_color`, `dim_type`, `dim_country`) displays a custom, non-blocking **Confirm Delete** modal popup displaying:
   - Record ID (e.g. `ID: h6YTWUygR5D5QZ2enZ47`)
   - Item Display Value (e.g. `Value: Siso (22%)`)
   - Explicit **"Confirm Delete"** (danger button) and **"Cancel"** buttons.
 
-### 6.5 `fact_admin_log` Audit Logs Value Display Rule
+### 6.7 `fact_admin_log` Audit Logs Value Display Rule
 - Audit log messages in `fact_admin_log` must record the display value alongside document IDs for all mutations:
   - `Deleted ID h6YTWUygR5D5QZ2enZ47 (Siso (22%))`
   - `Added ID 9mK10xL45z (Catsolute)`
   - `Updated ID p80xK11m (Red)`
 
-### 6.6 Avatar Image Fallback Rule (Capitalized Letter Icon)
+### 6.8 Avatar Image Fallback Rule (Capitalized Letter Icon)
 - All member avatars are rendered via `<MemberAvatar>`.
 - **Error Handling**: If a member avatar URL (`member_image`) is missing, blank, `None`, or fails to render (404, broken link, CDN error), `MemberAvatar` catches `onError` and displays a **capitalized initial letter circle icon** styled with the member's theme color.
 
-### 6.7 Mobile Layout & Horizontal Table Sliding Specifications
+### 6.9 Mobile Layout & Horizontal Table Sliding Specifications
 - **Viewport Width Bounding (`min-width: 0`)**: All page containers, card components, and main layout wrappers (`.main-content`, `.layout-wrapper`) enforce `width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box;` on mobile devices.
 - **Horizontal Table & Grid Sliding**:
   - All wide data tables (Raw Data `raw-table`, Admin `dim_table`, Analytics tables) are wrapped inside `.table-wrapper` with `overflow-x: auto; -webkit-overflow-scrolling: touch;`.
@@ -221,11 +232,11 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
   - Filter bars across all pages (`FilterBar`) automatically wrap into a fitted 2-column grid (`grid-template-columns: repeat(2, 1fr)`) on mobile screens ($\le 768\text{px}$).
   - All select dropdowns in the filter bar use `width: 100%; max-width: 100%; min-width: 0; text-overflow: ellipsis;` so filters fit neatly within the mobile viewport without overflowing or getting cut off.
 
-### 6.8 Parenthetical Display Name Formatting Rule (`formatDisplayName`)
+### 6.10 Parenthetical Display Name Formatting Rule (`formatDisplayName`)
 - **Parenthesis Stripping Rule**: Any member name containing text inside parentheses (e.g. `"Zero (NOLiMIT)"`, `"Siso (22%)"`) will automatically have the parentheses and enclosed content removed for UI display (e.g. `"Zero (NOLiMIT)"` renders as `"Zero"`, `"Siso (22%)"` renders as `"Siso"`).
 - **Implementation**: Handled centrally via `formatDisplayName(name)` in [lib/imageUtils.ts](file:///Users/pavin/01%20Pavin%20Coding/cheki-tracker-v2/lib/imageUtils.ts) (`name.replace(/\s*\([^)]*\)/g, '').trim()`) and applied across Analytics Leaderboard / Bar Graph rows, Data Tables, Member Avatars, Admin `dim_member` table, and Raw Data transaction tables.
 
-### 6.9 Analytics Tab Bar Graph Styling & Leaderboard Layout Specifications
+### 6.11 Analytics Tab Bar Graph Styling & Leaderboard Layout Specifications
 - **Bar Graph Exclusive View**: The Analytics tab exclusively displays the Bar Graph (Leaderboard) view.
 - **Rank-Based Metallic Trophy & Avatar Borders**:
   - Rank #1: Gold trophy icon (`#facc15`), Gold avatar border (`#facc15`).

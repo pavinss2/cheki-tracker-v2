@@ -17,6 +17,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   signOutUser: () => Promise<void>;
   isDemoUser: boolean;
+  isSuperAdmin: boolean;
   enableDemoMode: () => void;
 }
 
@@ -26,13 +27,18 @@ const AuthContext = createContext<AuthContextType>({
   signInWithGoogle: async () => {},
   signOutUser: async () => {},
   isDemoUser: false,
+  isSuperAdmin: false,
   enableDemoMode: () => {},
 });
+
+export const SUPER_ADMIN_EMAIL = 'pavin.ss2@gmail.com';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDemoUser, setIsDemoUser] = useState(false);
+
+  const isSuperAdmin = Boolean(user && user.email === SUPER_ADMIN_EMAIL);
 
   useEffect(() => {
     // Check if demo user flag in localStorage
@@ -111,10 +117,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOutUser, isDemoUser, enableDemoMode }}>
+    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOutUser, isDemoUser, isSuperAdmin, enableDemoMode }}>
       {loading ? <CircularSpinner fullScreen /> : children}
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => useContext(AuthContext);
+

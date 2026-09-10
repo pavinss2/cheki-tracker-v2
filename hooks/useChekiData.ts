@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useFilters } from '@/context/FilterContext';
 import { 
   subscribeTransactions, 
-  subscribeMetadata, 
+  subscribeMergedMetadata, 
   DEFAULT_PRICE_RULES, 
   getPriceRules, 
   savePriceRules,
@@ -74,13 +74,13 @@ export function useChekiData() {
     }, isDemoUser);
 
 
-    const unsubMem = subscribeMetadata<DimMember>('dim_member', userId, DEFAULT_MEMBERS, setMembers, isDemoUser);
-    const unsubCmp = subscribeMetadata<DimCompany>('dim_company', userId, DEFAULT_COMPANIES, setCompanies, isDemoUser);
-    const unsubGrp = subscribeMetadata<DimGroup>('dim_group', userId, DEFAULT_GROUPS, setGroups, isDemoUser);
-    const unsubClr = subscribeMetadata<DimColor>('dim_color', userId, DEFAULT_COLORS, setColors, isDemoUser);
-    const unsubTyp = subscribeMetadata<DimType>('dim_type', userId, DEFAULT_TYPES, setTypes, isDemoUser);
-    const unsubCnt = subscribeMetadata<DimCountry>('dim_country', userId, DEFAULT_COUNTRIES, setCountries, isDemoUser);
-    const unsubLoc = subscribeMetadata<DimLocation>('dim_location', userId, [
+    const unsubMem = subscribeMergedMetadata<DimMember>('dim_member', userId, DEFAULT_MEMBERS, setMembers, isDemoUser);
+    const unsubCmp = subscribeMergedMetadata<DimCompany>('dim_company', userId, DEFAULT_COMPANIES, setCompanies, isDemoUser);
+    const unsubGrp = subscribeMergedMetadata<DimGroup>('dim_group', userId, DEFAULT_GROUPS, setGroups, isDemoUser);
+    const unsubClr = subscribeMergedMetadata<DimColor>('dim_color', userId, DEFAULT_COLORS, setColors, isDemoUser);
+    const unsubTyp = subscribeMergedMetadata<DimType>('dim_type', userId, DEFAULT_TYPES, setTypes, isDemoUser);
+    const unsubCnt = subscribeMergedMetadata<DimCountry>('dim_country', userId, DEFAULT_COUNTRIES, setCountries, isDemoUser);
+    const unsubLoc = subscribeMergedMetadata<DimLocation>('dim_location', userId, [
       { location: 'Bangkok' },
       { location: 'Tokyo' },
       { location: 'Seoul' },
