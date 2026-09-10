@@ -8,24 +8,48 @@ import { Home, Calendar, Table, BarChart2, Grid, Settings } from 'lucide-react';
 export const MobileNav: React.FC = () => {
   const pathname = usePathname();
 
+  const normalizePath = (p: string) => (p && p.endsWith('/') && p.length > 1 ? p.slice(0, -1) : p);
+  const currentPath = normalizePath(pathname || '/');
+
   const items = [
-    { label: ' Home', href: '/', icon: Home },
-    { label: ' Cal', href: '/calendar', icon: Calendar },
-    { label: ' Raw', href: '/raw', icon: Table },
-    { label: ' Analytics', href: '/analytics', icon: BarChart2 },
-    { label: ' Admin', href: '/admin', icon: Settings },
+    { label: 'Home', href: '/', icon: Home },
+    { label: 'Cal', href: '/calendar', icon: Calendar },
+    { label: 'Raw', href: '/raw', icon: Table },
+    { label: 'Analytics', href: '/analytics', icon: BarChart2 },
+    { label: 'Admin', href: '/admin', icon: Settings },
   ];
 
   return (
     <nav className="mobile-nav">
       {items.map(item => {
         const Icon = item.icon;
-        const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+        const targetPath = normalizePath(item.href);
+        const isActive = currentPath === targetPath || (targetPath !== '/' && currentPath.startsWith(targetPath));
 
         return (
-          <Link key={item.href} href={item.href} className={`mobile-item ${isActive ? 'active' : ''}`}>
-            <Icon size={20} />
-            <span className="mobile-label">{item.label}</span>
+          <Link 
+            key={item.href} 
+            href={item.href} 
+            className={`mobile-item ${isActive ? 'active' : ''}`}
+            data-active={isActive ? 'true' : 'false'}
+            style={isActive ? {
+              color: '#d4a84b',
+              backgroundColor: 'rgba(212, 168, 75, 0.18)',
+              fontWeight: 700,
+            } : {
+              color: '#ffffff',
+            }}
+          >
+            <Icon 
+              size={20} 
+              style={isActive ? { color: '#d4a84b', stroke: '#d4a84b' } : { color: '#ffffff', stroke: '#ffffff' }}
+            />
+            <span 
+              className="mobile-label"
+              style={isActive ? { color: '#d4a84b' } : { color: '#ffffff' }}
+            >
+              {item.label}
+            </span>
           </Link>
         );
       })}
@@ -42,26 +66,51 @@ export const MobileNav: React.FC = () => {
             bottom: 0;
             left: 0;
             right: 0;
-            height: 60px;
+            height: 64px;
             background-color: var(--bg-surface-1);
             border-top: 1px solid var(--border-subtle);
-            z-index: 50;
+            z-index: 100;
             justify-content: space-around;
             align-items: center;
+            padding: 4px 8px;
           }
 
           .mobile-item {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 2px;
-            color: var(--text-muted);
-            font-size: 0.7rem;
-            padding: 6px;
+            justify-content: center;
+            gap: 3px;
+            color: #ffffff;
+            font-size: 0.72rem;
+            padding: 6px 12px;
+            border-radius: 16px;
+            text-decoration: none;
+            transition: all 0.15s ease;
           }
 
-          .mobile-item.active {
-            color: var(--accent-primary);
+          .mobile-item :global(svg) {
+            color: #ffffff;
+            stroke: #ffffff;
+            transition: color 0.15s ease, stroke 0.15s ease;
+          }
+
+          .mobile-item.active,
+          .mobile-item[data-active="true"] {
+            color: #d4a84b !important;
+            background-color: rgba(212, 168, 75, 0.18) !important;
+            font-weight: 700 !important;
+          }
+
+          .mobile-item.active :global(svg),
+          .mobile-item[data-active="true"] :global(svg) {
+            color: #d4a84b !important;
+            stroke: #d4a84b !important;
+          }
+
+          .mobile-item.active .mobile-label,
+          .mobile-item[data-active="true"] .mobile-label {
+            color: #d4a84b !important;
           }
         }
       `}</style>

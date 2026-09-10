@@ -43,7 +43,6 @@ export const Sidebar: React.FC = () => {
               style={isActive ? {
                 color: '#d4a84b',
                 backgroundColor: 'rgba(212, 168, 75, 0.18)',
-                borderLeft: '3.5px solid #d4a84b',
                 fontWeight: 700,
               } : {
                 color: '#ffffff',
@@ -121,7 +120,6 @@ export const Sidebar: React.FC = () => {
           background-color: rgba(212, 168, 75, 0.15);
           color: #d4a84b !important;
           font-weight: 700;
-          border-left: 3px solid #d4a84b;
         }
 
         .nav-item.active :global(svg) {

@@ -75,7 +75,7 @@ html, body {
   background-color: rgba(212, 168, 75, 0.18) !important;
   color: #d4a84b !important;
   font-weight: 700 !important;
-  border-left: 3.5px solid #d4a84b !important;
+  border-left: none !important;
 }
 
 .app-sidebar .nav-item.active svg,
