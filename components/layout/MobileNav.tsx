@@ -12,11 +12,11 @@ export const MobileNav: React.FC = () => {
   const currentPath = normalizePath(pathname || '/');
 
   const items = [
-    { label: 'Home', href: '/', icon: Home },
-    { label: 'Cal', href: '/calendar', icon: Calendar },
-    { label: 'Analytics', href: '/analytics', icon: BarChart2 },
-    { label: 'Raw', href: '/raw', icon: Table },
-    { label: 'Admin', href: '/admin', icon: Settings },
+    { label: '', href: '/', icon: Home },
+    { label: '', href: '/calendar', icon: Calendar },
+    { label: '', href: '/analytics', icon: BarChart2 },
+    { label: '', href: '/raw', icon: Table },
+    { label: '', href: '/admin', icon: Settings },
   ];
 
   return (
