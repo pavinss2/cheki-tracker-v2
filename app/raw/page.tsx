@@ -412,14 +412,14 @@ export default function RawDataPage() {
           <Clipboard size={16} /> Paste TSV
         </button>
         <button className="btn btn-secondary" onClick={handleAddBlankRow}>
-          <Plus size={16} /> Add Blank Row
+          <Plus size={16} /> Add Row
         </button>
         <button 
           className="btn btn-primary" 
           onClick={handleBatchSave} 
           disabled={isSavingBatch || validDirtyCount === 0}
         >
-          <Save size={16} /> {isSavingBatch ? 'Saving...' : `Save All (${validDirtyCount} new)`}
+          <Save size={16} /> {isSavingBatch ? 'Saving...' : `Save (${validDirtyCount})`}
         </button>
       </div>
 
@@ -781,7 +781,7 @@ export default function RawDataPage() {
         .raw-actions-bar {
           display: flex;
           gap: 12px;
-          flex-wrap: wrap;
+          flex-wrap: flex;
           align-items: center;
         }
 

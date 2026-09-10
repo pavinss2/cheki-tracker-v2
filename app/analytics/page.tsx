@@ -110,7 +110,7 @@ export default function AnalyticsPage() {
 
       {/* Main Bar Graph Leaderboard View */}
       <div className="chart-card card">
-        <h2>{dimension} ({metric === 'qty' ? 'Quantity' : 'Total Spend'})</h2>
+        {/* <h2>{dimension} ({metric === 'qty' ? 'Quantity' : 'Total Spend'})</h2> */}
 
         <div className="custom-bar-list">
           {aggregatedData.map((item, idx) => {
@@ -215,7 +215,7 @@ export default function AnalyticsPage() {
           display: flex;
           flex-direction: column;
           gap: 10px;
-          margin-top: 18px;
+          margin-top: 1px;
         }
 
         .leaderboard-row {
