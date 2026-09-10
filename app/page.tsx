@@ -207,6 +207,7 @@ export default function HomePage() {
     const IconComponent = cardInfo.icon;
     const sorted = Object.entries(cardInfo.map).sort((a, b) => b[1] - a[1]);
     const top3 = sorted.slice(0, 3);
+    const activeSortedList = sorted.slice(0, 20);
     const isSelected = selectedCardKey === cardKey;
 
     return (
@@ -258,6 +259,53 @@ export default function HomePage() {
             <div className="empty-top-list">No records found</div>
           )}
         </div>
+
+        {/* Floating Top Layer Popover Extension Attached Under Clicked Card */}
+        {isSelected && (
+          <div 
+            className="breakdown-popover-card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="breakdown-header">
+              <div className="breakdown-title-group">
+                <span className="breakdown-title">TOP 20 - {cardInfo.title}</span>
+                <span className="breakdown-count-badge">{activeSortedList.length} ITEMS</span>
+              </div>
+              <button 
+                className="btn-close-breakdown" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedCardKey(null);
+                }} 
+                title="Close Breakdown"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="breakdown-list">
+              {activeSortedList.map(([name, val], idx) => {
+                const pct = kpis.totalQty > 0 ? ((val / kpis.totalQty) * 100).toFixed(1) : '0';
+                const textColor = getItemTextColor(name, cardKey);
+
+                return (
+                  <div key={name} className="breakdown-row">
+                    <div className="breakdown-left">
+                      <span className="breakdown-rank">{idx + 1}</span>
+                      <span className="breakdown-name" style={{ color: textColor }}>
+                        {cardKey === 'nationalities' ? getNationalityLabel(name) : name}
+                      </span>
+                    </div>
+                    <div className="breakdown-right">
+                      <strong>{val}</strong>
+                      <span className="breakdown-pct">({pct}%)</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -269,12 +317,6 @@ export default function HomePage() {
   if (loading) {
     return <div className="loading-state">Loading Analytics Dashboard...</div>;
   }
-
-  // Active breakdown list calculation
-  const activeBreakdown = selectedCardKey ? cardsMap[selectedCardKey] : null;
-  const activeSortedList = activeBreakdown 
-    ? Object.entries(activeBreakdown.map).sort((a, b) => b[1] - a[1]).slice(0, 20)
-    : [];
 
   return (
     <div className="home-page">
@@ -354,43 +396,6 @@ export default function HomePage() {
           <div className="date-subtext">{kpis.maxDayDate}</div>
         </div>
       </div>
-
-      {/* Separate Extension Breakdown Card (Triggered ON CLICK ONLY) */}
-      {selectedCardKey && activeBreakdown && (
-        <div className="breakdown-extension-card card">
-          <div className="breakdown-header">
-            <div className="breakdown-title-group">
-              <span className="breakdown-title">TOP 20 - {activeBreakdown.title}</span>
-              <span className="breakdown-count-badge">{activeSortedList.length} ITEMS</span>
-            </div>
-            <button className="btn-close-breakdown" onClick={() => setSelectedCardKey(null)} title="Close Breakdown">
-              <X size={16} />
-            </button>
-          </div>
-
-          <div className="breakdown-list">
-            {activeSortedList.map(([name, val], idx) => {
-              const pct = kpis.totalQty > 0 ? ((val / kpis.totalQty) * 100).toFixed(1) : '0';
-              const textColor = getItemTextColor(name, selectedCardKey);
-
-              return (
-                <div key={name} className="breakdown-row">
-                  <div className="breakdown-left">
-                    <span className="breakdown-rank">{idx + 1}</span>
-                    <span className="breakdown-name" style={{ color: textColor }}>
-                      {selectedCardKey === 'nationalities' ? getNationalityLabel(name) : name}
-                    </span>
-                  </div>
-                  <div className="breakdown-right">
-                    <strong>{val}</strong>
-                    <span className="breakdown-pct">({pct}%)</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Bar Chart Timeline */}
       <div className="chart-card card">

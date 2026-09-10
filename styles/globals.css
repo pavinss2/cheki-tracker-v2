@@ -235,6 +235,140 @@ tr:hover td {
 .kpi-card.selected {
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 1px var(--accent-primary);
+  z-index: 60;
+}
+
+/* Floating Popover Breakdown Card (Appears attached directly under clicked KPI card) */
+.breakdown-popover-card {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 100%;
+  min-width: 260px;
+  background-color: #161822;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  z-index: 100;
+  animation: popoverFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes popoverFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.breakdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.breakdown-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.breakdown-title {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--text-subtle);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.breakdown-count-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--accent-blue);
+  letter-spacing: 0.05em;
+}
+
+.btn-close-breakdown {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-close-breakdown:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.breakdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  font-size: 0.84rem;
+}
+
+.breakdown-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.breakdown-rank {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.breakdown-name {
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.breakdown-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.84rem;
+  color: var(--text-main);
+}
+
+.breakdown-pct {
+  color: var(--text-muted);
+  font-size: 0.76rem;
 }
 
 .kpi-header {
