@@ -77,10 +77,10 @@ The application employs a dual-storage strategy to ensure real-time Cloud persis
   - **Mobile Paste TSV Hiding Rule**: The `Paste TSV` button (`.btn-paste-tsv`) is **hidden on mobile viewports ($\le 768\text{px}$)** (`display: none !important`) to save horizontal layout space.
 
 ### 2.5 Layout Stability, Home Chart Tooltip & Events Controls Rules
-- **Header & Layout Anti-Twitch & Loading Scrollbar Rule**:
-  - `html` and `body` enforce `min-height: 100.1vh; overflow-y: scroll !important; scrollbar-gutter: stable always;` so the vertical scrollbar track is permanently active even during fast tab transitions.
-  - `.spinner-container` specifies `min-height: calc(100vh - 120px);` so loading states never collapse page height or cause scrollbar removal.
-  - `.app-header` specifies fixed viewport coordinates (`position: fixed; top: 0; left: var(--sidebar-width); right: 0; z-index: 45;`), and `.header-actions` is **absolutely pinned** to `position: absolute; right: 24px; top: 0; bottom: 0;`. `.user-profile` remains 100% stationary without any twitching during fast tab toggling or loading states.
+- **Two-Zone Header Architecture & Anti-Twitch Rule**:
+  - `.app-header` is split into two independent zones: `.header-left-zone` (`flex: 1; min-width: 0;`) for page titles and `.header-right-zone` (`flex-shrink: 0; min-width: 180px; justify-content: flex-end;`) for user profile controls.
+  - All header CSS rules are placed in static global CSS ([styles/globals.css](file:///Users/pavin/01%20Pavin%20Coding/cheki-tracker-v2/styles/globals.css)), bypassing Next.js `styled-jsx` class hashing (`jsx-xxxxxxxx`) completely during route transitions.
+  - `html` and `body` enforce `min-height: 100.1vh; overflow-y: scroll !important; scrollbar-gutter: stable always;` and `.spinner-container` specifies `min-height: calc(100vh - 120px);` so `.user-profile` remains 100% stationary without any twitching during fast tab toggling or loading states.
 - **Home Chart Instant Tooltip & Clean Overlay Rule**:
   - Recharts `<Tooltip>` on the Home tab timeline chart sets `isAnimationActive={false}`, `animationDuration={0}`, and `cursor={false}`.
   - Eliminates laggy sliding animation so the tooltip displays instantly under the hovered date, and removes the white hover rectangle highlight overlay.
