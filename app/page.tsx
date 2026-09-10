@@ -469,6 +469,19 @@ export default function HomePage() {
           transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
         }
 
+        .kpi-card.combined-overview-card {
+          justify-content: center;
+          gap: 14px;
+        }
+
+        .kpi-card.combined-overview-card .kpi-header {
+          margin-bottom: 0;
+        }
+
+        .kpi-card.combined-overview-card .kpi-split-three {
+          margin-top: 0;
+        }
+
         .kpi-card.highlight {
           border-color: var(--border-subtle);
           background: linear-gradient(135deg, var(--bg-surface-1), var(--bg-surface-2));

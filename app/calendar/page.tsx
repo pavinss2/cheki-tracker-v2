@@ -283,7 +283,20 @@ export default function CalendarPage() {
       {/* Requirement 3: Clicking cal-nav-card resets to full month gallery view */}
       <div className="cal-nav-card card clickable-cal-nav" onClick={() => setSelectedDate(null)} title="Show full month gallery">
         <div className="cal-title-section">
-          <h2>{monthNames[currentMonth]} {currentYear}</h2>
+          <div className="month-year-header">
+            <h2>{monthNames[currentMonth].substring(0, 3)} {currentYear}</h2>
+            <button 
+              className="btn btn-secondary btn-sm btn-today" 
+              onClick={(e) => {
+                e.stopPropagation();
+                setCurrentYear(now.getFullYear());
+                setCurrentMonth(now.getMonth());
+                setSelectedDate(null);
+              }}
+            >
+              Today
+            </button>
+          </div>
 
           <div className="month-summary-strip">
             <span className="summary-pill">📸 {monthSummary.monthQty} pcs</span>
@@ -296,9 +309,6 @@ export default function CalendarPage() {
         <div className="btn-group" onClick={(e) => e.stopPropagation()}>
           <button className="btn btn-secondary btn-sm" onClick={handlePrevMonth}>
             <ChevronLeft size={16} /> Prev
-          </button>
-          <button className="btn btn-secondary btn-sm" onClick={() => { setCurrentYear(now.getFullYear()); setCurrentMonth(now.getMonth()); setSelectedDate(null); }}>
-            Today
           </button>
           <button className="btn btn-secondary btn-sm" onClick={handleNextMonth}>
             Next <ChevronRight size={16} />
@@ -478,9 +488,22 @@ export default function CalendarPage() {
           gap: 20px;
         }
 
+        .month-year-header {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
         .cal-title-section h2 {
           font-size: 1.3rem;
           font-weight: 700;
+        }
+
+        .btn-today {
+          padding: 4px 10px;
+          min-height: 28px;
+          font-size: 0.78rem;
+          font-weight: 600;
         }
 
         .month-summary-strip {

@@ -223,6 +223,19 @@ tr:hover td {
   background: linear-gradient(135deg, var(--bg-surface-1), var(--bg-surface-2));
 }
 
+.kpi-card.combined-overview-card {
+  justify-content: center;
+  gap: 14px;
+}
+
+.kpi-card.combined-overview-card .kpi-header {
+  margin-bottom: 0;
+}
+
+.kpi-card.combined-overview-card .kpi-split-three {
+  margin-top: 0;
+}
+
 .kpi-card.clickable-card {
   cursor: pointer;
 }
