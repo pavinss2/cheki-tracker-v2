@@ -262,9 +262,6 @@ export default function BackOfficePage() {
                     <th className="sortable-th" onClick={() => handleSortMembers('company')}>
                       Company <span title="Locked & auto-mapped by Group"><Lock size={11} /></span> {memberSortKey === 'company' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                     </th>
-                    <th className="sortable-th" onClick={() => handleSortMembers('date_added')}>
-                      Date Added {memberSortKey === 'date_added' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                    </th>
                     <th className="sortable-th" onClick={() => handleSortMembers('start_date')}>
                       Start Date {memberSortKey === 'start_date' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                     </th>
@@ -275,6 +272,9 @@ export default function BackOfficePage() {
                       Status {memberSortKey === 'is_active' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                     </th>
                     <th>X Profile</th>
+                    <th className="sortable-th" onClick={() => handleSortMembers('date_added')}>
+                      Date Added {memberSortKey === 'date_added' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                    </th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -376,15 +376,6 @@ export default function BackOfficePage() {
                         <input 
                           type="date" 
                           className="table-input" 
-                          value={tempMember.date_added} 
-                          onChange={(e) => setTempMember({ ...tempMember, date_added: e.target.value })}
-                          title="Date Added"
-                        />
-                      </td>
-                      <td>
-                        <input 
-                          type="date" 
-                          className="table-input" 
                           value={tempMember.start_date} 
                           onChange={(e) => setTempMember({ ...tempMember, start_date: e.target.value })}
                         />
@@ -414,6 +405,15 @@ export default function BackOfficePage() {
                           placeholder="https://x.com/..." 
                           value={tempMember.x_profile} 
                           onChange={(e) => setTempMember({ ...tempMember, x_profile: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <input 
+                          type="date" 
+                          className="table-input" 
+                          value={tempMember.date_added} 
+                          onChange={(e) => setTempMember({ ...tempMember, date_added: e.target.value })}
+                          title="Date Added"
                         />
                       </td>
                       <td>
@@ -460,7 +460,6 @@ export default function BackOfficePage() {
                         <td>{m.group}</td>
                         <td>{m.country}</td>
                         <td>{m.company}</td>
-                        <td>{m.date_added || '-'}</td>
                         <td>{m.start_date || '-'}</td>
                         <td>{m.end_date || '-'}</td>
                         <td>{m.is_active ? <span className="status-badge active">Active</span> : <span className="status-badge">Inactive</span>}</td>
@@ -471,6 +470,7 @@ export default function BackOfficePage() {
                             </a>
                           ) : '-'}
                         </td>
+                        <td>{m.date_added || '-'}</td>
                         <td>
                           <div className="action-btns">
                             <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_member', data: { ...m } })}><Edit2 size={15} /></button>

@@ -119,16 +119,17 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 ### 6.1 `dim_member` Table Column Sorting & `date_added` Rule
 - **`date_added` Field**: `dim_member` records include a `date_added` field (`YYYY-MM-DD`). Automatically set to today's date when creating new member records.
 - **Default Sort Order**: By default, the `dim_member` table is **arranged by `date_added` descending (`▼`)**. Newly added members remain at the top of the table.
+- **Column Order**: `Avatar & Image URL`, `Member Name`, `Color`, `Group`, `Country`, `Company`, `Start Date`, `End Date`, `Status`, `X Profile`, `Date Added` (most right-hand side before `Actions`), `Actions`.
 - **Sortable Columns**: The `dim_member` table headers are clickable and sortable for all columns:
   1. `Member Name` (`member_name`)
   2. `Color` (`color`)
   3. `Group` (`group`)
   4. `Country` (`country`)
   5. `Company` (`company`)
-  6. `Date Added` (`date_added`)
-  7. `Start Date` (`start_date`)
-  8. `End Date` (`end_date`)
-  9. `Status` (`is_active`)
+  6. `Start Date` (`start_date`)
+  7. `End Date` (`end_date`)
+  8. `Status` (`is_active`)
+  9. `Date Added` (`date_added` - positioned right before `Actions`)
 - Toggles between ascending (`▲`) and descending (`▼`) sort order.
 
 ### 6.2 Temporary Top Row Draft, Image URL & Locked Fields Rule
