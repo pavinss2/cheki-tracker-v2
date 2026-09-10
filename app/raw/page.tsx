@@ -12,6 +12,7 @@ import { Plus, Edit2, Trash2, ArrowUpDown, Image as ImageIcon, X } from 'lucide-
 
 import { extractDirectImageUrl, groupTransactionsByImage } from '@/lib/imageUtils';
 import { LightboxGallery, LightboxItem } from '@/components/common/LightboxGallery';
+import { CircularSpinner } from '@/components/common/CircularSpinner';
 
 export default function RawDataPage() {
   const { user, isDemoUser } = useAuth();
@@ -111,7 +112,7 @@ export default function RawDataPage() {
     }
   };
 
-  if (loading) return <div className="loading-state">Loading Raw Data...</div>;
+  if (loading) return <CircularSpinner />;
 
   return (
     <div className="raw-data-page">

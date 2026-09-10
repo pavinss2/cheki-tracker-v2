@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useChekiData } from '@/hooks/useChekiData';
 import { FilterBar } from '@/components/layout/FilterBar';
+import { CircularSpinner } from '@/components/common/CircularSpinner';
 
 export default function EventsPage() {
   const { allTransactions, filteredTransactions, loading } = useChekiData();
@@ -46,7 +47,7 @@ export default function EventsPage() {
     return { items, totalQtyAll };
   }, [filteredTransactions, viewMode]);
 
-  if (loading) return <div className="loading-state">Loading Events Pivot...</div>;
+  if (loading) return <CircularSpinner />;
 
   return (
     <div className="events-page">

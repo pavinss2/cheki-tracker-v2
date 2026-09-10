@@ -6,6 +6,7 @@ import { addMetadataDoc, updateMetadataDoc, deleteMetadataDoc, getAdminLogs, see
 import { useAuth } from '@/context/AuthContext';
 import { LoginPrompt } from '@/components/layout/LoginPrompt';
 import { Plus, Edit2, Trash2, Shield, Users, Building, Flag, Palette, Layers, Tag, X, Database } from 'lucide-react';
+import { CircularSpinner } from '@/components/common/CircularSpinner';
 
 export default function BackOfficePage() {
   const { user, isDemoUser } = useAuth();
@@ -71,7 +72,7 @@ export default function BackOfficePage() {
   };
 
   if (!user && !isDemoUser) return <LoginPrompt />;
-  if (loading) return <div className="loading-state">Loading Back Office Manager...</div>;
+  if (loading) return <CircularSpinner />;
 
   return (
     <div className="admin-page">

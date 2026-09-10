@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { LoginPrompt } from '@/components/layout/LoginPrompt';
 import { MemberAvatar } from '@/components/common/MemberAvatar';
 import { Award, Trophy } from 'lucide-react';
+import { CircularSpinner } from '@/components/common/CircularSpinner';
 
 export default function AnalyticsPage() {
   const { user, isDemoUser } = useAuth();
@@ -81,7 +82,7 @@ export default function AnalyticsPage() {
   }, [aggregatedData, metric]);
 
   if (!user && !isDemoUser) return <LoginPrompt />;
-  if (loading) return <div className="loading-state">Loading Analytics...</div>;
+  if (loading) return <CircularSpinner />;
 
   return (
     <div className="analytics-page">
@@ -124,7 +125,7 @@ export default function AnalyticsPage() {
       {/* Main View - Aligned Columns Layout Matching Attached Image: Rank(#), Trophy, Member Image, Name, Bar, Number */}
       {viewMode === 'GRAPH' ? (
         <div className="chart-card card">
-          <h2>{dimension} Ranking ({metric === 'qty' ? 'Quantity' : 'Total Spend'})</h2>
+          <h2>{dimension} ({metric === 'qty' ? 'Quantity' : 'Total Spend'})</h2>
 
           <div className="custom-bar-list">
             {aggregatedData.map((item, idx) => {

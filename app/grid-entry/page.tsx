@@ -18,6 +18,7 @@ import {
   AlertCircle,
   X
 } from 'lucide-react';
+import { CircularSpinner } from '@/components/common/CircularSpinner';
 
 interface GridRow {
   localId: string;
@@ -277,7 +278,7 @@ export default function GridEntryPage() {
   };
 
   if (!user && !isDemoUser) return <LoginPrompt />;
-  if (loading) return <div className="loading-state">Loading Grid Entry Engine...</div>;
+  if (loading) return <CircularSpinner />;
 
   return (
     <div className="grid-entry-page">

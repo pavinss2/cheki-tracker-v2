@@ -10,6 +10,7 @@ import { ChevronLeft, ChevronRight, X, Image as ImageIcon, Users } from 'lucide-
 import { LightboxGallery, LightboxItem } from '@/components/common/LightboxGallery';
 import { MemberAvatar } from '@/components/common/MemberAvatar';
 import { extractDirectImageUrl } from '@/lib/imageUtils';
+import { CircularSpinner } from '@/components/common/CircularSpinner';
 
 interface GroupedChekiPhoto {
   key: string;
@@ -267,7 +268,7 @@ export default function CalendarPage() {
   }, [calendarDays, dayDataMap]);
 
   if (!user && !isDemoUser) return <LoginPrompt />;
-  if (loading) return <div className="loading-state">Loading Calendar View...</div>;
+  if (loading) return <CircularSpinner />;
 
   return (
     <div className="calendar-page">

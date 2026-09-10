@@ -9,6 +9,8 @@ import {
 } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
 
+import { CircularSpinner } from '@/components/common/CircularSpinner';
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
@@ -110,7 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOutUser, isDemoUser, enableDemoMode }}>
-      {children}
+      {loading ? <CircularSpinner fullScreen /> : children}
     </AuthContext.Provider>
   );
 };

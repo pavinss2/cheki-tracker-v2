@@ -29,6 +29,8 @@ import {
   X 
 } from 'lucide-react';
 
+import { CircularSpinner } from '@/components/common/CircularSpinner';
+
 const COLOR_HEX_MAP: Record<string, string> = {
   white: '#ffffff',
   red: '#e74c3c',
@@ -315,7 +317,7 @@ export default function HomePage() {
   }
 
   if (loading) {
-    return <div className="loading-state">Loading Analytics Dashboard...</div>;
+    return <CircularSpinner />;
   }
 
   return (

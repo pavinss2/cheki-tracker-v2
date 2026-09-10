@@ -29,7 +29,7 @@ export const Sidebar: React.FC = () => {
   return (
     <aside className="app-sidebar">
       <nav className="sidebar-nav">
-        <div className="nav-group-title">MAIN NAVIGATION</div>
+        {/* <div className="nav-group-title">MAIN NAVIGATION</div> */}
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
@@ -65,7 +65,7 @@ export const Sidebar: React.FC = () => {
         .sidebar-nav {
           display: flex;
           flex-direction: column;
-          gap: 4px;
+          gap: 30px;
         }
 
         .nav-group-title {
@@ -80,7 +80,7 @@ export const Sidebar: React.FC = () => {
           display: flex;
           align-items: center;
           gap: 12px;
-          padding: 10px 14px;
+          padding: 20px 24px;
           border-radius: var(--radius-sm);
           color: var(--text-muted);
           font-weight: 500;
