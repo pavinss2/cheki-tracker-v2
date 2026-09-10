@@ -765,6 +765,7 @@ export default function RawDataPage() {
       )}
 
       {/* LIGHTBOX GALLERY MODAL */}
+              {/* LIGHTBOX GALLERY MODAL */}
       {lightboxState.open && (
         <LightboxGallery 
           items={galleryItems} 
@@ -778,12 +779,17 @@ export default function RawDataPage() {
           display: flex;
           flex-direction: column;
           gap: 20px;
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
         }
 
         .page-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
+          gap: 16px;
+          flex-wrap: wrap;
         }
 
         .header-actions {
@@ -807,12 +813,26 @@ export default function RawDataPage() {
           font-weight: 500;
         }
 
+        .table-card {
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          overflow: hidden;
+          box-sizing: border-box;
+          padding: 0;
+        }
+
         .table-wrapper {
           overflow-x: auto;
+          width: 100%;
+          max-width: 100%;
+          -webkit-overflow-scrolling: touch;
+          display: block;
         }
 
         .raw-table {
           width: 100%;
+          min-width: 920px;
           border-collapse: collapse;
         }
 

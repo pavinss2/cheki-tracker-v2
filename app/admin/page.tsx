@@ -236,237 +236,239 @@ export default function BackOfficePage() {
                 <Plus size={14} /> Add Member
               </button>
             </div>
-            <table>
-              <thead>
-                <tr>
-                  <th>Avatar & Image URL</th>
-                  <th className="sortable-th" onClick={() => handleSortMembers('member_name')}>
-                    Member Name {memberSortKey === 'member_name' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                  </th>
-                  <th className="sortable-th" onClick={() => handleSortMembers('color')}>
-                    Color {memberSortKey === 'color' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                  </th>
-                  <th className="sortable-th" onClick={() => handleSortMembers('group')}>
-                    Group {memberSortKey === 'group' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                  </th>
-                  <th className="sortable-th" onClick={() => handleSortMembers('country')}>
-                    Country <span title="Locked & auto-mapped by Group"><Lock size={11} /></span> {memberSortKey === 'country' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                  </th>
-                  <th className="sortable-th" onClick={() => handleSortMembers('company')}>
-                    Company <span title="Locked & auto-mapped by Group"><Lock size={11} /></span> {memberSortKey === 'company' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                  </th>
-                  <th className="sortable-th" onClick={() => handleSortMembers('start_date')}>
-                    Start Date {memberSortKey === 'start_date' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                  </th>
-                  <th className="sortable-th" onClick={() => handleSortMembers('end_date')}>
-                    End Date {memberSortKey === 'end_date' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                  </th>
-                  <th className="sortable-th" onClick={() => handleSortMembers('is_active')}>
-                    Status {memberSortKey === 'is_active' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                  </th>
-                  <th>X Profile</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* Temporary Unsaved New Member Row Pinned at Top Row */}
-                {tempMember && (
-                  <tr className="temp-row">
-                    <td style={{ minWidth: '160px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <MemberAvatar 
-                          src={tempMember.member_image} 
-                          name={tempMember.member_name || 'New'} 
-                          size={32} 
-                          colorHex={colors.find(c => c.color === tempMember.color)?.color_code} 
-                        />
-                        <input 
-                          type="url" 
-                          className="table-input" 
-                          placeholder="Image URL (https://...)" 
-                          value={tempMember.member_image} 
-                          onChange={(e) => setTempMember({ ...tempMember, member_image: e.target.value })}
-                          title="Member Avatar Image URL"
-                        />
-                      </div>
-                    </td>
-                    <td>
-                      <input 
-                        type="text" 
-                        className="table-input bold" 
-                        placeholder="Member Name *" 
-                        autoFocus
-                        value={tempMember.member_name} 
-                        onChange={(e) => setTempMember({ ...tempMember, member_name: e.target.value })}
-                      />
-                    </td>
-                    <td>
-                      <select 
-                        className="table-select"
-                        value={tempMember.color}
-                        onChange={(e) => {
-                          if (e.target.value === '__CREATE_NEW__') {
-                            setInlineNewModal({ table: 'dim_color', fieldKey: 'color', name: '' });
-                          } else {
-                            setTempMember({ ...tempMember, color: e.target.value });
-                          }
-                        }}
-                      >
-                        {colors.map((c) => (
-                          <option key={c.id} value={c.color}>{c.color}</option>
-                        ))}
-                        <option value="__CREATE_NEW__">+ Create New Color...</option>
-                      </select>
-                    </td>
-                    <td>
-                      <select 
-                        className="table-select"
-                        value={tempMember.group}
-                        onChange={(e) => {
-                          const grpVal = e.target.value;
-                          if (grpVal === '__CREATE_NEW__') {
-                            setInlineNewModal({ table: 'dim_group', fieldKey: 'group', name: '' });
-                          } else {
-                            const mapped = groupLookup[grpVal];
-                            setTempMember({ 
-                              ...tempMember, 
-                              group: grpVal,
-                              company: mapped?.company || 'Individual',
-                              country: mapped?.country || '🇹🇭 TH'
-                            });
-                          }
-                        }}
-                      >
-                        <option value="">-- Select Group --</option>
-                        {groups.map((g) => (
-                          <option key={g.id} value={g.group}>{g.group}</option>
-                        ))}
-                        <option value="__CREATE_NEW__">+ Create New Group...</option>
-                      </select>
-                    </td>
-                    <td>
-                      <input 
-                        type="text" 
-                        disabled 
-                        className="table-input disabled" 
-                        value={tempMember.country} 
-                        title="Country is locked and auto-mapped by selected Group"
-                      />
-                    </td>
-                    <td>
-                      <input 
-                        type="text" 
-                        disabled 
-                        className="table-input disabled" 
-                        value={tempMember.company} 
-                        title="Company is locked and auto-mapped by selected Group"
-                      />
-                    </td>
-                    <td>
-                      <input 
-                        type="date" 
-                        className="table-input" 
-                        value={tempMember.start_date} 
-                        onChange={(e) => setTempMember({ ...tempMember, start_date: e.target.value })}
-                      />
-                    </td>
-                    <td>
-                      <input 
-                        type="date" 
-                        className="table-input" 
-                        value={tempMember.end_date} 
-                        onChange={(e) => setTempMember({ ...tempMember, end_date: e.target.value })}
-                      />
-                    </td>
-                    <td>
-                      <select 
-                        className="table-select"
-                        value={tempMember.is_active ? 'active' : 'inactive'}
-                        onChange={(e) => setTempMember({ ...tempMember, is_active: e.target.value === 'active' })}
-                      >
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                      </select>
-                    </td>
-                    <td>
-                      <input 
-                        type="text" 
-                        className="table-input" 
-                        placeholder="https://x.com/..." 
-                        value={tempMember.x_profile} 
-                        onChange={(e) => setTempMember({ ...tempMember, x_profile: e.target.value })}
-                      />
-                    </td>
-                    <td>
-                      <div className="action-btns">
-                        <button 
-                          className="btn btn-primary btn-xs" 
-                          onClick={handleSaveTempMember}
-                          disabled={isSavingTemp}
-                          title="Save New Member to Database"
-                        >
-                          <Save size={13} /> {isSavingTemp ? 'Saving...' : 'Save'}
-                        </button>
-                        <button 
-                          className="btn btn-secondary btn-xs" 
-                          onClick={() => setTempMember(null)}
-                          title="Cancel"
-                        >
-                          <X size={13} />
-                        </button>
-                      </div>
-                    </td>
+            <div className="table-wrapper">
+              <table className="dim-table member-table">
+                <thead>
+                  <tr>
+                    <th>Avatar & Image URL</th>
+                    <th className="sortable-th" onClick={() => handleSortMembers('member_name')}>
+                      Member Name {memberSortKey === 'member_name' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                    </th>
+                    <th className="sortable-th" onClick={() => handleSortMembers('color')}>
+                      Color {memberSortKey === 'color' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                    </th>
+                    <th className="sortable-th" onClick={() => handleSortMembers('group')}>
+                      Group {memberSortKey === 'group' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                    </th>
+                    <th className="sortable-th" onClick={() => handleSortMembers('country')}>
+                      Country <span title="Locked & auto-mapped by Group"><Lock size={11} /></span> {memberSortKey === 'country' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                    </th>
+                    <th className="sortable-th" onClick={() => handleSortMembers('company')}>
+                      Company <span title="Locked & auto-mapped by Group"><Lock size={11} /></span> {memberSortKey === 'company' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                    </th>
+                    <th className="sortable-th" onClick={() => handleSortMembers('start_date')}>
+                      Start Date {memberSortKey === 'start_date' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                    </th>
+                    <th className="sortable-th" onClick={() => handleSortMembers('end_date')}>
+                      End Date {memberSortKey === 'end_date' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                    </th>
+                    <th className="sortable-th" onClick={() => handleSortMembers('is_active')}>
+                      Status {memberSortKey === 'is_active' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                    </th>
+                    <th>X Profile</th>
+                    <th>Actions</th>
                   </tr>
-                )}
-
-                {/* Sorted Member List */}
-                {sortedMembers.map((m) => {
-                  const colorObj = colors.find(c => c.color === m.color);
-                  const xUrl = m.x_profile 
-                    ? (m.x_profile.startsWith('http') ? m.x_profile : `https://x.com/${m.x_profile.replace('@', '')}`)
-                    : '';
-
-                  return (
-                    <tr key={m.id}>
+                </thead>
+                <tbody>
+                  {/* Temporary Unsaved New Member Row Pinned at Top Row */}
+                  {tempMember && (
+                    <tr className="temp-row">
+                      <td style={{ minWidth: '160px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <MemberAvatar 
+                            src={tempMember.member_image} 
+                            name={tempMember.member_name || 'New'} 
+                            size={32} 
+                            colorHex={colors.find(c => c.color === tempMember.color)?.color_code} 
+                          />
+                          <input 
+                            type="url" 
+                            className="table-input" 
+                            placeholder="Image URL (https://...)" 
+                            value={tempMember.member_image} 
+                            onChange={(e) => setTempMember({ ...tempMember, member_image: e.target.value })}
+                            title="Member Avatar Image URL"
+                          />
+                        </div>
+                      </td>
                       <td>
-                        <MemberAvatar 
-                          src={m.member_image} 
-                          name={m.member_name} 
-                          size={36} 
-                          colorHex={colorObj?.color_code} 
+                        <input 
+                          type="text" 
+                          className="table-input bold" 
+                          placeholder="Member Name *" 
+                          autoFocus
+                          value={tempMember.member_name} 
+                          onChange={(e) => setTempMember({ ...tempMember, member_name: e.target.value })}
                         />
                       </td>
-                      <td><strong>{m.member_name}</strong></td>
-                      <td>{m.color}</td>
-                      <td>{m.group}</td>
-                      <td>{m.country}</td>
-                      <td>{m.company}</td>
-                      <td>{m.start_date || '-'}</td>
-                      <td>{m.end_date || '-'}</td>
-                      <td>{m.is_active ? <span className="status-badge active">Active</span> : <span className="status-badge">Inactive</span>}</td>
                       <td>
-                        {xUrl ? (
-                          <a href={xUrl} target="_blank" rel="noreferrer" className="x-link" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                            <ExternalLink size={13} /> Link
-                          </a>
-                        ) : '-'}
+                        <select 
+                          className="table-select"
+                          value={tempMember.color}
+                          onChange={(e) => {
+                            if (e.target.value === '__CREATE_NEW__') {
+                              setInlineNewModal({ table: 'dim_color', fieldKey: 'color', name: '' });
+                            } else {
+                              setTempMember({ ...tempMember, color: e.target.value });
+                            }
+                          }}
+                        >
+                          {colors.map((c) => (
+                            <option key={c.id} value={c.color}>{c.color}</option>
+                          ))}
+                          <option value="__CREATE_NEW__">+ Create New Color...</option>
+                        </select>
+                      </td>
+                      <td>
+                        <select 
+                          className="table-select"
+                          value={tempMember.group}
+                          onChange={(e) => {
+                            const grpVal = e.target.value;
+                            if (grpVal === '__CREATE_NEW__') {
+                              setInlineNewModal({ table: 'dim_group', fieldKey: 'group', name: '' });
+                            } else {
+                              const mapped = groupLookup[grpVal];
+                              setTempMember({ 
+                                ...tempMember, 
+                                group: grpVal,
+                                company: mapped?.company || 'Individual',
+                                country: mapped?.country || '🇹🇭 TH'
+                              });
+                            }
+                          }}
+                        >
+                          <option value="">-- Select Group --</option>
+                          {groups.map((g) => (
+                            <option key={g.id} value={g.group}>{g.group}</option>
+                          ))}
+                          <option value="__CREATE_NEW__">+ Create New Group...</option>
+                        </select>
+                      </td>
+                      <td>
+                        <input 
+                          type="text" 
+                          disabled 
+                          className="table-input disabled" 
+                          value={tempMember.country} 
+                          title="Country is locked and auto-mapped by selected Group"
+                        />
+                      </td>
+                      <td>
+                        <input 
+                          type="text" 
+                          disabled 
+                          className="table-input disabled" 
+                          value={tempMember.company} 
+                          title="Company is locked and auto-mapped by selected Group"
+                        />
+                      </td>
+                      <td>
+                        <input 
+                          type="date" 
+                          className="table-input" 
+                          value={tempMember.start_date} 
+                          onChange={(e) => setTempMember({ ...tempMember, start_date: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <input 
+                          type="date" 
+                          className="table-input" 
+                          value={tempMember.end_date} 
+                          onChange={(e) => setTempMember({ ...tempMember, end_date: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <select 
+                          className="table-select"
+                          value={tempMember.is_active ? 'active' : 'inactive'}
+                          onChange={(e) => setTempMember({ ...tempMember, is_active: e.target.value === 'active' })}
+                        >
+                          <option value="active">Active</option>
+                          <option value="inactive">Inactive</option>
+                        </select>
+                      </td>
+                      <td>
+                        <input 
+                          type="text" 
+                          className="table-input" 
+                          placeholder="https://x.com/..." 
+                          value={tempMember.x_profile} 
+                          onChange={(e) => setTempMember({ ...tempMember, x_profile: e.target.value })}
+                        />
                       </td>
                       <td>
                         <div className="action-btns">
-                          <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_member', data: { ...m } })}><Edit2 size={15} /></button>
                           <button 
-                            className="btn-icon danger" 
-                            onClick={() => setDeleteConfirmModal({ table: 'dim_member', id: m.id, displayValue: getItemValueString(m as unknown as Record<string, unknown>) })}
+                            className="btn btn-primary btn-xs" 
+                            onClick={handleSaveTempMember}
+                            disabled={isSavingTemp}
+                            title="Save New Member to Database"
                           >
-                            <Trash2 size={15} />
+                            <Save size={13} /> {isSavingTemp ? 'Saving...' : 'Save'}
+                          </button>
+                          <button 
+                            className="btn btn-secondary btn-xs" 
+                            onClick={() => setTempMember(null)}
+                            title="Cancel"
+                          >
+                            <X size={13} />
                           </button>
                         </div>
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  )}
+
+                  {/* Sorted Member List */}
+                  {sortedMembers.map((m) => {
+                    const colorObj = colors.find(c => c.color === m.color);
+                    const xUrl = m.x_profile 
+                      ? (m.x_profile.startsWith('http') ? m.x_profile : `https://x.com/${m.x_profile.replace('@', '')}`)
+                      : '';
+
+                    return (
+                      <tr key={m.id}>
+                        <td>
+                          <MemberAvatar 
+                            src={m.member_image} 
+                            name={m.member_name} 
+                            size={36} 
+                            colorHex={colorObj?.color_code} 
+                          />
+                        </td>
+                        <td><strong>{m.member_name}</strong></td>
+                        <td>{m.color}</td>
+                        <td>{m.group}</td>
+                        <td>{m.country}</td>
+                        <td>{m.company}</td>
+                        <td>{m.start_date || '-'}</td>
+                        <td>{m.end_date || '-'}</td>
+                        <td>{m.is_active ? <span className="status-badge active">Active</span> : <span className="status-badge">Inactive</span>}</td>
+                        <td>
+                          {xUrl ? (
+                            <a href={xUrl} target="_blank" rel="noreferrer" className="x-link" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <ExternalLink size={13} /> Link
+                            </a>
+                          ) : '-'}
+                        </td>
+                        <td>
+                          <div className="action-btns">
+                            <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_member', data: { ...m } })}><Edit2 size={15} /></button>
+                            <button 
+                              className="btn-icon danger" 
+                              onClick={() => setDeleteConfirmModal({ table: 'dim_member', id: m.id, displayValue: getItemValueString(m as unknown as Record<string, unknown>) })}
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
@@ -479,36 +481,38 @@ export default function BackOfficePage() {
                 <Plus size={14} /> Add Group
               </button>
             </div>
-            <table>
-              <thead>
-                <tr>
-                  <th>Group Name</th>
-                  <th>Country</th>
-                  <th>Company</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {groups.map((g) => (
-                  <tr key={g.id}>
-                    <td><strong>{g.group}</strong></td>
-                    <td>{g.country}</td>
-                    <td>{g.company}</td>
-                    <td>
-                      <div className="action-btns">
-                        <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_group', data: { ...g } })}><Edit2 size={15} /></button>
-                        <button 
-                          className="btn-icon danger" 
-                          onClick={() => setDeleteConfirmModal({ table: 'dim_group', id: g.id, displayValue: getItemValueString(g as unknown as Record<string, unknown>) })}
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
+            <div className="table-wrapper">
+              <table className="dim-table">
+                <thead>
+                  <tr>
+                    <th>Group Name</th>
+                    <th>Country</th>
+                    <th>Company</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {groups.map((g) => (
+                    <tr key={g.id}>
+                      <td><strong>{g.group}</strong></td>
+                      <td>{g.country}</td>
+                      <td>{g.company}</td>
+                      <td>
+                        <div className="action-btns">
+                          <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_group', data: { ...g } })}><Edit2 size={15} /></button>
+                          <button 
+                            className="btn-icon danger" 
+                            onClick={() => setDeleteConfirmModal({ table: 'dim_group', id: g.id, displayValue: getItemValueString(g as unknown as Record<string, unknown>) })}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
@@ -521,32 +525,34 @@ export default function BackOfficePage() {
                 <Plus size={14} /> Add Company
               </button>
             </div>
-            <table>
-              <thead>
-                <tr>
-                  <th>Company Name</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {companies.map((c) => (
-                  <tr key={c.id}>
-                    <td><strong>{c.company}</strong></td>
-                    <td>
-                      <div className="action-btns">
-                        <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_company', data: { ...c } })}><Edit2 size={15} /></button>
-                        <button 
-                          className="btn-icon danger" 
-                          onClick={() => setDeleteConfirmModal({ table: 'dim_company', id: c.id, displayValue: getItemValueString(c as unknown as Record<string, unknown>) })}
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
+            <div className="table-wrapper">
+              <table className="dim-table">
+                <thead>
+                  <tr>
+                    <th>Company Name</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {companies.map((c) => (
+                    <tr key={c.id}>
+                      <td><strong>{c.company}</strong></td>
+                      <td>
+                        <div className="action-btns">
+                          <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_company', data: { ...c } })}><Edit2 size={15} /></button>
+                          <button 
+                            className="btn-icon danger" 
+                            onClick={() => setDeleteConfirmModal({ table: 'dim_company', id: c.id, displayValue: getItemValueString(c as unknown as Record<string, unknown>) })}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
@@ -559,36 +565,38 @@ export default function BackOfficePage() {
                 <Plus size={14} /> Add Color
               </button>
             </div>
-            <table>
-              <thead>
-                <tr>
-                  <th>Color Name</th>
-                  <th>Color Hex Code</th>
-                  <th>Preview</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {colors.map((c) => (
-                  <tr key={c.id}>
-                    <td><strong>{c.color}</strong></td>
-                    <td><code>{c.color_code}</code></td>
-                    <td><div className="color-swatch" style={{ backgroundColor: c.color_code }} /></td>
-                    <td>
-                      <div className="action-btns">
-                        <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_color', data: { ...c } })}><Edit2 size={15} /></button>
-                        <button 
-                          className="btn-icon danger" 
-                          onClick={() => setDeleteConfirmModal({ table: 'dim_color', id: c.id, displayValue: getItemValueString(c as unknown as Record<string, unknown>) })}
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
+            <div className="table-wrapper">
+              <table className="dim-table">
+                <thead>
+                  <tr>
+                    <th>Color Name</th>
+                    <th>Color Hex Code</th>
+                    <th>Preview</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {colors.map((c) => (
+                    <tr key={c.id}>
+                      <td><strong>{c.color}</strong></td>
+                      <td><code>{c.color_code}</code></td>
+                      <td><div className="color-swatch" style={{ backgroundColor: c.color_code }} /></td>
+                      <td>
+                        <div className="action-btns">
+                          <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_color', data: { ...c } })}><Edit2 size={15} /></button>
+                          <button 
+                            className="btn-icon danger" 
+                            onClick={() => setDeleteConfirmModal({ table: 'dim_color', id: c.id, displayValue: getItemValueString(c as unknown as Record<string, unknown>) })}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
@@ -601,32 +609,34 @@ export default function BackOfficePage() {
                 <Plus size={14} /> Add Type
               </button>
             </div>
-            <table>
-              <thead>
-                <tr>
-                  <th>Type Name</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {types.map((t) => (
-                  <tr key={t.id}>
-                    <td><strong>{t.type}</strong></td>
-                    <td>
-                      <div className="action-btns">
-                        <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_type', data: { ...t } })}><Edit2 size={15} /></button>
-                        <button 
-                          className="btn-icon danger" 
-                          onClick={() => setDeleteConfirmModal({ table: 'dim_type', id: t.id, displayValue: getItemValueString(t as unknown as Record<string, unknown>) })}
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
+            <div className="table-wrapper">
+              <table className="dim-table">
+                <thead>
+                  <tr>
+                    <th>Type Name</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {types.map((t) => (
+                    <tr key={t.id}>
+                      <td><strong>{t.type}</strong></td>
+                      <td>
+                        <div className="action-btns">
+                          <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_type', data: { ...t } })}><Edit2 size={15} /></button>
+                          <button 
+                            className="btn-icon danger" 
+                            onClick={() => setDeleteConfirmModal({ table: 'dim_type', id: t.id, displayValue: getItemValueString(t as unknown as Record<string, unknown>) })}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
@@ -639,34 +649,36 @@ export default function BackOfficePage() {
                 <Plus size={14} /> Add Country
               </button>
             </div>
-            <table>
-              <thead>
-                <tr>
-                  <th>Country Name</th>
-                  <th>Display Code & Emoji</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {countries.map((c) => (
-                  <tr key={c.id}>
-                    <td><strong>{c.country}</strong></td>
-                    <td>{c.displayed_country}</td>
-                    <td>
-                      <div className="action-btns">
-                        <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_country', data: { ...c } })}><Edit2 size={15} /></button>
-                        <button 
-                          className="btn-icon danger" 
-                          onClick={() => setDeleteConfirmModal({ table: 'dim_country', id: c.id, displayValue: getItemValueString(c as unknown as Record<string, unknown>) })}
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
+            <div className="table-wrapper">
+              <table className="dim-table">
+                <thead>
+                  <tr>
+                    <th>Country Name</th>
+                    <th>Display Code & Emoji</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {countries.map((c) => (
+                    <tr key={c.id}>
+                      <td><strong>{c.country}</strong></td>
+                      <td>{c.displayed_country}</td>
+                      <td>
+                        <div className="action-btns">
+                          <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_country', data: { ...c } })}><Edit2 size={15} /></button>
+                          <button 
+                            className="btn-icon danger" 
+                            onClick={() => setDeleteConfirmModal({ table: 'dim_country', id: c.id, displayValue: getItemValueString(c as unknown as Record<string, unknown>) })}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
@@ -676,24 +688,26 @@ export default function BackOfficePage() {
             <div className="tab-header">
               <h2>fact_admin_log</h2>
             </div>
-            <table>
-              <thead>
-                <tr>
-                  <th>Timestamp</th>
-                  <th>Action Type</th>
-                  <th>Action Detail</th>
-                </tr>
-              </thead>
-              <tbody>
-                {logs.map((l) => (
-                  <tr key={l.id}>
-                    <td>{new Date(l.timestamp).toLocaleString()}</td>
-                    <td><span className="log-badge">{l.actionType}</span></td>
-                    <td><strong>{l.actionDetail}</strong></td>
+            <div className="table-wrapper">
+              <table className="dim-table">
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Action Type</th>
+                    <th>Action Detail</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {logs.map((l) => (
+                    <tr key={l.id}>
+                      <td>{new Date(l.timestamp).toLocaleString()}</td>
+                      <td><span className="log-badge">{l.actionType}</span></td>
+                      <td><strong>{l.actionDetail}</strong></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
@@ -981,7 +995,7 @@ export default function BackOfficePage() {
       )}
 
       <style jsx>{`
-        .admin-page { display: flex; flex-direction: column; gap: 20px; }
+        .admin-page { display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 100%; min-width: 0; }
         .page-title { font-size: 1.6rem; }
 
         .tabs-bar { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -990,7 +1004,33 @@ export default function BackOfficePage() {
           &.active { background: var(--accent-primary-subtle); color: var(--accent-primary); border-color: rgba(212, 168, 75, 0.4); font-weight: 600; }
         }
 
-        .tab-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .table-card {
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          overflow: hidden;
+          box-sizing: border-box;
+        }
+
+        .table-wrapper {
+          overflow-x: auto;
+          width: 100%;
+          max-width: 100%;
+          -webkit-overflow-scrolling: touch;
+          display: block;
+        }
+
+        .dim-table {
+          width: 100%;
+          min-width: 500px;
+          border-collapse: collapse;
+        }
+
+        .dim-table.member-table {
+          min-width: 980px;
+        }
+
+        .tab-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
 
         .sortable-th {
           cursor: pointer;

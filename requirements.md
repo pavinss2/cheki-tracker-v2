@@ -160,8 +160,15 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 - All member avatars are rendered via `<MemberAvatar>`.
 - **Error Handling**: If a member avatar URL (`member_image`) is missing, blank, `None`, or fails to render (404, broken link, CDN error), `MemberAvatar` catches `onError` and displays a **capitalized initial letter circle icon** styled with the member's theme color.
 
-### 6.6 Inline Choice Creation
-- Dropdowns for Group, Company, Color, and Country include a `+ Create New...` option opening a quick modal to create missing dimension options on the fly. Must click **Save Choice (Confirm)** to save.
+### 6.7 Mobile Layout & Horizontal Table Sliding Specifications
+- **Viewport Width Bounding (`min-width: 0`)**: All page containers, card components, and main layout wrappers (`.main-content`, `.layout-wrapper`) enforce `width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box;` on mobile devices.
+- **Horizontal Table & Grid Sliding**:
+  - All wide data tables (Raw Data `raw-table`, Admin `dim_table`, Analytics tables) are wrapped inside `.table-wrapper` with `overflow-x: auto; -webkit-overflow-scrolling: touch;`.
+  - Tables maintain minimum column widths (e.g. `min-width: 920px` for Raw Data and `min-width: 980px` for `dim_member`) to ensure readability while allowing full horizontal swipe/slide touch interaction on mobile.
+  - The Calendar 7-column grid (`.cal-grid-card`) wraps in `.cal-grid-wrapper` with `min-width: 500px` on screens $\le 640\text{px}$, enabling smooth horizontal sliding without content cropping.
+- **Fitted Mobile Filter Bar**:
+  - Filter bars across all pages (`FilterBar`) automatically wrap into a fitted 2-column grid (`grid-template-columns: repeat(2, 1fr)`) on mobile screens ($\le 768\text{px}$).
+  - All select dropdowns in the filter bar use `width: 100%; max-width: 100%; min-width: 0; text-overflow: ellipsis;` so filters fit neatly within the mobile viewport without overflowing or getting cut off.
 
 ---
 

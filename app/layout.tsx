@@ -36,6 +36,9 @@ export default function RootLayout({
           .layout-wrapper {
             display: flex;
             min-height: calc(100vh - var(--header-height));
+            width: 100%;
+            max-width: 100vw;
+            overflow-x: hidden;
           }
           .main-content {
             flex: 1;
@@ -43,12 +46,17 @@ export default function RootLayout({
             padding: 24px;
             padding-bottom: 80px;
             max-width: 1600px;
+            width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
           }
           @media (max-width: 768px) {
             .main-content {
               margin-left: 0;
-              padding: 16px;
+              padding: 12px 14px;
               padding-bottom: 80px;
+              width: 100%;
+              min-width: 0;
             }
           }
         `}</style>

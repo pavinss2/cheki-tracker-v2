@@ -318,50 +318,52 @@ export default function CalendarPage() {
 
       {/* 7-column Calendar Grid */}
       <div className="cal-grid-card card">
-        <div className="cal-grid-header">
-          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(w => (
-            <div key={w} className="weekday-header">{w}</div>
-          ))}
-        </div>
+        <div className="cal-grid-wrapper">
+          <div className="cal-grid-header">
+            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(w => (
+              <div key={w} className="weekday-header">{w}</div>
+            ))}
+          </div>
 
-        <div className="cal-grid-body">
-          {calendarDays.map((cell, idx) => {
-            const data = dayDataMap[cell.dateStr];
-            const qty = data?.qty || 0;
-            const heatClass = getHeatClass(qty);
-            const isSelected = selectedDate === cell.dateStr;
+          <div className="cal-grid-body">
+            {calendarDays.map((cell, idx) => {
+              const data = dayDataMap[cell.dateStr];
+              const qty = data?.qty || 0;
+              const heatClass = getHeatClass(qty);
+              const isSelected = selectedDate === cell.dateStr;
 
-            const uniqueMembers = Array.from(new Set(data?.rows.map(r => r.member) || []));
+              const uniqueMembers = Array.from(new Set(data?.rows.map(r => r.member) || []));
 
-            return (
-              <div
-                key={idx}
-                className={`cal-day-cell ${!cell.isCurrentMonth ? 'other-month' : ''} ${heatClass} ${isSelected ? 'selected' : ''}`}
-                onClick={() => setSelectedDate(isSelected ? null : cell.dateStr)}
-              >
-                <div className="day-cell-top">
-                  <span className="day-num">{cell.dayNum}</span>
-                  {qty > 0 && <span className="qty-badge">{qty}</span>}
-                </div>
-
-                {uniqueMembers.length > 0 && (
-                  <div className="avatar-grid">
-                    {uniqueMembers.slice(0, 4).map(m => (
-                      <MemberAvatar
-                        key={m}
-                        name={m}
-                        src={memberAvatarMap[m]}
-                        size={18}
-                      />
-                    ))}
-                    {uniqueMembers.length > 4 && (
-                      <div className="mini-avatar more">+{uniqueMembers.length - 4}</div>
-                    )}
+              return (
+                <div
+                  key={idx}
+                  className={`cal-day-cell ${!cell.isCurrentMonth ? 'other-month' : ''} ${heatClass} ${isSelected ? 'selected' : ''}`}
+                  onClick={() => setSelectedDate(isSelected ? null : cell.dateStr)}
+                >
+                  <div className="day-cell-top">
+                    <span className="day-num">{cell.dayNum}</span>
+                    {qty > 0 && <span className="qty-badge">{qty}</span>}
                   </div>
-                )}
-              </div>
-            );
-          })}
+
+                  {uniqueMembers.length > 0 && (
+                    <div className="avatar-grid">
+                      {uniqueMembers.slice(0, 4).map(m => (
+                        <MemberAvatar
+                          key={m}
+                          name={m}
+                          src={memberAvatarMap[m]}
+                          size={18}
+                        />
+                      ))}
+                      {uniqueMembers.length > 4 && (
+                        <div className="mini-avatar more">+{uniqueMembers.length - 4}</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -463,6 +465,9 @@ export default function CalendarPage() {
           display: flex;
           flex-direction: column;
           gap: 20px;
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
         }
 
         .page-title { font-size: 1.6rem; }
@@ -480,12 +485,14 @@ export default function CalendarPage() {
           justify-content: space-between;
           align-items: center;
           gap: 16px;
+          flex-wrap: wrap;
         }
 
         .cal-title-section {
           display: flex;
           align-items: center;
-          gap: 20px;
+          gap: 16px;
+          flex-wrap: wrap;
         }
 
         .month-year-header {
@@ -508,7 +515,8 @@ export default function CalendarPage() {
 
         .month-summary-strip {
           display: flex;
-          gap: 8px;
+          gap: 6px;
+          flex-wrap: wrap;
         }
 
         .summary-pill {
@@ -523,6 +531,19 @@ export default function CalendarPage() {
 
         .cal-grid-card {
           padding: 16px;
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          overflow: hidden;
+          box-sizing: border-box;
+        }
+
+        .cal-grid-wrapper {
+          width: 100%;
+          max-width: 100%;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          display: block;
         }
 
         .cal-grid-header {
@@ -543,6 +564,15 @@ export default function CalendarPage() {
           display: grid;
           grid-template-columns: repeat(7, 1fr);
           gap: 6px;
+        }
+
+        @media (max-width: 640px) {
+          .cal-grid-header, .cal-grid-body {
+            min-width: 500px;
+          }
+          .cal-grid-card {
+            padding: 10px;
+          }
         }
 
         .cal-day-cell {

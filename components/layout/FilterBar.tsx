@@ -195,18 +195,34 @@ export const FilterBar: React.FC<FilterBarProps> = ({ transactions }) => {
           display: flex;
           flex-direction: column;
           gap: 12px;
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
         }
 
         .filter-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
           gap: 12px;
+          width: 100%;
+          min-width: 0;
         }
 
         .filter-item {
           display: flex;
           flex-direction: column;
           gap: 4px;
+          min-width: 0;
+          width: 100%;
+        }
+
+        .filter-item select {
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          text-overflow: ellipsis;
+          box-sizing: border-box;
         }
 
         .filter-item label {
@@ -258,6 +274,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({ transactions }) => {
           justify-content: space-between;
           align-items: center;
           padding-top: 6px;
+          gap: 8px;
+          flex-wrap: wrap;
         }
 
         .btn-show-more {
@@ -310,8 +328,12 @@ export const FilterBar: React.FC<FilterBarProps> = ({ transactions }) => {
         }
 
         @media (max-width: 768px) {
+          .filter-bar {
+            padding: 12px;
+          }
           .filter-grid {
             grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
           }
         }
       `}</style>
