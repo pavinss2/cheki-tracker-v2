@@ -650,7 +650,11 @@ export default function HomePage() {
           cursor: pointer;
           padding: 4px;
           border-radius: 4px;
-          &:hover { color: var(--text-main); background: rgba(255,255,255,0.1); }
+        }
+
+        .btn-close-breakdown:hover {
+          color: var(--text-main);
+          background: rgba(255,255,255,0.1);
         }
 
         .breakdown-list {
@@ -715,7 +719,10 @@ export default function HomePage() {
         .btn-group { display: flex; background-color: var(--bg-surface-2); padding: 3px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); }
         .btn-toggle {
           background: none; border: none; color: var(--text-muted); padding: 6px 12px; font-size: 0.78rem; font-weight: 500; border-radius: 4px; cursor: pointer;
-          &.active { background-color: var(--bg-surface-3); color: var(--text-main); font-weight: 600; }
+        }
+
+        .btn-toggle.active {
+          background-color: var(--bg-surface-3); color: var(--text-main); font-weight: 600;
         }
 
         @media (max-width: 1024px) {

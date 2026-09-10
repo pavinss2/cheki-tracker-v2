@@ -251,7 +251,10 @@ export default function AnalyticsPage() {
 
         .btn-toggle {
           background: none; border: none; color: var(--text-muted); padding: 6px 12px; font-size: 0.78rem; font-weight: 500; border-radius: 4px; cursor: pointer;
-          &.active { background-color: var(--bg-surface-3); color: var(--text-main); font-weight: 600; }
+        }
+
+        .btn-toggle.active {
+          background-color: var(--bg-surface-3); color: var(--text-main); font-weight: 600;
         }
 
         /* Leaderboard List Column Alignment (Rank, Trophy, Member Image, Name, Bar, Number) */
