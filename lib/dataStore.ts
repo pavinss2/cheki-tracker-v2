@@ -27,6 +27,7 @@ import {
   getDocs, 
   onSnapshot, 
   query, 
+  setDoc,
   updateDoc, 
   where, 
   writeBatch 
@@ -291,7 +292,8 @@ export function subscribeMetadata<T>(
   if (isDemo || !userId || process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes("Demo")) {
     const load = () => {
       const raw = getLocalData<T>(`${tableName}_${userId || 'demo'}`, seed);
-      onData(sortNewestTop(raw));
+      const active = raw.filter((i: any) => !i.is_deleted);
+      onData(sortNewestTop(active));
     };
     load();
     return subscribeToLocalStore(`${tableName}_${userId || 'demo'}`, load);
@@ -300,30 +302,53 @@ export function subscribeMetadata<T>(
   try {
     const q = query(collection(db, tableName), where("userId", "==", userId));
     return onSnapshot(q, (snapshot) => {
-      const items: T[] = [];
-      snapshot.forEach((doc) => {
-        items.push({ id: doc.id, ...doc.data() } as unknown as T);
+      const dbItems: T[] = [];
+      const dbMapById = new Map<string, T>();
+      const deletedIds = new Set<string>();
+
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        const d = { ...data, id: docSnap.id } as unknown as T;
+        if ((data as any).is_deleted) {
+          deletedIds.add(docSnap.id);
+        } else {
+          dbItems.push(d);
+          dbMapById.set(docSnap.id, d);
+        }
       });
 
+      const finalItems: T[] = [];
+      const seenKeys = new Set<string>();
+
+      // 1. Add DB items (non-deleted)
+      dbItems.forEach(item => {
+        const valKey = getItemValueString(item as Record<string, unknown>).toLowerCase() || String((item as any).id);
+        if (!seenKeys.has(valKey)) {
+          seenKeys.add(valKey);
+          finalItems.push(item);
+        }
+      });
+
+      // 2. Add seed items if not deleted or overridden
       if (seed && seed.length > 0) {
-        const combined = [...items, ...seed];
-        const seen = new Set<string>();
-        const deduplicated: T[] = [];
-        combined.forEach((item) => {
-          const val = getItemValueString(item as Record<string, unknown>).toLowerCase();
-          const key = val || String((item as any).id);
-          if (!seen.has(key)) {
-            seen.add(key);
-            deduplicated.push(item);
+        seed.forEach(item => {
+          const seedId = String((item as any).id);
+          if (deletedIds.has(seedId)) return;
+          if (dbMapById.has(seedId)) return;
+
+          const valKey = getItemValueString(item as Record<string, unknown>).toLowerCase() || seedId;
+          if (!seenKeys.has(valKey)) {
+            seenKeys.add(valKey);
+            finalItems.push(item);
           }
         });
-        onData(sortNewestTop(deduplicated));
-      } else {
-        onData(sortNewestTop(items));
       }
+
+      onData(sortNewestTop(finalItems));
     }, () => {
       const raw = getLocalData<T>(`${tableName}_${userId}`, seed);
-      onData(sortNewestTop(raw));
+      const active = raw.filter((i: any) => !i.is_deleted);
+      onData(sortNewestTop(active));
     });
   } catch {
     onData(sortNewestTop(seed));
@@ -373,20 +398,38 @@ export async function updateMetadataDoc(
   const payload = { ...data, updatedAt: new Date().toISOString() };
   const valStr = getItemValueString(data);
 
-  if (id.startsWith('default_')) {
-    // If updating an inherited default item, create a user override doc in dim_*
-    const { id: _ignoreId, isDefault: _ignoreDef, ...overrideData } = data;
-    await addMetadataDoc(tableName, userId, overrideData, isDemo);
-    return;
-  }
-
   if (isDemo || process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes("Demo")) {
     const key = `${tableName}_${userId || 'demo'}`;
     const current = getLocalData<Record<string, unknown> & { id: string }>(key, []);
-    const updated = current.map(item => item.id === id ? { ...item, ...payload } : item);
+    let found = false;
+    const updated = current.map(item => {
+      if (item.id === id) {
+        found = true;
+        return { ...item, ...payload };
+      }
+      return item;
+    });
+    if (!found) {
+      updated.unshift({ id, ...payload });
+    }
     setLocalData(key, updated);
     notifyListeners(key);
     logAdminAction(userId, `UPDATE_${tableName.toUpperCase()}`, `Updated ID ${id} (${valStr})`, true);
+    return;
+  }
+
+  // If modifying a Back Office default table ('default_dim_*' or userId === 'global')
+  if (tableName.startsWith('default_') || userId === 'global') {
+    const docRef = doc(db, tableName, id);
+    await setDoc(docRef, { ...payload, id, userId: 'global' }, { merge: true });
+    logAdminAction(userId, `UPDATE_${tableName.toUpperCase()}`, `Updated ID ${id} (${valStr})`);
+    return;
+  }
+
+  // Regular user updating dim_* doc from Admin tab
+  if (id.startsWith('default_')) {
+    const { id: _ignoreId, isDefault: _ignoreDef, ...overrideData } = data;
+    await addMetadataDoc(tableName, userId, overrideData, isDemo);
     return;
   }
 
@@ -403,17 +446,35 @@ export async function deleteMetadataDoc(
 ): Promise<void> {
   const valSuffix = itemValue ? ` (${itemValue})` : '';
 
-  if (id.startsWith('default_')) {
-    // If deleting an inherited default from user perspective, save a disabled override doc
-    return;
-  }
-
   if (isDemo || process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes("Demo")) {
     const key = `${tableName}_${userId || 'demo'}`;
     const current = getLocalData<{ id: string }>(key, []);
     setLocalData(key, current.filter(item => item.id !== id));
     notifyListeners(key);
     logAdminAction(userId, `DELETE_${tableName.toUpperCase()}`, `Deleted ID ${id}${valSuffix}`, true);
+    return;
+  }
+
+  // If modifying a Back Office default table ('default_dim_*' or userId === 'global')
+  if (tableName.startsWith('default_') || userId === 'global') {
+    if (id.startsWith('default_') || id.includes('_')) {
+      // Seed item: write a soft-delete marker document with id in Firestore so snapshot overrides static seed!
+      await setDoc(doc(db, tableName, id), {
+        id,
+        userId: 'global',
+        is_deleted: true,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+    } else {
+      await deleteDoc(doc(db, tableName, id));
+    }
+    logAdminAction(userId, `DELETE_${tableName.toUpperCase()}`, `Deleted ID ${id}${valSuffix}`);
+    return;
+  }
+
+  // Regular user deleting inherited default item from Admin tab
+  if (id.startsWith('default_')) {
+    await addMetadataDoc(tableName, userId, { originalId: id, is_deleted: true, is_active: false }, isDemo);
     return;
   }
 
@@ -671,42 +732,7 @@ export async function seedUserDataToFirestore(userId: string): Promise<{ success
       }
     }
 
-    // Helper for dim tables
-    const seedDimTable = async (tableName: string, defaultData: Record<string, unknown>[]) => {
-      const snap = await getDocs(query(collection(db, tableName), where("userId", "==", userId)));
-      if (snap.empty) {
-        const CHUNK_SIZE = 300;
-        for (let i = 0; i < defaultData.length; i += CHUNK_SIZE) {
-          const chunk = defaultData.slice(i, i + CHUNK_SIZE);
-          const batch = writeBatch(db);
-          chunk.forEach((item) => {
-            const docRef = doc(collection(db, tableName));
-            batch.set(docRef, {
-              ...item,
-              userId,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            });
-          });
-          await batch.commit();
-        }
-      }
-    };
-
-    await seedDimTable("dim_member", DEFAULT_MEMBERS);
-    await seedDimTable("dim_company", DEFAULT_COMPANIES);
-    await seedDimTable("dim_group", DEFAULT_GROUPS);
-    await seedDimTable("dim_color", DEFAULT_COLORS);
-    await seedDimTable("dim_type", DEFAULT_TYPES);
-    await seedDimTable("dim_country", DEFAULT_COUNTRIES);
-    await seedDimTable("dim_location", [
-      { location: 'Bangkok' },
-      { location: 'Tokyo' },
-      { location: 'Seoul' },
-      { location: 'Taipei' }
-    ]);
-
-    logAdminAction(userId, "SEED_FIRESTORE_DATA", `Successfully imported ${INITIAL_TRANSACTIONS.length} transaction records and ${DEFAULT_MEMBERS.length} dim members into Firestore`);
+    logAdminAction(userId, "SEED_FIRESTORE_DATA", `Successfully imported ${INITIAL_TRANSACTIONS.length} transaction records into Firestore`);
     return { success: true, message: `Successfully synced ${INITIAL_TRANSACTIONS.length} transactions to Firestore!` };
   } catch (err: unknown) {
     const error = err as Error;
