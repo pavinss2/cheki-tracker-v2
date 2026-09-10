@@ -6,7 +6,7 @@ import { FilterBar } from '@/components/layout/FilterBar';
 import { useAuth } from '@/context/AuthContext';
 import { LoginPrompt } from '@/components/layout/LoginPrompt';
 import { MemberAvatar } from '@/components/common/MemberAvatar';
-import { Award, Trophy } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 import { CircularSpinner } from '@/components/common/CircularSpinner';
 import { formatDisplayName } from '@/lib/imageUtils';
 
@@ -16,7 +16,6 @@ export default function AnalyticsPage() {
 
   const [dimension, setDimension] = useState<'MEMBER' | 'GROUP' | 'COLOR'>('MEMBER');
   const [metric, setMetric] = useState<'qty' | 'price'>('qty');
-  const [viewMode, setViewMode] = useState<'GRAPH' | 'TABLE'>('GRAPH');
 
   const colorHexMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -113,116 +112,68 @@ export default function AnalyticsPage() {
             <button className={`btn-toggle ${metric === 'price' ? 'active' : ''}`} onClick={() => setMetric('price')}>Total Spend (THB)</button>
           </div>
         </div>
-
-        <div className="control-group">
-          <label>Mode:</label>
-          <div className="btn-group">
-            <button className={`btn-toggle ${viewMode === 'GRAPH' ? 'active' : ''}`} onClick={() => setViewMode('GRAPH')}>Bar Graph</button>
-            <button className={`btn-toggle ${viewMode === 'TABLE' ? 'active' : ''}`} onClick={() => setViewMode('TABLE')}>Data Table</button>
-          </div>
-        </div>
       </div>
 
-      {/* Main View - Aligned Columns Layout Matching Attached Image: Rank(#), Trophy, Member Image, Name, Bar, Number */}
-      {viewMode === 'GRAPH' ? (
-        <div className="chart-card card">
-          <h2>{dimension} ({metric === 'qty' ? 'Quantity' : 'Total Spend'})</h2>
+      {/* Main Bar Graph Leaderboard View */}
+      <div className="chart-card card">
+        <h2>{dimension} ({metric === 'qty' ? 'Quantity' : 'Total Spend'})</h2>
 
-          <div className="custom-bar-list">
-            {aggregatedData.map((item, idx) => {
-              const val = metric === 'qty' ? item.qty : item.price;
-              const pct = maxVal > 0 ? (val / maxVal) * 100 : 0;
-              const rank = idx + 1;
+        <div className="custom-bar-list">
+          {aggregatedData.map((item, idx) => {
+            const val = metric === 'qty' ? item.qty : item.price;
+            const pct = maxVal > 0 ? (val / maxVal) * 100 : 0;
+            const rank = idx + 1;
 
-              return (
-                <div key={item.name} className="leaderboard-row">
-                  {/* Column 1: Rank(#) */}
-                  <span className="col-rank">#{rank}</span>
+            return (
+              <div key={item.name} className="leaderboard-row">
+                {/* Column 1: Rank(#) */}
+                <span className="col-rank">#{rank}</span>
 
-                  {/* Column 2: Trophy */}
-                  <div className="col-trophy">
-                    {rank === 1 && <Trophy size={18} color="#f59e0b" fill="#f59e0b" />}
-                    {rank === 2 && <Trophy size={18} color="#9ca3af" fill="#9ca3af" />}
-                    {rank === 3 && <Trophy size={18} color="#d97706" fill="#d97706" />}
-                  </div>
-
-                  {/* Column 3: Member Image / Avatar Fallback */}
-                  {dimension === 'MEMBER' && (
-                    <div className="col-avatar">
-                      <MemberAvatar 
-                        src={item.image} 
-                        name={item.name} 
-                        size={28} 
-                        colorHex={item.colorHex} 
-                      />
-                    </div>
-                  )}
-
-                  {/* Column 4: Member Name */}
-                  <span className="col-name">{dimension === 'MEMBER' ? formatDisplayName(item.name) : item.name}</span>
-
-                  {/* Column 5: Progress Bar */}
-                  <div className="col-bar-container">
-                    <div className="bar-track">
-                      <div
-                        key={`${dimension}-${metric}-${item.name}`}
-                        className="bar-fill"
-                        style={{
-                          width: `${pct}%`,
-                          backgroundColor: item.colorHex || '#58a6ff',
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Column 6: Number */}
-                  <span className="col-number">
-                    {metric === 'qty' ? val : `฿${val.toLocaleString()}`}
-                  </span>
+                {/* Column 2: Trophy */}
+                <div className="col-trophy">
+                  {rank === 1 && <Trophy size={18} color="#f59e0b" fill="#f59e0b" />}
+                  {rank === 2 && <Trophy size={18} color="#9ca3af" fill="#9ca3af" />}
+                  {rank === 3 && <Trophy size={18} color="#d97706" fill="#d97706" />}
                 </div>
-              );
-            })}
-          </div>
+
+                {/* Column 3: Member Image / Avatar Fallback */}
+                {dimension === 'MEMBER' && (
+                  <div className="col-avatar">
+                    <MemberAvatar 
+                      src={item.image} 
+                      name={item.name} 
+                      size={28} 
+                      colorHex={item.colorHex} 
+                    />
+                  </div>
+                )}
+
+                {/* Column 4: Member Name */}
+                <span className="col-name">{dimension === 'MEMBER' ? formatDisplayName(item.name) : item.name}</span>
+
+                {/* Column 5: Progress Bar */}
+                <div className="col-bar-container">
+                  <div className="bar-track">
+                    <div
+                      key={`${dimension}-${metric}-${item.name}`}
+                      className="bar-fill"
+                      style={{
+                        width: `${pct}%`,
+                        backgroundColor: item.colorHex || '#58a6ff',
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Column 6: Number */}
+                <span className="col-number">
+                  {metric === 'qty' ? val : `฿${val.toLocaleString()}`}
+                </span>
+              </div>
+            );
+          })}
         </div>
-      ) : (
-        <div className="table-card card">
-          <h2>{dimension} Pivot Table</h2>
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Rank</th>
-                  {dimension === 'MEMBER' && <th>Avatar</th>}
-                  <th>{dimension}</th>
-                  <th>Quantity</th>
-                  <th>Total Spend (THB)</th>
-                  <th>Avg Price / Cheki</th>
-                </tr>
-              </thead>
-              <tbody>
-                {aggregatedData.map((item, idx) => (
-                  <tr key={item.name}>
-                    <td>
-                      <span className="rank-badge">
-                        {idx < 3 ? <Award size={14} className="gold" /> : idx + 1}
-                      </span>
-                    </td>
-                    {dimension === 'MEMBER' && (
-                      <td>
-                        <MemberAvatar src={item.image} name={item.name} size={30} colorHex={item.colorHex} />
-                      </td>
-                    )}
-                    <td><strong>{dimension === 'MEMBER' ? formatDisplayName(item.name) : item.name}</strong></td>
-                    <td>{item.qty} pcs</td>
-                    <td>฿{item.price.toLocaleString()} THB</td>
-                    <td>฿{item.qty > 0 ? Math.round(item.price / item.qty).toLocaleString() : 0}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      </div>
 
       <style jsx>{`
         .analytics-page {

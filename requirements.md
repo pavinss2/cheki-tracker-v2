@@ -184,8 +184,9 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 - **Parenthesis Stripping Rule**: Any member name containing text inside parentheses (e.g. `"Zero (NOLiMIT)"`, `"Siso (22%)"`) will automatically have the parentheses and enclosed content removed for UI display (e.g. `"Zero (NOLiMIT)"` renders as `"Zero"`, `"Siso (22%)"` renders as `"Siso"`).
 - **Implementation**: Handled centrally via `formatDisplayName(name)` in [lib/imageUtils.ts](file:///Users/pavin/01%20Pavin%20Coding/cheki-tracker-v2/lib/imageUtils.ts) (`name.replace(/\s*\([^)]*\)/g, '').trim()`) and applied across Analytics Leaderboard / Bar Graph rows, Data Tables, Member Avatars, Admin `dim_member` table, and Raw Data transaction tables.
 
-### 6.9 Compact Mobile Analytics Leaderboard Layout
-- **Mobile Progress Bar Visibility**: In `Analytics` tab (Bar Graph View), the leaderboard row layout (`.leaderboard-row`) on mobile displays is optimized by tightening spacing (`gap: 8px`), reducing fixed widths (`.col-rank: min-width: 26px`, `.col-trophy: 18px`, `.col-avatar: 28px`, `.col-name: max-width: 85px`, `.col-number: min-width: 28px`), and expanding `.col-bar-container` (`flex: 1; min-width: 60px`).
+### 6.9 Analytics Tab Bar Graph Exclusive Mode & Compact Mobile Layout
+- **Bar Graph Exclusive View**: The Analytics tab exclusively displays the Bar Graph (Leaderboard) view. The Data Table view option and Mode toggle button group have been removed for a clean, focused user experience.
+- **Mobile Progress Bar Visibility**: In the `Analytics` tab, the leaderboard row layout (`.leaderboard-row`) on mobile displays is optimized by tightening spacing (`gap: 8px`), reducing fixed widths (`.col-rank: min-width: 26px`, `.col-trophy: 18px`, `.col-avatar: 28px`, `.col-name: max-width: 85px`, `.col-number: min-width: 28px`), and expanding `.col-bar-container` (`flex: 1; min-width: 60px`).
 - **Result**: Ensures horizontal progress bars (`bar-track` / `bar-fill`) remain clearly visible and readable alongside rank, trophy icon, avatar, member name, and numeric metrics across all mobile viewports.
 
 ---
