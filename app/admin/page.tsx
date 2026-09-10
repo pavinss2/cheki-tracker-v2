@@ -491,7 +491,7 @@ export default function BackOfficePage() {
                       <tr key={m.id}>
                         <td>
                           {isDef ? (
-                            <span className="badge-pill gold-outline" style={{ fontSize: '0.72rem', padding: '2px 8px', fontWeight: 600 }}>⚡ Default</span>
+                            <span className="badge-pill gold-outline" style={{ fontSize: '0.72rem', padding: '2px 8px', fontWeight: 600 }}>Default</span>
                           ) : (
                             <span className="badge-pill dark" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>Custom</span>
                           )}
@@ -572,7 +572,7 @@ export default function BackOfficePage() {
                       <tr key={g.id}>
                         <td>
                           {isDef ? (
-                            <span className="badge-pill gold-outline" style={{ fontSize: '0.72rem', padding: '2px 8px', fontWeight: 600 }}>⚡ Default</span>
+                            <span className="badge-pill gold-outline" style={{ fontSize: '0.72rem', padding: '2px 8px', fontWeight: 600 }}>Default</span>
                           ) : (
                             <span className="badge-pill dark" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>Custom</span>
                           )}
@@ -631,7 +631,7 @@ export default function BackOfficePage() {
                       <tr key={c.id}>
                         <td>
                           {isDef ? (
-                            <span className="badge-pill gold-outline" style={{ fontSize: '0.72rem', padding: '2px 8px', fontWeight: 600 }}>⚡ Default</span>
+                            <span className="badge-pill gold-outline" style={{ fontSize: '0.72rem', padding: '2px 8px', fontWeight: 600 }}>Default</span>
                           ) : (
                             <span className="badge-pill dark" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>Custom</span>
                           )}
