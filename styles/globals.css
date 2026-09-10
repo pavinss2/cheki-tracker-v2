@@ -14,9 +14,9 @@ html, body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  min-height: 100vh;
+  min-height: 100.1vh;
   overflow-x: hidden;
-  overflow-y: scroll;
+  overflow-y: scroll !important;
   scrollbar-gutter: stable always;
 }
 
@@ -770,7 +770,7 @@ tr:hover td {
   justify-content: center;
   padding: 80px 0;
   width: 100%;
-  min-height: 300px;
+  min-height: calc(100vh - 120px);
 }
 
 .spinner-container.full-screen {
@@ -779,8 +779,8 @@ tr:hover td {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 100vh;
-  width: 100vw;
+  height: 100%;
+  width: 100%;
   background-color: var(--bg-app, #0d0f15);
   z-index: 99999;
   padding: 0;
