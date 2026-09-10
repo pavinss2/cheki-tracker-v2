@@ -39,9 +39,27 @@ export const Sidebar: React.FC = () => {
               key={item.href}
               href={item.href}
               className={`nav-item ${isActive ? 'active' : ''}`}
+              data-active={isActive ? 'true' : 'false'}
+              style={isActive ? {
+                color: '#d4a84b',
+                backgroundColor: 'rgba(212, 168, 75, 0.18)',
+                borderLeft: '3.5px solid #d4a84b',
+                fontWeight: 700,
+              } : {
+                color: '#ffffff',
+              }}
             >
-              <Icon size={18} className="nav-icon" />
-              <span className="nav-label">{item.label}</span>
+              <Icon 
+                size={18} 
+                className="nav-icon" 
+                style={isActive ? { color: '#d4a84b', stroke: '#d4a84b' } : { color: '#ffffff', stroke: '#ffffff' }} 
+              />
+              <span 
+                className="nav-label" 
+                style={isActive ? { color: '#d4a84b' } : { color: '#ffffff' }}
+              >
+                {item.label}
+              </span>
             </Link>
           );
         })}

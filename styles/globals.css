@@ -18,6 +18,79 @@ html, body {
   overflow-x: hidden;
 }
 
+/* Sidebar Nav Items & Active State Highlighting (Gold / Amber #d4a84b) */
+.app-sidebar {
+  width: var(--sidebar-width);
+  background-color: var(--bg-surface-1);
+  border-right: 1px solid var(--border-subtle);
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 50;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.app-sidebar .nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  color: #ffffff !important;
+  font-weight: 500;
+  font-size: 0.95rem;
+  text-decoration: none !important;
+  transition: all 0.15s ease;
+}
+
+.app-sidebar .nav-item svg,
+.app-sidebar .nav-item .nav-icon {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+  transition: color 0.15s ease, stroke 0.15s ease;
+}
+
+.app-sidebar .nav-item .nav-label {
+  color: #ffffff !important;
+  transition: color 0.15s ease;
+}
+
+.app-sidebar .nav-item:hover {
+  background-color: var(--bg-surface-2);
+  color: #ffffff !important;
+}
+
+/* ACTIVE TAB HIGHLIGHT (GOLD / AMBER #d4a84b) */
+.app-sidebar .nav-item.active,
+.app-sidebar .nav-item[data-active="true"] {
+  background-color: rgba(212, 168, 75, 0.18) !important;
+  color: #d4a84b !important;
+  font-weight: 700 !important;
+  border-left: 3.5px solid #d4a84b !important;
+}
+
+.app-sidebar .nav-item.active svg,
+.app-sidebar .nav-item[data-active="true"] svg,
+.app-sidebar .nav-item.active .nav-icon,
+.app-sidebar .nav-item[data-active="true"] .nav-icon {
+  color: #d4a84b !important;
+  stroke: #d4a84b !important;
+}
+
+.app-sidebar .nav-item.active .nav-label,
+.app-sidebar .nav-item[data-active="true"] .nav-label {
+  color: #d4a84b !important;
+}
+
 /* Scrollbars */
 ::-webkit-scrollbar {
   width: 8px;
