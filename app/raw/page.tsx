@@ -1,31 +1,109 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useChekiData } from '@/hooks/useChekiData';
 import { FilterBar } from '@/components/layout/FilterBar';
 import { useAuth } from '@/context/AuthContext';
 import { LoginPrompt } from '@/components/layout/LoginPrompt';
 import { useFilters } from '@/context/FilterContext';
-import { Transaction } from '@/types/cheki';
-import { addTransaction, updateTransaction, deleteTransaction } from '@/lib/dataStore';
-import { Plus, Edit2, Trash2, ArrowUpDown, Image as ImageIcon, X } from 'lucide-react';
+import { Transaction, DimMember } from '@/types/cheki';
+import { 
+  addTransaction, 
+  updateTransaction, 
+  deleteTransaction, 
+  batchUpsertTransactions, 
+  calculateRowPrice 
+} from '@/lib/dataStore';
+import { 
+  Plus, 
+  Edit2, 
+  Trash2, 
+  ArrowUpDown, 
+  Image as ImageIcon, 
+  X, 
+  Settings, 
+  Clipboard, 
+  Save, 
+  CheckCircle2,
+  FileSpreadsheet
+} from 'lucide-react';
 
 import { extractDirectImageUrl, groupTransactionsByImage } from '@/lib/imageUtils';
 import { LightboxGallery, LightboxItem } from '@/components/common/LightboxGallery';
 import { CircularSpinner } from '@/components/common/CircularSpinner';
+import { PriceRuleBuilderModal } from '@/components/grid-editor/PriceRuleBuilderModal';
+
+interface GridRow {
+  localId: string;
+  member: string;
+  color: string;
+  group: string;
+  nationality: string;
+  date: string;
+  month: string;
+  year: string;
+  event: string;
+  description: string;
+  type: string;
+  location: string;
+  quantity: number;
+  totalPrice: number;
+  img: string;
+  talkTopic: string;
+  company: string;
+  isDirty?: boolean;
+}
 
 export default function RawDataPage() {
   const { user, isDemoUser } = useAuth();
-  const { allTransactions, filteredTransactions, members, groups, colors, types, locations, userId, loading } = useChekiData();
+  const { 
+    allTransactions, 
+    filteredTransactions, 
+    members, 
+    groups, 
+    colors, 
+    types, 
+    locations, 
+    priceRules,
+    updateRules,
+    userId, 
+    loading 
+  } = useChekiData();
   const { addCellFilter } = useFilters();
 
   const [sortCol, setSortCol] = useState<keyof Transaction>('date');
   const [sortAsc, setSortAsc] = useState(false);
+  
+  // Single edit modal state
   const [modalTransaction, setModalTransaction] = useState<Partial<Transaction> | null>(null);
   const [lightboxState, setLightboxState] = useState<{ open: boolean; index: number }>({ open: false, index: 0 });
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingBatch, setIsSavingBatch] = useState(false);
 
-  if (!user) return <LoginPrompt />;
+  // New Blank Rows & Bulk Paste state (Grid Entry integration)
+  const [blankRows, setBlankRows] = useState<GridRow[]>([]);
+  const [showRuleModal, setShowRuleModal] = useState(false);
+  const [showPasteModal, setShowPasteModal] = useState(false);
+  const [pasteRawText, setPasteRawText] = useState('');
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
+
+  // Group Select Modal for Edge Cases (Member in multiple groups)
+  const [groupSelectModal, setGroupSelectModal] = useState<{
+    rowIdx: number;
+    memberName: string;
+    matchingMembers: DimMember[];
+  } | null>(null);
+
+  // Group lookup map for auto-mapping company & nationality/country
+  const groupLookup = useMemo(() => {
+    const map: Record<string, { company: string; country: string }> = {};
+    groups.forEach((g) => {
+      map[g.group] = { company: g.company, country: g.country };
+    });
+    return map;
+  }, [groups]);
+
+  if (!user && !isDemoUser) return <LoginPrompt />;
 
   // Sorting
   const sortedTransactions = [...filteredTransactions].sort((a, b) => {
@@ -36,11 +114,11 @@ export default function RawDataPage() {
   });
 
   // Group photos so Lightbox displays unique image URLs without duplicates
-  const groupedPhotos = React.useMemo(() => {
+  const groupedPhotos = useMemo(() => {
     return groupTransactionsByImage(sortedTransactions);
   }, [sortedTransactions]);
 
-  const galleryItems: LightboxItem[] = React.useMemo(() => {
+  const galleryItems: LightboxItem[] = useMemo(() => {
     return groupedPhotos.map((g) => {
       const memberLabel = g.members.length > 2
         ? `${g.members.slice(0, 2).join(', ')} +${g.members.length - 2}`
@@ -73,7 +151,187 @@ export default function RawDataPage() {
     }
   };
 
-  // Auto-populate group/color/country/company when a member is selected in modal
+  // Grid entry features: Add Blank Row
+  const handleAddBlankRow = () => {
+    const today = new Date().toISOString().split('T')[0];
+    const newRow: GridRow = {
+      localId: 'blank_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+      member: '',
+      color: 'White',
+      group: '',
+      nationality: '🇹🇭 TH',
+      date: today,
+      month: today.substring(0, 7),
+      year: today.substring(0, 4),
+      event: '',
+      description: '',
+      type: 'Cheki',
+      location: 'Bangkok',
+      quantity: 1,
+      totalPrice: 300,
+      img: '',
+      talkTopic: '',
+      company: '',
+      isDirty: true,
+    };
+    setBlankRows([newRow, ...blankRows]);
+  };
+
+  const handleMemberSelect = (rowIdx: number, memberName: string) => {
+    const matches = members.filter(m => m.member_name.toLowerCase() === memberName.toLowerCase());
+
+    if (matches.length > 1) {
+      setGroupSelectModal({
+        rowIdx,
+        memberName,
+        matchingMembers: matches,
+      });
+    } else if (matches.length === 1) {
+      const m = matches[0];
+      const mappedGroup = groupLookup[m.group] || { company: m.company, country: m.country };
+
+      setBlankRows((prev) => {
+        const copy = [...prev];
+        const row = {
+          ...copy[rowIdx],
+          member: m.member_name,
+          group: m.group,
+          color: m.color || copy[rowIdx].color,
+          company: mappedGroup.company || m.company,
+          nationality: mappedGroup.country || m.country,
+          isDirty: true,
+        };
+        row.totalPrice = calculateRowPrice(row, priceRules);
+        copy[rowIdx] = row;
+        return copy;
+      });
+    } else {
+      handleCellChange(rowIdx, 'member', memberName);
+    }
+  };
+
+  const applyGroupSelection = (selectedMember: DimMember) => {
+    if (!groupSelectModal) return;
+
+    const rowIdx = groupSelectModal.rowIdx;
+    const mappedGroup = groupLookup[selectedMember.group] || { company: selectedMember.company, country: selectedMember.country };
+
+    setBlankRows((prev) => {
+      const copy = [...prev];
+      const row = {
+        ...copy[rowIdx],
+        member: selectedMember.member_name,
+        group: selectedMember.group,
+        color: selectedMember.color || copy[rowIdx].color,
+        company: mappedGroup.company || selectedMember.company,
+        nationality: mappedGroup.country || selectedMember.country,
+        isDirty: true,
+      };
+      row.totalPrice = calculateRowPrice(row, priceRules);
+      copy[rowIdx] = row;
+      return copy;
+    });
+
+    setGroupSelectModal(null);
+  };
+
+  const handleCellChange = (rowIdx: number, colKey: keyof GridRow, value: string | number) => {
+    setBlankRows((prev) => {
+      const copy = [...prev];
+      const row = { ...copy[rowIdx], [colKey]: value, isDirty: true };
+
+      if (colKey === 'date' && typeof value === 'string') {
+        row.month = value ? value.substring(0, 7) : '';
+        row.year = value ? value.substring(0, 4) : '';
+      }
+
+      if (colKey === 'group' && typeof value === 'string') {
+        const mapped = groupLookup[value];
+        if (mapped) {
+          row.company = mapped.company;
+          row.nationality = mapped.country;
+        }
+      }
+
+      row.totalPrice = calculateRowPrice(row, priceRules);
+      copy[rowIdx] = row;
+      return copy;
+    });
+  };
+
+  const handleDeleteBlankRow = (index: number) => {
+    setBlankRows(blankRows.filter((_, i) => i !== index));
+  };
+
+  // Bulk Paste TSV
+  const handleBulkPasteSubmit = () => {
+    if (!pasteRawText.trim()) return;
+
+    const lines = pasteRawText.trim().split('\n');
+    const parsedRows: GridRow[] = lines.map((line, idx) => {
+      const parts = line.split('\t');
+      const dateVal = parts[4] || new Date().toISOString().split('T')[0];
+      const memberVal = parts[0] || '';
+      const groupVal = parts[2] || '';
+      const mapped = groupLookup[groupVal] || { company: parts[16] || '', country: parts[3] || '' };
+
+      const rowObj: GridRow = {
+        localId: 'paste_' + Date.now() + '_' + idx,
+        member: memberVal,
+        color: parts[1] || 'White',
+        group: groupVal,
+        nationality: mapped.country || parts[3] || '🇹🇭 TH',
+        date: dateVal,
+        month: dateVal.substring(0, 7),
+        year: dateVal.substring(0, 4),
+        event: parts[7] || '',
+        description: parts[8] || '',
+        type: parts[9] || 'Cheki',
+        location: parts[10] || 'Bangkok',
+        quantity: Number(parts[11]) || 1,
+        totalPrice: Number(parts[12]) || 300,
+        img: parts[13] || '',
+        talkTopic: parts[14] || '',
+        company: mapped.company || parts[16] || '',
+        isDirty: true,
+      };
+
+      rowObj.totalPrice = calculateRowPrice(rowObj, priceRules);
+      return rowObj;
+    });
+
+    setBlankRows([...parsedRows, ...blankRows]);
+    setShowPasteModal(false);
+    setPasteRawText('');
+  };
+
+  // Save All dirty blank/pasted rows
+  const handleBatchSave = async () => {
+    const dirtyRows = blankRows.filter((r) => r.isDirty && r.member.trim() !== '');
+    if (dirtyRows.length === 0) {
+      alert("No valid modified rows to save. Make sure 'Member' is filled in your added rows.");
+      return;
+    }
+
+    setIsSavingBatch(true);
+    try {
+      const payload = dirtyRows.map(({ localId: _l, isDirty: _d, ...rest }) => rest as Omit<Transaction, 'id' | 'userId'>);
+      await batchUpsertTransactions(userId, payload, isDemoUser);
+
+      setSaveSuccessMsg(`Successfully saved ${dirtyRows.length} transactions to database!`);
+      setTimeout(() => setSaveSuccessMsg(''), 4000);
+
+      // Remove saved blank rows as they are now in subscription
+      setBlankRows(blankRows.filter(r => !r.isDirty || r.member.trim() === ''));
+    } catch (err) {
+      console.error("Batch save error:", err);
+      alert("Failed saving data: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setIsSavingBatch(false);
+    }
+  };
+
+  // Auto-populate group/color/country/company when a member is selected in single edit modal
   const handleMemberSelectInModal = (selectedMemberName: string) => {
     const match = members.find((m) => m.member_name === selectedMemberName);
     if (match) {
@@ -139,24 +397,49 @@ export default function RawDataPage() {
 
   if (loading) return <CircularSpinner />;
 
+  const validDirtyCount = blankRows.filter((r) => r.isDirty && r.member.trim() !== '').length;
+
   return (
     <div className="raw-data-page">
       <div className="page-header">
         <div>
           <h1 className="page-title">Raw Data</h1>
         </div>
-        <button className="btn btn-primary" onClick={() => setModalTransaction({ date: new Date().toISOString().split('T')[0], quantity: 1, totalPrice: 300, type: 'Cheki', location: 'Bangkok' })}>
-          <Plus size={16} /> Add Transaction
-        </button>
+        
+        {/* Integrated Grid Entry Action Controls */}
+        <div className="header-actions">
+          <button className="btn btn-secondary" onClick={() => setShowRuleModal(true)}>
+            <Settings size={16} /> Price Rules
+          </button>
+          <button className="btn btn-secondary" onClick={() => setShowPasteModal(true)}>
+            <Clipboard size={16} /> Paste TSV
+          </button>
+          <button className="btn btn-secondary" onClick={handleAddBlankRow}>
+            <Plus size={16} /> Add Blank Row
+          </button>
+          <button 
+            className="btn btn-primary" 
+            onClick={handleBatchSave} 
+            disabled={isSavingBatch || validDirtyCount === 0}
+          >
+            <Save size={16} /> {isSavingBatch ? 'Saving...' : `Save All (${validDirtyCount} new)`}
+          </button>
+        </div>
       </div>
 
+      {saveSuccessMsg && (
+        <div className="success-banner">
+          <CheckCircle2 size={18} />
+          <span>{saveSuccessMsg}</span>
+        </div>
+      )}
 
       <FilterBar transactions={allTransactions} />
 
       {/* Transactions Table */}
       <div className="table-card card">
         <div className="table-wrapper">
-          <table>
+          <table className="raw-table">
             <thead>
               <tr>
                 <th>IMG</th>
@@ -173,9 +456,123 @@ export default function RawDataPage() {
               </tr>
             </thead>
             <tbody>
-              {sortedTransactions.slice(0, 200).map((r) => {
-                const imgUrl = extractDirectImageUrl(r.img);
+              {/* NEW BLANK / PASTED ROWS (Grid Entry Inline Editable) */}
+              {blankRows.map((row, idx) => (
+                <tr key={row.localId} className="new-row-highlight">
+                  <td>
+                    <input 
+                      type="url" 
+                      placeholder="Image URL..." 
+                      value={row.img} 
+                      onChange={(e) => handleCellChange(idx, 'img', e.target.value)} 
+                      className="inline-input"
+                    />
+                  </td>
+                  <td>
+                    <input 
+                      type="date" 
+                      value={row.date} 
+                      onChange={(e) => handleCellChange(idx, 'date', e.target.value)} 
+                      className="inline-input"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      list={`members_list_${idx}`}
+                      value={row.member}
+                      onChange={(e) => handleMemberSelect(idx, e.target.value)}
+                      placeholder="Select member..."
+                      className="inline-input"
+                    />
+                    <datalist id={`members_list_${idx}`}>
+                      {Array.from(new Set(members.map(m => m.member_name))).map((name) => (
+                        <option key={name} value={name} />
+                      ))}
+                    </datalist>
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      list={`groups_list_${idx}`}
+                      value={row.group}
+                      onChange={(e) => handleCellChange(idx, 'group', e.target.value)}
+                      placeholder="Group..."
+                      className="inline-input"
+                    />
+                    <datalist id={`groups_list_${idx}`}>
+                      {groups.map((g) => (
+                        <option key={g.id} value={g.group} />
+                      ))}
+                    </datalist>
+                  </td>
+                  <td>
+                    <select
+                      value={row.color}
+                      onChange={(e) => handleCellChange(idx, 'color', e.target.value)}
+                      className="inline-select"
+                    >
+                      {colors.map((c) => (
+                        <option key={c.id} value={c.color}>{c.color}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td>
+                    <input 
+                      type="text" 
+                      placeholder="Event name..." 
+                      value={row.event} 
+                      onChange={(e) => handleCellChange(idx, 'event', e.target.value)} 
+                      className="inline-input"
+                    />
+                  </td>
+                  <td>
+                    <select
+                      value={row.type}
+                      onChange={(e) => handleCellChange(idx, 'type', e.target.value)}
+                      className="inline-select"
+                    >
+                      {types.map((t) => (
+                        <option key={t.id} value={t.type}>{t.type}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td>
+                    <select
+                      value={row.location}
+                      onChange={(e) => handleCellChange(idx, 'location', e.target.value)}
+                      className="inline-select"
+                    >
+                      {locations.map((l) => (
+                        <option key={l.id} value={l.location}>{l.location}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td>
+                    <input 
+                      type="number" 
+                      min="1" 
+                      style={{ width: '60px' }} 
+                      value={row.quantity} 
+                      onChange={(e) => handleCellChange(idx, 'quantity', Number(e.target.value))} 
+                      className="inline-input"
+                    />
+                  </td>
+                  <td>
+                    <strong>฿{row.totalPrice}</strong>
+                  </td>
+                  <td>
+                    <div className="action-btns">
+                      <button className="btn-icon danger" onClick={() => handleDeleteBlankRow(idx)} title="Remove row">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
 
+              {/* EXISTING PERSISTED TRANSACTIONS */}
+              {sortedTransactions.slice(0, 200).map((r) => {
                 return (
                   <tr key={r.id}>
                     <td>
@@ -210,12 +607,77 @@ export default function RawDataPage() {
                 );
               })}
             </tbody>
-
           </table>
         </div>
       </div>
 
-      {/* Edit/Add Modal */}
+      {/* PRICE RULES MODAL */}
+      {showRuleModal && (
+        <PriceRuleBuilderModal
+          rules={priceRules}
+          onSave={(newRules) => {
+            updateRules(newRules);
+            setShowRuleModal(false);
+          }}
+          onClose={() => setShowRuleModal(false)}
+        />
+      )}
+
+      {/* BULK PASTE TSV MODAL */}
+      {showPasteModal && (
+        <div className="modal-overlay" onClick={() => setShowPasteModal(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2><FileSpreadsheet size={20} /> Bulk Paste TSV Data</h2>
+              <button className="btn-close" onClick={() => setShowPasteModal(false)}><X size={18} /></button>
+            </div>
+            <p className="modal-subtitle">
+              Copy and paste rows directly from Google Sheets or Excel (Tab-separated values):
+            </p>
+            <textarea
+              className="paste-textarea"
+              rows={10}
+              placeholder="Paste tab-separated rows here..."
+              value={pasteRawText}
+              onChange={(e) => setPasteRawText(e.target.value)}
+            />
+            <div className="form-actions" style={{ marginTop: '14px' }}>
+              <button className="btn btn-secondary" onClick={() => setShowPasteModal(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleBulkPasteSubmit}>
+                Parse & Insert Rows
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MULTIPLE GROUP CHOICE MODAL FOR EDGE CASES */}
+      {groupSelectModal && (
+        <div className="modal-overlay" onClick={() => setGroupSelectModal(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Select Group for {groupSelectModal.memberName}</h2>
+              <button className="btn-close" onClick={() => setGroupSelectModal(null)}><X size={18} /></button>
+            </div>
+            <p className="modal-subtitle">
+              This member belongs to multiple groups. Please select which group applies:
+            </p>
+            <div className="group-choices-list">
+              {groupSelectModal.matchingMembers.map((m) => (
+                <button
+                  key={m.id}
+                  className="btn btn-secondary group-choice-btn"
+                  onClick={() => applyGroupSelection(m)}
+                >
+                  <strong>{m.group}</strong> ({m.company || 'Individual'})
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT SINGLE TRANSACTION MODAL */}
       {modalTransaction && (
         <div className="modal-overlay" onClick={() => setModalTransaction(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
@@ -302,7 +764,7 @@ export default function RawDataPage() {
         </div>
       )}
 
-      {/* Lightbox Gallery Modal with Next/Prev Navigation */}
+      {/* LIGHTBOX GALLERY MODAL */}
       {lightboxState.open && (
         <LightboxGallery 
           items={galleryItems} 
@@ -310,7 +772,6 @@ export default function RawDataPage() {
           onClose={() => setLightboxState({ open: false, index: 0 })} 
         />
       )}
-
 
       <style jsx>{`
         .raw-data-page {
@@ -325,11 +786,49 @@ export default function RawDataPage() {
           align-items: center;
         }
 
+        .header-actions {
+          display: flex;
+          gap: 10px;
+          align-items: center;
+          flex-wrap: wrap;
+        }
+
         .page-title { font-size: 1.6rem; }
-        .page-subtitle { color: var(--text-muted); font-size: 0.88rem; margin-top: -12px; }
+
+        .success-banner {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          background: rgba(39, 174, 96, 0.15);
+          color: #27ae60;
+          border: 1px solid rgba(39, 174, 96, 0.3);
+          padding: 12px 16px;
+          border-radius: var(--radius-sm);
+          font-weight: 500;
+        }
 
         .table-wrapper {
           overflow-x: auto;
+        }
+
+        .raw-table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+
+        .new-row-highlight td {
+          background-color: rgba(212, 168, 75, 0.12) !important;
+          border-bottom: 1px dashed #d4a84b;
+        }
+
+        .inline-input, .inline-select {
+          background: var(--bg-surface-2);
+          border: 1px solid var(--border-strong);
+          color: var(--text-main);
+          padding: 6px 8px;
+          border-radius: 4px;
+          font-size: 0.85rem;
+          width: 100%;
         }
 
         .sortable {
@@ -406,7 +905,36 @@ export default function RawDataPage() {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 20px;
+          margin-bottom: 12px;
+        }
+
+        .modal-subtitle {
+          color: var(--text-muted);
+          font-size: 0.88rem;
+          margin-bottom: 16px;
+        }
+
+        .paste-textarea {
+          width: 100%;
+          background: var(--bg-surface-2);
+          border: 1px solid var(--border-strong);
+          color: var(--text-main);
+          padding: 12px;
+          border-radius: var(--radius-sm);
+          font-family: monospace;
+          font-size: 0.82rem;
+        }
+
+        .group-choices-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .group-choice-btn {
+          justify-content: flex-start;
+          width: 100%;
+          padding: 12px 16px;
         }
 
         .btn-close {
@@ -444,26 +972,7 @@ export default function RawDataPage() {
           gap: 10px;
           margin-top: 10px;
         }
-
-        .lightbox-content {
-          position: relative;
-          max-width: 90vw;
-          max-height: 90vh;
-        }
-
-        .lightbox-content img {
-          max-width: 100%;
-          max-height: 85vh;
-          border-radius: var(--radius-sm);
-        }
-
-        .btn-close-light {
-          position: absolute;
-          top: -36px; right: 0;
-          background: none; border: none; color: #fff; cursor: pointer;
-        }
       `}</style>
     </div>
   );
 }
-

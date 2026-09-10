@@ -19,7 +19,6 @@ const NAV_ITEMS = [
   { label: 'Raw Data', href: '/raw',  icon: Table },
   { label: 'Analytics', href: '/analytics', icon: BarChart2 },
   { label: 'Events', href: '/events', icon: CalendarDays },
-  { label: 'Grid Entry', href: '/grid-entry', icon: Grid },
   { label: 'Back Office', href: '/admin', icon: Settings },
 ];
 
