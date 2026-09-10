@@ -163,6 +163,7 @@ export default function AnalyticsPage() {
                   <div className="col-bar-container">
                     <div className="bar-track">
                       <div
+                        key={`${dimension}-${metric}-${item.name}`}
                         className="bar-fill"
                         style={{
                           width: `${pct}%`,
@@ -321,7 +322,20 @@ export default function AnalyticsPage() {
         .bar-fill {
           height: 100%;
           border-radius: 9px;
+          transform-origin: left;
+          animation: barEmerge 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
           transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes barEmerge {
+          from {
+            transform: scaleX(0);
+            opacity: 0.3;
+          }
+          to {
+            transform: scaleX(1);
+            opacity: 1;
+          }
         }
 
         .col-number {

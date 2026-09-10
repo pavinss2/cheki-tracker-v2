@@ -31,7 +31,7 @@ export const Header: React.FC = () => {
         )}
 
         {user ? (
-          <div className="user-profile">
+          <div className="user-profile" title={user.displayName || user.email || 'Logged in User'}>
             {user.photoURL ? (
               // eslint-disable-next-next/no-img-element
               <img src={user.photoURL} alt={user.displayName || 'User'} className="user-avatar" />
@@ -40,9 +40,8 @@ export const Header: React.FC = () => {
                 <UserIcon size={16} />
               </div>
             )}
-            <span className="user-name">{user.displayName || user.email?.split('@')[0]}</span>
             <button onClick={signOutUser} className="btn-icon" title="Sign Out">
-              <LogOut size={18} />
+              <LogOut size={16} />
             </button>
           </div>
         ) : (
@@ -136,11 +135,12 @@ export const Header: React.FC = () => {
         .user-profile {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 6px;
           background-color: var(--bg-surface-2);
-          padding: 4px 10px;
+          padding: 4px 8px;
           border-radius: 20px;
           border: 1px solid var(--border-subtle);
+          flex-shrink: 0;
         }
 
         .user-avatar {
@@ -159,12 +159,6 @@ export const Header: React.FC = () => {
           align-items: center;
           justify-content: center;
           color: var(--text-muted);
-        }
-
-        .user-name {
-          font-size: 0.85rem;
-          font-weight: 500;
-          color: var(--text-main);
         }
 
         .btn-icon {

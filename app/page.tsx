@@ -14,7 +14,19 @@ import {
   Tooltip, 
   ResponsiveContainer 
 } from 'recharts';
-import { Award, Calendar, ImageIcon, RotateCcw, X } from 'lucide-react';
+import { 
+  Award, 
+  Building2, 
+  Globe, 
+  ImageIcon, 
+  MapPin, 
+  Palette, 
+  RotateCcw, 
+  Star, 
+  Tag, 
+  Users, 
+  X 
+} from 'lucide-react';
 
 const COLOR_HEX_MAP: Record<string, string> = {
   white: '#ffffff',
@@ -29,20 +41,45 @@ const COLOR_HEX_MAP: Record<string, string> = {
   'n/a': '#7f8c8d',
 };
 
-function getItemColor(name: string, isColorCard: boolean): string | undefined {
-  if (isColorCard) {
-    return COLOR_HEX_MAP[name.toLowerCase()] || '#f4f4f7';
-  }
-  return undefined;
+const COUNTRY_FLAG_MAP: Record<string, string> = {
+  TH: '🇹🇭 ',
+  KR: '🇰🇷 ',
+  TW: '🇹🇼 ',
+  JP: '🇯🇵 ',
+  CN: '🇨🇳 ',
+  US: '🇺🇸 ',
+  UK: '🇬🇧 ',
+  GB: '🇬🇧 ',
+};
+
+function getNationalityLabel(code: string): string {
+  const flag = COUNTRY_FLAG_MAP[code.toUpperCase()] || '';
+  return `${flag}${code}`;
 }
 
 export default function HomePage() {
   const { user, isDemoUser } = useAuth();
-  const { allTransactions, filteredTransactions, loading } = useChekiData();
+  const { allTransactions, filteredTransactions, members, colors, loading } = useChekiData();
   const [granularity, setGranularity] = useState<'DAILY' | 'MONTHLY' | 'YEARLY'>('DAILY');
-  
-  // Requirement 1: Selected card defaults to null so extension card ONLY opens on click!
   const [selectedCardKey, setSelectedCardKey] = useState<string | null>(null);
+
+  // Maps for custom color overrides
+  const colorHexMap = useMemo(() => {
+    const map: Record<string, string> = { ...COLOR_HEX_MAP };
+    colors.forEach((c) => {
+      if (c.color) map[c.color.toLowerCase()] = c.color_code;
+    });
+    return map;
+  }, [colors]);
+
+  const memberMetaMap = useMemo(() => {
+    const map: Record<string, { colorHex: string }> = {};
+    members.forEach((m) => {
+      const hex = colorHexMap[m.color?.toLowerCase()] || '#58a6ff';
+      map[m.member_name] = { colorHex: hex };
+    });
+    return map;
+  }, [members, colorHexMap]);
 
   // KPI Calculations
   const kpis = useMemo(() => {
@@ -125,54 +162,92 @@ export default function HomePage() {
     }));
   }, [filteredTransactions, granularity]);
 
-  const cardsMap: Record<string, { title: string; map: Record<string, number> }> = {
-    colors: { title: 'TOP COLOR', map: kpis.colorMap },
-    members: { title: 'TOP MEMBERS', map: kpis.memberMap },
-    groups: { title: 'TOP GROUPS', map: kpis.groupMap },
-    companies: { title: 'TOP COMPANY', map: kpis.companyMap },
-    nationalities: { title: 'TOP NATIONALITY', map: kpis.natMap },
+  const cardsMap: Record<string, { title: string; map: Record<string, number>; icon: React.ElementType }> = {
+    members: { title: 'TOP MEMBERS', map: kpis.memberMap, icon: Star },
+    groups: { title: 'TOP GROUPS', map: kpis.groupMap, icon: Users },
+    colors: { title: 'TOP COLOR', map: kpis.colorMap, icon: Palette },
+    companies: { title: 'TOP COMPANY', map: kpis.companyMap, icon: Building2 },
+    nationalities: { title: 'TOP NATIONALITY', map: kpis.natMap, icon: Globe },
+    types: { title: 'TOP TYPE', map: kpis.typeMap, icon: Tag },
+    locations: { title: 'TOP LOCATION', map: kpis.locationMap, icon: MapPin },
   };
 
   const handleCardClick = (cardKey: string) => {
     setSelectedCardKey(prev => prev === cardKey ? null : cardKey);
   };
 
-  const renderSubColumn = (cardKey: string) => {
+  const getItemBarColor = (name: string, cardKey: string, rankIdx: number): string => {
+    if (cardKey === 'colors') {
+      return colorHexMap[name.toLowerCase()] || COLOR_HEX_MAP[name.toLowerCase()] || '#ffffff';
+    }
+    if (cardKey === 'members' && memberMetaMap[name]?.colorHex) {
+      return memberMetaMap[name].colorHex;
+    }
+    // Default crisp indicators matching screenshot
+    if (rankIdx === 0) return 'var(--text-main)';
+    if (rankIdx === 1) return '#9ca3af';
+    return '#6b7280';
+  };
+
+  const getItemTextColor = (name: string, cardKey: string): string | undefined => {
+    if (cardKey === 'colors') {
+      return colorHexMap[name.toLowerCase()] || COLOR_HEX_MAP[name.toLowerCase()] || '#f4f4f7';
+    }
+    if (cardKey === 'members' && memberMetaMap[name]?.colorHex) {
+      return memberMetaMap[name].colorHex;
+    }
+    return undefined;
+  };
+
+  const renderKpiCard = (cardKey: string) => {
     const cardInfo = cardsMap[cardKey];
     if (!cardInfo) return null;
 
+    const IconComponent = cardInfo.icon;
     const sorted = Object.entries(cardInfo.map).sort((a, b) => b[1] - a[1]);
     const top3 = sorted.slice(0, 3);
     const isSelected = selectedCardKey === cardKey;
-    const isColorCard = cardKey === 'colors';
 
     return (
       <div 
-        className={`sub-column clickable-subcol ${isSelected ? 'selected' : ''}`}
-        onClick={(e) => {
-          e.stopPropagation();
-          handleCardClick(cardKey);
-        }}
+        key={cardKey}
+        className={`kpi-card clickable-card ${isSelected ? 'selected' : ''}`}
+        onClick={() => handleCardClick(cardKey)}
         title={`Click to toggle breakdown for ${cardInfo.title}`}
       >
         <div className="kpi-header">
           <span>{cardInfo.title}</span>
-          <RotateCcw size={13} className="kpi-cycle-icon" />
+          <IconComponent size={16} className="kpi-icon" />
         </div>
 
         <div className="top-list">
           {top3.map(([name, val], idx) => {
             const pct = kpis.totalQty > 0 ? ((val / kpis.totalQty) * 100).toFixed(1) : '0';
-            const textColor = getItemColor(name, isColorCard);
+            const barColor = getItemBarColor(name, cardKey, idx);
+            const textColor = getItemTextColor(name, cardKey);
 
             return (
               <div key={name} className="top-item-container">
-                <div className="top-item">
+                <div className="top-item-row">
                   <div className="item-left">
-                    <span className={`rank-circle rank-${idx + 1}`}>{idx + 1}</span>
-                    <span className="name" style={{ color: textColor }}>{name}</span>
+                    <span className={`rank-badge rank-${idx + 1}`}>{idx + 1}</span>
+                    <span className="item-name" style={{ color: textColor }}>
+                      {cardKey === 'nationalities' ? getNationalityLabel(name) : name}
+                    </span>
                   </div>
-                  <span className="val">{val} <span className="pct-small">({pct}%)</span></span>
+                  <div className="item-right">
+                    <span className="item-val">{val}</span>
+                    <span className="item-pct">({pct}%)</span>
+                  </div>
+                </div>
+                <div className="item-bar-track">
+                  <div
+                    className="item-bar-fill"
+                    style={{
+                      width: `${Math.max(Number(pct), 1.5)}%`,
+                      backgroundColor: barColor,
+                    }}
+                  />
                 </div>
               </div>
             );
@@ -206,74 +281,57 @@ export default function HomePage() {
 
       <FilterBar transactions={allTransactions} />
 
-      {/* KPI Cards Container - Structured into 2 Rows matching attached screenshot */}
-      <div className="kpi-container">
-        {/* Row 1: Total Cheki | Unique Count | TOP MEMBERS & TOP GROUPS */}
-        <div className="kpi-row row-1">
-          {/* Total Cheki */}
-          <div className="kpi-card highlight flex-1">
-            <div className="kpi-header">
-              <span>Total Cheki</span>
-              <ImageIcon size={18} className="kpi-icon" />
-            </div>
-            <div className="kpi-big-value">{kpis.totalQty.toLocaleString()}</div>
-            <div className="kpi-subtext">฿ {kpis.totalPrice.toLocaleString()} THB</div>
+      {/* KPI Cards Grid - 3x3 Layout matching attached reference image */}
+      <div className="kpi-grid">
+        {/* Card 1: TOTAL CHEKI */}
+        <div className="kpi-card highlight">
+          <div className="kpi-header">
+            <span>TOTAL CHEKI</span>
+            <ImageIcon size={16} className="kpi-icon" />
           </div>
+          <div className="kpi-big-value">{kpis.totalQty.toLocaleString()}<span className="unit"> pcs</span></div>
+          <div className="kpi-subtext">฿ {kpis.totalPrice.toLocaleString()}</div>
+        </div>
 
-          {/* Unique Count */}
-          <div className="kpi-card highlight flex-1">
-            <div className="kpi-header">
-              <span>Unique Count</span>
-              <Award size={18} className="kpi-icon" />
-            </div>
-            <div className="kpi-split">
-              <div className="split-col">
-                <span className="split-val">{kpis.uniqueMembers}</span>
-                <span className="split-lbl">Members</span>
-              </div>
-              <div className="split-divider" />
-              <div className="split-col">
-                <span className="split-val">{kpis.uniqueGroups}</span>
-                <span className="split-lbl">Groups</span>
-              </div>
-            </div>
+        {/* Card 2: UNIQUE COUNT */}
+        <div className="kpi-card highlight">
+          <div className="kpi-header">
+            <span>UNIQUE COUNT</span>
+            <Award size={16} className="kpi-icon" />
           </div>
-
-          {/* Grouped Card: TOP MEMBERS & TOP GROUPS */}
-          <div className="kpi-card grouped-card flex-2">
-            <div className="sub-columns-container cols-2">
-              {renderSubColumn('members')}
-              <div className="sub-col-divider" />
-              {renderSubColumn('groups')}
+          <div className="kpi-split">
+            <div className="split-col">
+              <span className="split-val">{kpis.uniqueMembers}</span>
+              <span className="split-lbl">MEMBERS</span>
+            </div>
+            <div className="split-divider" />
+            <div className="split-col">
+              <span className="split-val">{kpis.uniqueGroups}</span>
+              <span className="split-lbl">GROUPS</span>
             </div>
           </div>
         </div>
 
-        {/* Row 2: TOP COLOR & TOP COMPANY & TOP NATIONALITY | Most Cheki Day */}
-        <div className="kpi-row row-2">
-          {/* Grouped Card: TOP COLOR & TOP COMPANY & TOP NATIONALITY */}
-          <div className="kpi-card grouped-card flex-3">
-            <div className="sub-columns-container cols-3">
-              {renderSubColumn('colors')}
-              <div className="sub-col-divider" />
-              {renderSubColumn('companies')}
-              <div className="sub-col-divider" />
-              {renderSubColumn('nationalities')}
-            </div>
-          </div>
+        {/* Card 3: TOP MEMBERS */}
+        {renderKpiCard('members')}
 
-          {/* Most Cheki Day */}
-          <div className="kpi-card flex-1">
-            <div className="kpi-header">
-              <span>Most Cheki Day</span>
-              <Calendar size={18} className="kpi-icon" />
-            </div>
-            <div className="kpi-big-value">{kpis.maxDayQty} <span className="unit">pcs</span></div>
-            <div className="kpi-subtext">
-              {kpis.maxDayDate} • ฿{kpis.maxDaySpend.toLocaleString()}
-            </div>
-          </div>
-        </div>
+        {/* Card 4: TOP GROUPS */}
+        {renderKpiCard('groups')}
+
+        {/* Card 5: TOP COLOR */}
+        {renderKpiCard('colors')}
+
+        {/* Card 6: TOP COMPANY */}
+        {renderKpiCard('companies')}
+
+        {/* Card 7: TOP NATIONALITY */}
+        {renderKpiCard('nationalities')}
+
+        {/* Card 8: TOP TYPE */}
+        {renderKpiCard('types')}
+
+        {/* Card 9: TOP LOCATION */}
+        {renderKpiCard('locations')}
       </div>
 
       {/* Separate Extension Breakdown Card (Triggered ON CLICK ONLY) */}
@@ -292,13 +350,15 @@ export default function HomePage() {
           <div className="breakdown-list">
             {activeSortedList.map(([name, val], idx) => {
               const pct = kpis.totalQty > 0 ? ((val / kpis.totalQty) * 100).toFixed(1) : '0';
-              const textColor = getItemColor(name, selectedCardKey === 'colors');
+              const textColor = getItemTextColor(name, selectedCardKey);
 
               return (
                 <div key={name} className="breakdown-row">
                   <div className="breakdown-left">
                     <span className="breakdown-rank">{idx + 1}</span>
-                    <span className="breakdown-name" style={{ color: textColor }}>{name}</span>
+                    <span className="breakdown-name" style={{ color: textColor }}>
+                      {selectedCardKey === 'nationalities' ? getNationalityLabel(name) : name}
+                    </span>
                   </div>
                   <div className="breakdown-right">
                     <strong>{val}</strong>
@@ -363,81 +423,44 @@ export default function HomePage() {
         }
 
         .page-title { font-size: 1.6rem; }
-
         .loading-state { padding: 60px; text-align: center; color: var(--text-muted); }
 
-        .kpi-container {
-          display: flex;
-          flex-direction: column;
+        .kpi-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
           gap: 16px;
         }
-
-        .kpi-row {
-          display: flex;
-          gap: 16px;
-          width: 100%;
-        }
-
-        .flex-1 { flex: 1; min-width: 0; }
-        .flex-2 { flex: 2; min-width: 0; }
-        .flex-3 { flex: 3; min-width: 0; }
 
         .kpi-card {
           background-color: var(--bg-surface-1);
           border: 1px solid var(--border-subtle);
           border-radius: var(--radius-md);
           padding: 16px;
-          min-height: 140px;
+          min-height: 155px;
           display: flex;
           flex-direction: column;
           justify-content: space-between;
           box-shadow: var(--shadow-card);
-          position: relative;
-          transition: border-color 0.2s, box-shadow 0.2s;
+          transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
         }
 
         .kpi-card.highlight {
-          border-color: var(--accent-primary-subtle);
+          border-color: var(--border-subtle);
           background: linear-gradient(135deg, var(--bg-surface-1), var(--bg-surface-2));
         }
 
-        .grouped-card {
-          padding: 12px 16px;
-        }
-
-        .sub-columns-container {
-          display: flex;
-          width: 100%;
-          height: 100%;
-          gap: 12px;
-        }
-
-        .sub-column {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          padding: 4px 8px;
-          border-radius: var(--radius-sm);
+        .kpi-card.clickable-card {
           cursor: pointer;
-          transition: background-color 0.15s;
         }
 
-        .sub-column:hover {
-          background-color: rgba(255,255,255,0.03);
+        .kpi-card.clickable-card:hover {
+          border-color: var(--border-strong);
+          background-color: var(--bg-surface-2);
         }
 
-        .sub-column.selected {
-          background-color: rgba(212, 168, 75, 0.08);
-          outline: 1px solid var(--accent-primary);
-          border-radius: 6px;
-        }
-
-        .sub-col-divider {
-          width: 1px;
-          background-color: rgba(255, 255, 255, 0.08);
-          margin: 4px 0;
-          flex-shrink: 0;
+        .kpi-card.selected {
+          border-color: var(--accent-primary);
+          box-shadow: 0 0 0 1px var(--accent-primary);
         }
 
         .kpi-header {
@@ -451,66 +474,87 @@ export default function HomePage() {
           letter-spacing: 0.05em;
         }
 
-        .kpi-cycle-icon {
+        .kpi-icon {
           color: var(--text-subtle);
-          opacity: 0.6;
         }
 
         .kpi-big-value {
           font-family: var(--font-display);
-          font-size: 2rem;
+          font-size: 2.1rem;
           font-weight: 700;
           color: var(--text-main);
-          margin: 10px 0 4px 0;
+          margin: 10px 0 2px 0;
         }
-        .kpi-big-value .unit { font-size: 0.9rem; color: var(--text-muted); }
+        .kpi-big-value .unit { font-size: 0.9rem; color: var(--text-muted); font-family: var(--font-body); }
 
-        .kpi-subtext { font-size: 0.82rem; color: var(--accent-primary); font-weight: 600; }
+        .kpi-subtext { font-size: 0.84rem; color: var(--accent-primary); font-weight: 600; }
 
         .kpi-split { display: flex; align-items: center; justify-content: space-around; margin-top: 14px; }
         .split-col { display: flex; flex-direction: column; align-items: center; }
         .split-val { font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; color: var(--text-main); }
-        .split-lbl { font-size: 0.72rem; color: var(--text-subtle); }
+        .split-lbl { font-size: 0.68rem; color: var(--text-subtle); letter-spacing: 0.05em; font-weight: 600; }
         .split-divider { width: 1px; height: 30px; background: var(--border-strong); }
 
         .top-list { 
           display: flex; 
           flex-direction: column; 
-          gap: 6px; 
-          margin-top: 8px; 
+          gap: 8px; 
+          margin-top: 12px; 
         }
 
         .top-item-container { 
           display: flex; 
           flex-direction: column; 
-          gap: 3px; 
+          gap: 4px; 
         }
 
-        .top-item { 
+        .top-item-row { 
           display: flex; 
           align-items: center; 
           justify-content: space-between; 
-          font-size: 0.82rem; 
+          font-size: 0.84rem; 
           gap: 8px;
         }
 
         .item-left {
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 8px;
           flex: 1;
           min-width: 0;
         }
 
-        .rank-circle {
-          font-size: 0.78rem; 
-          font-weight: 700; 
-          color: var(--text-muted); 
+        .rank-badge {
+          width: 17px;
+          height: 17px;
+          border-radius: 50%;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 0.68rem;
+          font-weight: 700;
           flex-shrink: 0;
-          width: 14px;
         }
 
-        .name { 
+        .rank-badge.rank-1 {
+          color: #f1c40f;
+          border: 1.5px solid #f1c40f;
+          background: rgba(241, 196, 15, 0.12);
+        }
+
+        .rank-badge.rank-2 {
+          color: #9ca3af;
+          border: 1.5px solid #6b7280;
+          background: rgba(156, 163, 175, 0.12);
+        }
+
+        .rank-badge.rank-3 {
+          color: #d97706;
+          border: 1.5px solid #d97706;
+          background: rgba(217, 119, 6, 0.12);
+        }
+
+        .item-name { 
           white-space: nowrap; 
           overflow: hidden; 
           text-overflow: ellipsis; 
@@ -518,18 +562,38 @@ export default function HomePage() {
           color: var(--text-main);
         }
 
-        .val { 
-          font-weight: 600; 
-          color: var(--text-main); 
-          font-size: 0.78rem; 
-          white-space: nowrap;
+        .item-right {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 0.82rem;
           flex-shrink: 0;
         }
 
-        .pct-small {
+        .item-val { 
+          font-weight: 700; 
+          color: var(--text-main); 
+        }
+
+        .item-pct {
           color: var(--text-muted);
           font-weight: 400;
-          font-size: 0.74rem;
+          font-size: 0.76rem;
+        }
+
+        .item-bar-track {
+          width: 100%;
+          height: 3px;
+          background: rgba(255, 255, 255, 0.08);
+          border-radius: 2px;
+          overflow: hidden;
+          margin-top: 1px;
+        }
+
+        .item-bar-fill {
+          height: 100%;
+          border-radius: 2px;
+          transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .empty-top-list {
@@ -538,10 +602,10 @@ export default function HomePage() {
           padding: 10px 0;
         }
 
-        /* Breakdown Extension Card (Image 4 format) */
+        /* Breakdown Extension Card */
         .breakdown-extension-card {
-          background-color: #18191c;
-          border: 1px solid rgba(255,255,255,0.12);
+          background-color: var(--bg-surface-1);
+          border: 1px solid var(--border-strong);
           border-radius: 12px;
           padding: 16px 20px;
           display: flex;
@@ -655,11 +719,14 @@ export default function HomePage() {
         }
 
         @media (max-width: 1024px) {
-          .kpi-row { flex-direction: column; }
-          .sub-columns-container { flex-direction: column; }
-          .sub-col-divider { width: 100%; height: 1px; margin: 8px 0; }
+          .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 640px) {
+          .kpi-grid { grid-template-columns: 1fr; }
         }
       `}</style>
     </div>
   );
 }
+
