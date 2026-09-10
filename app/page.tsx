@@ -328,23 +328,21 @@ export default function HomePage() {
 
       {/* KPI Cards Grid - 3x3 Layout matching attached reference image */}
       <div className="kpi-grid">
-        {/* Card 1: TOTAL CHEKI */}
-        <div className="kpi-card highlight">
+        {/* Combined Card: TOTAL CHEKI & UNIQUE COUNT */}
+        <div className="kpi-card highlight combined-overview-card">
           <div className="kpi-header">
-            <span>TOTAL CHEKI</span>
-            <ImageIcon size={16} className="kpi-icon" />
+            <span>TOTAL CHEKI & UNIQUE COUNT</span>
+            <div className="header-icons">
+              <ImageIcon size={15} className="kpi-icon" />
+              <Award size={15} className="kpi-icon" />
+            </div>
           </div>
-          <div className="kpi-big-value">{kpis.totalQty.toLocaleString()}<span className="unit"> pcs</span></div>
-          <div className="kpi-subtext">฿ {kpis.totalPrice.toLocaleString()}</div>
-        </div>
-
-        {/* Card 2: UNIQUE COUNT */}
-        <div className="kpi-card highlight">
-          <div className="kpi-header">
-            <span>UNIQUE COUNT</span>
-            <Award size={16} className="kpi-icon" />
-          </div>
-          <div className="kpi-split">
+          <div className="kpi-split-three">
+            <div className="split-col">
+              <div className="kpi-big-value">{kpis.totalQty.toLocaleString()}<span className="unit"> pcs</span></div>
+              <div className="kpi-subtext">฿ {kpis.totalPrice.toLocaleString()}</div>
+            </div>
+            <div className="split-divider" />
             <div className="split-col">
               <span className="split-val">{kpis.uniqueMembers}</span>
               <span className="split-lbl">MEMBERS</span>

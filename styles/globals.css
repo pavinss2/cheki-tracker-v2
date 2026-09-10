@@ -416,6 +416,42 @@ tr:hover td {
   margin-top: 12px;
 }
 
+.header-icons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kpi-split-three {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.kpi-split-three .split-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+
+.kpi-split-three .split-col .kpi-big-value {
+  margin: 0;
+  font-size: 1.75rem;
+  line-height: 1.15;
+}
+
+.kpi-split-three .split-divider {
+  width: 1px;
+  height: 36px;
+  background: var(--border-strong);
+  flex-shrink: 0;
+  margin: 0 4px;
+}
+
 .split-col {
   display: flex;
   flex-direction: column;
