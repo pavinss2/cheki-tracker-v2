@@ -23,6 +23,7 @@ export default function RawDataPage() {
   const [sortAsc, setSortAsc] = useState(false);
   const [modalTransaction, setModalTransaction] = useState<Partial<Transaction> | null>(null);
   const [lightboxState, setLightboxState] = useState<{ open: boolean; index: number }>({ open: false, index: 0 });
+  const [isSaving, setIsSaving] = useState(false);
 
   if (!user) return <LoginPrompt />;
 
@@ -72,10 +73,31 @@ export default function RawDataPage() {
     }
   };
 
+  // Auto-populate group/color/country/company when a member is selected in modal
+  const handleMemberSelectInModal = (selectedMemberName: string) => {
+    const match = members.find((m) => m.member_name === selectedMemberName);
+    if (match) {
+      setModalTransaction((prev) => ({
+        ...prev,
+        member: selectedMemberName,
+        group: match.group || prev?.group || '',
+        color: match.color || prev?.color || 'White',
+        company: match.company || prev?.company || '',
+        nationality: match.country || prev?.nationality || '🇹🇭 TH',
+      }));
+    } else {
+      setModalTransaction((prev) => ({ ...prev, member: selectedMemberName }));
+    }
+  };
+
   const handleSaveTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!modalTransaction || !modalTransaction.member || !modalTransaction.date) return;
+    if (!modalTransaction || !modalTransaction.member || !modalTransaction.date) {
+      alert("Please fill in required fields: Date and Member.");
+      return;
+    }
 
+    setIsSaving(true);
     try {
       if (modalTransaction.id) {
         await updateTransaction(modalTransaction.id, userId, modalTransaction, isDemoUser);
@@ -103,6 +125,9 @@ export default function RawDataPage() {
       setModalTransaction(null);
     } catch (err) {
       console.error("Failed saving transaction:", err);
+      alert("Failed saving transaction record: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -205,7 +230,7 @@ export default function RawDataPage() {
               </div>
               <div className="form-group">
                 <label>Member *</label>
-                <select required value={modalTransaction.member || ''} onChange={(e) => setModalTransaction({ ...modalTransaction, member: e.target.value })}>
+                <select required value={modalTransaction.member || ''} onChange={(e) => handleMemberSelectInModal(e.target.value)}>
                   <option value="">-- Select Member --</option>
                   {members.map((m) => (
                     <option key={m.id} value={m.member_name}>{m.member_name}</option>
@@ -213,8 +238,8 @@ export default function RawDataPage() {
                 </select>
               </div>
               <div className="form-group">
-                <label>Group *</label>
-                <select required value={modalTransaction.group || ''} onChange={(e) => setModalTransaction({ ...modalTransaction, group: e.target.value })}>
+                <label>Group</label>
+                <select value={modalTransaction.group || ''} onChange={(e) => setModalTransaction({ ...modalTransaction, group: e.target.value })}>
                   <option value="">-- Select Group --</option>
                   {groups.map((g) => (
                     <option key={g.id} value={g.group}>{g.group}</option>
@@ -267,8 +292,10 @@ export default function RawDataPage() {
               </div>
 
               <div className="form-actions span-2">
-                <button type="button" className="btn btn-secondary" onClick={() => setModalTransaction(null)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Save Transaction</button>
+                <button type="button" className="btn btn-secondary" onClick={() => setModalTransaction(null)} disabled={isSaving}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={isSaving}>
+                  {isSaving ? 'Saving...' : 'Save Transaction'}
+                </button>
               </div>
             </form>
           </div>

@@ -38,6 +38,7 @@ export default function BackOfficePage() {
       setEditingItem(null);
     } catch (err) {
       console.error("Save doc failed:", err);
+      alert("Failed saving metadata item: " + (err instanceof Error ? err.message : String(err)));
     }
   };
 
