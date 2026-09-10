@@ -78,8 +78,8 @@ The application employs a dual-storage strategy to ensure real-time Cloud persis
 
 ### 2.5 Layout Stability, Home Chart Tooltip & Events Controls Rules
 - **Header & Layout Anti-Twitch Rule**:
-  - `html` and `body` enforce `overflow-y: scroll; scrollbar-gutter: stable;` across all pages to reserve vertical scrollbar space permanently.
-  - `.app-header` specifies `width: calc(100% - var(--sidebar-width));` and `.header-actions` specifies `flex-shrink: 0; margin-left: auto;` so `.user-profile` remains perfectly stationary and never twitches or bounces when switching between tabs.
+  - `html` and `body` enforce `overflow-y: scroll; scrollbar-gutter: stable always;` across all pages to reserve vertical scrollbar space permanently regardless of route transition unmounting.
+  - `.app-header` specifies fixed viewport coordinates (`position: fixed; top: 0; left: var(--sidebar-width); right: 0; z-index: 45;`), `.header-left` specifies fixed title container width (`flex: 0 0 220px`), and `.header-actions` specifies `flex-shrink: 0; margin-left: auto;`. `.user-profile` remains 100% stationary and never twitches or bounces when switching between tabs.
 - **Home Chart Instant Tooltip & Clean Overlay Rule**:
   - Recharts `<Tooltip>` on the Home tab timeline chart sets `isAnimationActive={false}`, `animationDuration={0}`, and `cursor={false}`.
   - Eliminates laggy sliding animation so the tooltip displays instantly under the hovered date, and removes the white hover rectangle highlight overlay.

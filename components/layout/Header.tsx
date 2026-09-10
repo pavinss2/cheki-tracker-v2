@@ -72,18 +72,18 @@ export const Header: React.FC = () => {
           align-items: center;
           justify-content: space-between;
           padding: 0 24px;
-          position: sticky;
+          position: fixed;
           top: 0;
-          z-index: 40;
-          margin-left: var(--sidebar-width);
-          width: calc(100% - var(--sidebar-width));
+          left: var(--sidebar-width);
+          right: 0;
+          z-index: 45;
           box-sizing: border-box;
         }
 
         .header-left {
           display: flex;
           align-items: center;
-          flex: 1;
+          flex: 0 0 220px;
           min-width: 0;
         }
 
@@ -93,12 +93,18 @@ export const Header: React.FC = () => {
           font-weight: 700;
           color: var(--text-main);
           margin: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         @media (max-width: 768px) {
           .app-header {
-            margin-left: 0;
-            width: 100%;
+            left: 0;
+            right: 0;
+          }
+          .header-left {
+            flex: 0 0 160px;
           }
         }
 

@@ -17,7 +17,7 @@ html, body {
   min-height: 100vh;
   overflow-x: hidden;
   overflow-y: scroll;
-  scrollbar-gutter: stable;
+  scrollbar-gutter: stable always;
 }
 
 /* Sidebar Nav Items & Active State Highlighting (Gold / Amber #d4a84b) */

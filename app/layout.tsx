@@ -37,8 +37,8 @@ export default function RootLayout({
             display: flex;
             min-height: calc(100vh - var(--header-height));
             width: 100%;
-            max-width: 100vw;
-            overflow-x: hidden;
+            max-width: 100%;
+            margin-top: var(--header-height);
           }
           .main-content {
             flex: 1;
