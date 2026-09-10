@@ -276,7 +276,7 @@ export default function BackOfficePage() {
         {activeTab === 'members' && (
           <div>
             <div className="tab-header">
-              <h2>dim_member</h2>
+              {/* <h2>dim_member</h2> */}
               <button className="btn btn-primary btn-sm" onClick={handleStartAddMember} disabled={Boolean(tempMember)}>
                 <Plus size={14} /> Add Member
               </button>
@@ -548,7 +548,7 @@ export default function BackOfficePage() {
         {activeTab === 'groups' && (
           <div>
             <div className="tab-header">
-              <h2>dim_group</h2>
+              {/* <h2>dim_group</h2> */}
               <button className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_group', data: { group: '', country: '🇹🇭 TH', company: 'Individual' } })}>
                 <Plus size={14} /> Add Group
               </button>
@@ -609,7 +609,7 @@ export default function BackOfficePage() {
         {activeTab === 'companies' && (
           <div>
             <div className="tab-header">
-              <h2>dim_company</h2>
+              {/* <h2>dim_company</h2> */}
               <button className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_company', data: { company: '' } })}>
                 <Plus size={14} /> Add Company
               </button>
@@ -666,7 +666,7 @@ export default function BackOfficePage() {
         {activeTab === 'logs' && (
           <div>
             <div className="tab-header">
-              <h2>fact_admin_log</h2>
+              {/* <h2>fact_admin_log</h2> */}
             </div>
             <div className="table-wrapper">
               <table className="dim-table">

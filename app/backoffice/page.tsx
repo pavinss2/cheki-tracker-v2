@@ -351,7 +351,7 @@ export default function BackOfficePage() {
         {activeTab === 'members' && (
           <div>
             <div className="tab-header">
-              <h2>Default Members (default_dim_member)</h2>
+              <h2>default_dim_member</h2>
               <button className="btn btn-primary btn-sm" onClick={handleStartAddMember} disabled={Boolean(tempMember)}>
                 <Plus size={14} /> Add Default Member
               </button>
@@ -556,7 +556,7 @@ export default function BackOfficePage() {
         {activeTab === 'groups' && (
           <div>
             <div className="tab-header">
-              <h2>Default Groups (default_dim_group)</h2>
+              <h2>default_dim_group</h2>
               <button className="btn btn-primary btn-sm" onClick={() => setTempGroup({ group: '', country: '🇹🇭 TH', company: 'Individual' })} disabled={Boolean(tempGroup)}>
                 <Plus size={14} /> Add Default Group
               </button>
@@ -638,7 +638,7 @@ export default function BackOfficePage() {
         {activeTab === 'companies' && (
           <div>
             <div className="tab-header">
-              <h2>Default Companies (default_dim_company)</h2>
+              <h2>default_dim_company</h2>
               <button className="btn btn-primary btn-sm" onClick={() => setTempCompany({ company: '' })} disabled={Boolean(tempCompany)}>
                 <Plus size={14} /> Add Default Company
               </button>
@@ -698,7 +698,7 @@ export default function BackOfficePage() {
         {activeTab === 'colors' && (
           <div>
             <div className="tab-header">
-              <h2>Default Colors (default_dim_color)</h2>
+              <h2>default_dim_color</h2>
               <button className="btn btn-primary btn-sm" onClick={() => setTempColor({ color: '', color_code: '#ffffff' })} disabled={Boolean(tempColor)}>
                 <Plus size={14} /> Add Default Color
               </button>
@@ -776,7 +776,7 @@ export default function BackOfficePage() {
         {activeTab === 'types' && (
           <div>
             <div className="tab-header">
-              <h2>Default Cheki Types (default_dim_type)</h2>
+              <h2>default_dim_type</h2>
               <button className="btn btn-primary btn-sm" onClick={() => setTempType({ type: '' })} disabled={Boolean(tempType)}>
                 <Plus size={14} /> Add Default Type
               </button>
@@ -836,7 +836,7 @@ export default function BackOfficePage() {
         {activeTab === 'countries' && (
           <div>
             <div className="tab-header">
-              <h2>Default Countries (default_dim_country)</h2>
+              <h2>default_dim_country</h2>
               <button className="btn btn-primary btn-sm" onClick={() => setTempCountry({ country: 'JP', displayed_country: '🇯🇵 JP' })} disabled={Boolean(tempCountry)}>
                 <Plus size={14} /> Add Default Country
               </button>
@@ -895,7 +895,7 @@ export default function BackOfficePage() {
         {activeTab === 'locations' && (
           <div>
             <div className="tab-header">
-              <h2>Default Locations (default_dim_location)</h2>
+              <h2>default_dim_location</h2>
               <button className="btn btn-primary btn-sm" onClick={() => setTempLocation({ location: '' })} disabled={Boolean(tempLocation)}>
                 <Plus size={14} /> Add Default Location
               </button>
@@ -955,7 +955,7 @@ export default function BackOfficePage() {
         {activeTab === 'logs' && (
           <div>
             <div className="tab-header">
-              <h2>System Audit Logs (fact_admin_log)</h2>
+              <h2>fact_admin_log</h2>
             </div>
             <div className="table-wrapper">
               <table className="dim-table">
