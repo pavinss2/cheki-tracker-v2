@@ -128,16 +128,19 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
   8. `Status` (`is_active`)
 - Toggles between ascending (`▲`) and descending (`▼`) sort order.
 
-### 6.2 Temporary Top Row Draft & Save Button Rule
-- Clicking **"+ Add Member"** does NOT immediately save to the database.
-- It pins a **temporary draft row at the very top of the table** with inline input fields and select dropdowns.
+### 6.2 Temporary Top Row Draft, Image URL & Locked Fields Rule
+- Clicking **"+ Add Member"** pins a **temporary draft row at the very top of the table** with inline input fields.
+- **Image URL Field**: Provides a direct URL text input (`member_image`) in the draft top row as well as the edit modal form.
+- **Locked Fields Rule (Country & Company)**:
+  - `country` and `company` fields are **locked (disabled / read-only)** when creating or editing a member.
+  - Selecting a `Group` automatically maps and updates `country` and `company` from `dim_group`. Manual editing of country and company is disabled to prevent data mismatch.
 - **Default Field Values for New Member**:
   - `start_date`: Defaults to **`1000-12-26`**.
   - `end_date`: Defaults to **`9999-12-31`**.
   - `is_active`: Defaults to **`Active` (`true`)**.
   - `color`: Defaults to `'White'`.
-  - `country`: Defaults to `'🇹🇭 TH'`.
-  - `company`: Defaults to `'Individual'`.
+  - `country`: Auto-mapped by selected Group (defaults to `'🇹🇭 TH'`).
+  - `company`: Auto-mapped by selected Group (defaults to `'Individual'`).
 - **Explicit Save Button**: The new record is only written to Firestore when the user explicitly clicks the **Save** button in the draft row's actions column.
 - **Cancel Button**: Clicking Cancel (`X`) discards the temporary row without saving to the database.
 

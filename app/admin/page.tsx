@@ -5,7 +5,7 @@ import { useChekiData } from '@/hooks/useChekiData';
 import { addMetadataDoc, updateMetadataDoc, deleteMetadataDoc, getAdminLogs, getItemValueString } from '@/lib/dataStore';
 import { useAuth } from '@/context/AuthContext';
 import { LoginPrompt } from '@/components/layout/LoginPrompt';
-import { Plus, Edit2, Trash2, Shield, Users, Building, Flag, Palette, Layers, Tag, X, Save, ArrowUpDown, ExternalLink, Check } from 'lucide-react';
+import { Plus, Edit2, Trash2, Shield, Users, Building, Flag, Palette, Layers, Tag, X, Save, ArrowUpDown, ExternalLink, Lock } from 'lucide-react';
 import { CircularSpinner } from '@/components/common/CircularSpinner';
 import { MemberAvatar } from '@/components/common/MemberAvatar';
 import { DimMember } from '@/types/cheki';
@@ -239,7 +239,7 @@ export default function BackOfficePage() {
             <table>
               <thead>
                 <tr>
-                  <th>Avatar</th>
+                  <th>Avatar & Image URL</th>
                   <th className="sortable-th" onClick={() => handleSortMembers('member_name')}>
                     Member Name {memberSortKey === 'member_name' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                   </th>
@@ -250,10 +250,10 @@ export default function BackOfficePage() {
                     Group {memberSortKey === 'group' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                   </th>
                   <th className="sortable-th" onClick={() => handleSortMembers('country')}>
-                    Country {memberSortKey === 'country' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                    Country <span title="Locked & auto-mapped by Group"><Lock size={11} /></span> {memberSortKey === 'country' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                   </th>
                   <th className="sortable-th" onClick={() => handleSortMembers('company')}>
-                    Company {memberSortKey === 'company' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                    Company <span title="Locked & auto-mapped by Group"><Lock size={11} /></span> {memberSortKey === 'company' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                   </th>
                   <th className="sortable-th" onClick={() => handleSortMembers('start_date')}>
                     Start Date {memberSortKey === 'start_date' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
@@ -272,13 +272,23 @@ export default function BackOfficePage() {
                 {/* Temporary Unsaved New Member Row Pinned at Top Row */}
                 {tempMember && (
                   <tr className="temp-row">
-                    <td>
-                      <MemberAvatar 
-                        src={tempMember.member_image} 
-                        name={tempMember.member_name || 'New'} 
-                        size={36} 
-                        colorHex={colors.find(c => c.color === tempMember.color)?.color_code} 
-                      />
+                    <td style={{ minWidth: '160px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <MemberAvatar 
+                          src={tempMember.member_image} 
+                          name={tempMember.member_name || 'New'} 
+                          size={32} 
+                          colorHex={colors.find(c => c.color === tempMember.color)?.color_code} 
+                        />
+                        <input 
+                          type="url" 
+                          className="table-input" 
+                          placeholder="Image URL (https://...)" 
+                          value={tempMember.member_image} 
+                          onChange={(e) => setTempMember({ ...tempMember, member_image: e.target.value })}
+                          title="Member Avatar Image URL"
+                        />
+                      </div>
                     </td>
                     <td>
                       <input 
@@ -321,8 +331,8 @@ export default function BackOfficePage() {
                             setTempMember({ 
                               ...tempMember, 
                               group: grpVal,
-                              company: mapped?.company || tempMember.company,
-                              country: mapped?.country || tempMember.country
+                              company: mapped?.company || 'Individual',
+                              country: mapped?.country || '🇹🇭 TH'
                             });
                           }
                         }}
@@ -335,26 +345,22 @@ export default function BackOfficePage() {
                       </select>
                     </td>
                     <td>
-                      <select 
-                        className="table-select"
-                        value={tempMember.country}
-                        onChange={(e) => setTempMember({ ...tempMember, country: e.target.value })}
-                      >
-                        {countries.map((c) => (
-                          <option key={c.id} value={c.displayed_country}>{c.displayed_country} ({c.country})</option>
-                        ))}
-                      </select>
+                      <input 
+                        type="text" 
+                        disabled 
+                        className="table-input disabled" 
+                        value={tempMember.country} 
+                        title="Country is locked and auto-mapped by selected Group"
+                      />
                     </td>
                     <td>
-                      <select 
-                        className="table-select"
-                        value={tempMember.company}
-                        onChange={(e) => setTempMember({ ...tempMember, company: e.target.value })}
-                      >
-                        {companies.map((c) => (
-                          <option key={c.id} value={c.company}>{c.company}</option>
-                        ))}
-                      </select>
+                      <input 
+                        type="text" 
+                        disabled 
+                        className="table-input disabled" 
+                        value={tempMember.company} 
+                        title="Company is locked and auto-mapped by selected Group"
+                      />
                     </td>
                     <td>
                       <input 
@@ -744,6 +750,16 @@ export default function BackOfficePage() {
                     />
                   </div>
 
+                  <div className="form-group span-2">
+                    <label>Member Avatar Image URL</label>
+                    <input
+                      type="url"
+                      value={String(editingItem.data.member_image || '')}
+                      onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, member_image: e.target.value } })}
+                      placeholder="https://..."
+                    />
+                  </div>
+
                   <div className="form-group">
                     <label>Color</label>
                     <select
@@ -778,8 +794,8 @@ export default function BackOfficePage() {
                             data: { 
                               ...editingItem.data, 
                               group: grpVal,
-                              company: mapped?.company || editingItem.data.company,
-                              country: mapped?.country || editingItem.data.country,
+                              company: mapped?.company || 'Individual',
+                              country: mapped?.country || '🇹🇭 TH',
                             } 
                           });
                         }
@@ -794,41 +810,29 @@ export default function BackOfficePage() {
                   </div>
 
                   <div className="form-group">
-                    <label>Country</label>
-                    <select
-                      value={String(editingItem.data.country || '')}
-                      onChange={(e) => {
-                        if (e.target.value === '__CREATE_NEW__') {
-                          setInlineNewModal({ table: 'dim_country', fieldKey: 'country', name: '' });
-                        } else {
-                          setEditingItem({ ...editingItem, data: { ...editingItem.data, country: e.target.value } });
-                        }
-                      }}
-                    >
-                      {countries.map((c) => (
-                        <option key={c.id} value={c.displayed_country}>{c.displayed_country} ({c.country})</option>
-                      ))}
-                      <option value="__CREATE_NEW__">+ Create New Country...</option>
-                    </select>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      Country <span title="Locked & auto-mapped by Group"><Lock size={12} /></span>
+                    </label>
+                    <input
+                      type="text"
+                      disabled
+                      className="table-input disabled"
+                      value={String(editingItem.data.country || '🇹🇭 TH')}
+                      title="Country is locked and auto-mapped by Group"
+                    />
                   </div>
 
                   <div className="form-group">
-                    <label>Company</label>
-                    <select
-                      value={String(editingItem.data.company || '')}
-                      onChange={(e) => {
-                        if (e.target.value === '__CREATE_NEW__') {
-                          setInlineNewModal({ table: 'dim_company', fieldKey: 'company', name: '' });
-                        } else {
-                          setEditingItem({ ...editingItem, data: { ...editingItem.data, company: e.target.value } });
-                        }
-                      }}
-                    >
-                      {companies.map((c) => (
-                        <option key={c.id} value={c.company}>{c.company}</option>
-                      ))}
-                      <option value="__CREATE_NEW__">+ Create New Company...</option>
-                    </select>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      Company <span title="Locked & auto-mapped by Group"><Lock size={12} /></span>
+                    </label>
+                    <input
+                      type="text"
+                      disabled
+                      className="table-input disabled"
+                      value={String(editingItem.data.company || 'Individual')}
+                      title="Company is locked and auto-mapped by Group"
+                    />
                   </div>
 
                   <div className="form-group">
@@ -862,23 +866,13 @@ export default function BackOfficePage() {
                     </select>
                   </div>
 
-                  <div className="form-group">
+                  <div className="form-group span-2">
                     <label>X / Twitter Profile</label>
                     <input
                       type="text"
                       value={String(editingItem.data.x_profile || '')}
                       onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, x_profile: e.target.value } })}
                       placeholder="https://x.com/username or @username"
-                    />
-                  </div>
-
-                  <div className="form-group span-2">
-                    <label>Member Avatar Image URL</label>
-                    <input
-                      type="url"
-                      value={String(editingItem.data.member_image || '')}
-                      onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, member_image: e.target.value } })}
-                      placeholder="https://..."
                     />
                   </div>
                 </>
@@ -1019,6 +1013,11 @@ export default function BackOfficePage() {
           font-size: 0.82rem;
           &.bold { font-weight: 600; }
           &:focus { border-color: var(--accent-primary); outline: none; }
+          &.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            background: var(--bg-surface-3);
+          }
         }
 
         .table-select {
