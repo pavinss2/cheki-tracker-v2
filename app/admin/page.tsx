@@ -241,7 +241,7 @@ export default function BackOfficePage() {
               <table className="dim-table member-table">
                 <thead>
                   <tr>
-                    <th>Avatar & Image URL</th>
+                    <th>Avatar</th>
                     <th className="sortable-th" onClick={() => handleSortMembers('member_name')}>
                       Member Name {memberSortKey === 'member_name' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                     </th>

@@ -6,11 +6,12 @@ import { FilterBar } from '@/components/layout/FilterBar';
 import { useAuth } from '@/context/AuthContext';
 import { LoginPrompt } from '@/components/layout/LoginPrompt';
 import { Transaction } from '@/types/cheki';
-import { ChevronLeft, ChevronRight, X, Image as ImageIcon, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Image as ImageIcon, Users, Plus, Save } from 'lucide-react';
 import { LightboxGallery, LightboxItem } from '@/components/common/LightboxGallery';
 import { MemberAvatar } from '@/components/common/MemberAvatar';
 import { extractDirectImageUrl } from '@/lib/imageUtils';
 import { CircularSpinner } from '@/components/common/CircularSpinner';
+import { addTransaction } from '@/lib/dataStore';
 
 interface GroupedChekiPhoto {
   key: string;
@@ -61,30 +62,11 @@ function groupTransactionsByImage(rows: Transaction[]): GroupedChekiPhoto[] {
 
 export default function CalendarPage() {
   const { user, isDemoUser } = useAuth();
-  const { allTransactions, filteredTransactions, members, colors, loading } = useChekiData();
-
-  const now = new Date();
-  const [currentYear, setCurrentYear] = useState(now.getFullYear());
-  const [currentMonth, setCurrentMonth] = useState(now.getMonth()); // 0-indexed
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [lightboxState, setLightboxState] = useState<{ open: boolean; index: number }>({ open: false, index: 0 });
-
-  const monthNames = useMemo(() => [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ], []);
-
-  const colorHexMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    colors.forEach(c => {
-      map[c.color] = c.color_code;
-    });
-    return map;
-  }, [colors]);
+  const { allTransactions, members, colors, types, userId, loading } = useChekiData();
 
   const memberAvatarMap = useMemo(() => {
     const map: Record<string, string> = {};
-    members.forEach(m => {
+    members.forEach((m) => {
       if (m.member_image && m.member_image !== 'None') {
         map[m.member_name] = m.member_image;
       }
@@ -92,10 +74,119 @@ export default function CalendarPage() {
     return map;
   }, [members]);
 
+  const now = useMemo(() => new Date(), []);
+  const [currentYear, setCurrentYear] = useState<number>(now.getFullYear());
+  const [currentMonth, setCurrentMonth] = useState<number>(now.getMonth()); // 0-indexed
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  const [lightboxState, setLightboxState] = useState<{ open: boolean; index: number }>({
+    open: false,
+    index: 0,
+  });
+
+  // Modal State for "+ New Transaction" feature from Calendar
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [modalDate, setModalDate] = useState('');
+  const [modalMember, setModalMember] = useState('');
+  const [modalGroup, setModalGroup] = useState('');
+  const [modalColor, setModalColor] = useState('White');
+  const [modalEvent, setModalEvent] = useState('');
+  const [modalType, setModalType] = useState('Cheki');
+  const [modalQty, setModalQty] = useState(1);
+  const [modalPrice, setModalPrice] = useState(300);
+  const [modalImg, setModalImg] = useState('');
+  const [modalNotes, setModalNotes] = useState('');
+  const [isSubmittingTrans, setIsSubmittingTrans] = useState(false);
+
+  const handleOpenAddModal = (presetDate?: string) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    setModalDate(presetDate || selectedDate || todayStr);
+    setModalMember('');
+    setModalGroup('');
+    setModalColor('White');
+    setModalEvent('');
+    setModalType('Cheki');
+    setModalQty(1);
+    setModalPrice(300);
+    setModalImg('');
+    setModalNotes('');
+    setIsAddModalOpen(true);
+  };
+
+  const handleMemberSelect = (memberName: string) => {
+    setModalMember(memberName);
+    const found = members.find((m) => m.member_name.toLowerCase() === memberName.toLowerCase());
+    if (found) {
+      if (found.group) setModalGroup(found.group);
+      if (found.color) setModalColor(found.color);
+    }
+  };
+
+  const handleSaveNewTransaction = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!modalMember.trim() || !modalDate.trim()) {
+      alert("Please fill in required fields: Date and Member.");
+      return;
+    }
+
+    setIsSubmittingTrans(true);
+    try {
+      await addTransaction({
+        userId,
+        member: modalMember.trim(),
+        color: modalColor.trim() || 'White',
+        group: modalGroup.trim(),
+        nationality: '🇹🇭 TH',
+        date: modalDate.trim(),
+        month: modalDate.trim().substring(0, 7),
+        year: modalDate.trim().substring(0, 4),
+        event: modalEvent.trim(),
+        description: modalNotes.trim(),
+        type: modalType.trim() || 'Cheki',
+        location: 'Bangkok',
+        quantity: Number(modalQty) || 1,
+        totalPrice: Number(modalPrice) || 300,
+        img: modalImg.trim(),
+        talkTopic: modalNotes.trim(),
+        company: '',
+      }, isDemoUser);
+
+      setIsAddModalOpen(false);
+    } catch (err) {
+      console.error("Error creating transaction:", err);
+      alert("Failed to save transaction: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setIsSubmittingTrans(false);
+    }
+  };
+
+  const monthNames = useMemo(() => [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ], []);
+
+  const colorHexMap = useMemo(() => {
+    const map: Record<string, string> = {
+      White: '#ffffff',
+      Red: '#e74c3c',
+      Blue: '#3498db',
+      Yellow: '#f1c40f',
+      Green: '#2ecc71',
+      Pink: '#e84393',
+      Purple: '#9b59b6',
+      Orange: '#e67e22',
+      Black: '#2c3e50',
+    };
+    colors.forEach(c => {
+      map[c.color] = c.color_code;
+    });
+    return map;
+  }, [colors]);
+
   // Aggregate daily counts & rows for active month
   const dayDataMap = useMemo(() => {
     const map: Record<string, { qty: number; rows: Transaction[] }> = {};
-    filteredTransactions.forEach(r => {
+    allTransactions.forEach(r => {
       if (r.date) {
         if (!map[r.date]) {
           map[r.date] = { qty: 0, rows: [] };
@@ -105,7 +196,7 @@ export default function CalendarPage() {
       }
     });
     return map;
-  }, [filteredTransactions]);
+  }, [allTransactions]);
 
   // Generate calendar days for current month view
   const calendarDays = useMemo(() => {
@@ -113,7 +204,7 @@ export default function CalendarPage() {
     const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
     const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
 
-    const startOffset = (firstDayOfMonth.getDay() + 6) % 7;
+    let startOffset = (firstDayOfMonth.getDay() + 6) % 7;
     const totalDays = lastDayOfMonth.getDate();
 
     // Prev month padding
@@ -121,8 +212,10 @@ export default function CalendarPage() {
     for (let i = startOffset - 1; i >= 0; i--) {
       const d = prevMonthLastDay - i;
       const prevDate = new Date(currentYear, currentMonth - 1, d);
-      const dateStr = prevDate.toISOString().split('T')[0];
-      days.push({ dateStr, dayNum: d, isCurrentMonth: false });
+      const yyyy = prevDate.getFullYear();
+      const mm = String(prevDate.getMonth() + 1).padStart(2, '0');
+      const dd = String(d).padStart(2, '0');
+      days.push({ dateStr: `${yyyy}-${mm}-${dd}`, dayNum: d, isCurrentMonth: false });
     }
 
     // Current month days
@@ -133,12 +226,15 @@ export default function CalendarPage() {
       days.push({ dateStr, dayNum: d, isCurrentMonth: true });
     }
 
-    // Next month padding
-    const remaining = (7 - (days.length % 7)) % 7;
+    // Next month padding (make total grid 35 or 42)
+    const totalCells = days.length > 35 ? 42 : 35;
+    const remaining = totalCells - days.length;
     for (let d = 1; d <= remaining; d++) {
       const nextDate = new Date(currentYear, currentMonth + 1, d);
-      const dateStr = nextDate.toISOString().split('T')[0];
-      days.push({ dateStr, dayNum: d, isCurrentMonth: false });
+      const yyyy = nextDate.getFullYear();
+      const mm = String(nextDate.getMonth() + 1).padStart(2, '0');
+      const dd = String(d).padStart(2, '0');
+      days.push({ dateStr: `${yyyy}-${mm}-${dd}`, dayNum: d, isCurrentMonth: false });
     }
 
     return days;
@@ -183,7 +279,7 @@ export default function CalendarPage() {
     return 'heat-4';
   };
 
-  // Requirement 3: Active rows depend on selectedDate or active month
+  // Active rows depend on selectedDate or active month
   const activeViewRows = useMemo(() => {
     if (selectedDate) {
       return dayDataMap[selectedDate]?.rows || [];
@@ -198,30 +294,41 @@ export default function CalendarPage() {
     return monthRows;
   }, [selectedDate, calendarDays, dayDataMap]);
 
-  // Requirement 1: Group active transactions by unique image URL
+  // Group active transactions by unique image URL
   const groupedPhotos = useMemo(() => {
     return groupTransactionsByImage(activeViewRows);
   }, [activeViewRows]);
 
-  // Gallery items for Lightbox navigation
+  // Gallery items for Lightbox navigation with rich white-gold specs
   const monthGalleryItems: LightboxItem[] = useMemo(() => {
     return groupedPhotos.map((g) => {
-      const memberLabel = g.members.length > 2
-        ? `${g.members.slice(0, 2).join(', ')} +${g.members.length - 2}`
+      const sampleRow = g.rows[0];
+      const rawDateStr = sampleRow?.date || selectedDate || '';
+      const dateFormatted = rawDateStr 
+        ? new Date(rawDateStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) 
+        : '';
+
+      const memberLabel = g.members.length > 3
+        ? `${g.members.slice(0, 3).join(', ')} +${g.members.length - 3}`
         : g.members.join(', ');
+
       return {
         url: g.imgUrl,
-        title: `${memberLabel} ${g.groups.length > 0 ? '• ' + g.groups.join(', ') : ''}`,
+        title: memberLabel || 'Cheki Photo',
         subtitle: g.events.join(', '),
+        members: g.members,
+        event: g.events.join(', '),
+        date: dateFormatted,
+        qty: g.totalQty,
       };
     });
-  }, [groupedPhotos]);
+  }, [groupedPhotos, selectedDate]);
 
-  // Requirement 2: Header structure and wording (Attached Image 2)
+  // Header structure with MMM month formatting
   const viewHeaderInfo = useMemo(() => {
     if (selectedDate) {
       const dObj = new Date(selectedDate + 'T00:00:00');
-      const dateFormatted = dObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      const dateFormatted = dObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       const events = Array.from(new Set(activeViewRows.map((r) => r.event).filter(Boolean)));
       const totalQty = activeViewRows.reduce((sum, r) => sum + (r.quantity || 1), 0);
       return {
@@ -230,7 +337,8 @@ export default function CalendarPage() {
         isDateSelected: true,
       };
     } else {
-      const monthTitle = `${monthNames[currentMonth]} ${currentYear}`;
+      const monthShort = monthNames[currentMonth].substring(0, 3);
+      const monthTitle = `${monthShort} ${currentYear}`;
       const totalQty = activeViewRows.reduce((sum, r) => sum + (r.quantity || 1), 0);
       const events = Array.from(new Set(activeViewRows.map((r) => r.event).filter(Boolean)));
       return {
@@ -274,22 +382,37 @@ export default function CalendarPage() {
     <div className="calendar-page">
       <FilterBar transactions={allTransactions} />
 
-      {/* Requirement 3: Clicking cal-nav-card resets to full month gallery view */}
+      {/* Calendar Header Card */}
       <div className="cal-nav-card card clickable-cal-nav" onClick={() => setSelectedDate(null)} title="Show full month gallery">
         <div className="cal-title-section">
           <div className="month-year-header">
             <h2>{monthNames[currentMonth].substring(0, 3)} {currentYear}</h2>
-            <button 
-              className="btn btn-secondary btn-sm btn-today" 
-              onClick={(e) => {
-                e.stopPropagation();
-                setCurrentYear(now.getFullYear());
-                setCurrentMonth(now.getMonth());
-                setSelectedDate(null);
-              }}
-            >
-              Today
-            </button>
+            <div className="header-button-group">
+              <button 
+                className="btn btn-secondary btn-sm btn-today" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurrentYear(now.getFullYear());
+                  setCurrentMonth(now.getMonth());
+                  setSelectedDate(null);
+                }}
+              >
+                Today
+              </button>
+
+              {/* Primary "+ Add Cheki" Button in Calendar Header */}
+              <button
+                className="btn btn-primary btn-sm btn-add-cheki"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOpenAddModal(selectedDate || undefined);
+                }}
+                title="Add new cheki transaction"
+              >
+                <Plus size={15} />
+                <span>Add Cheki</span>
+              </button>
+            </div>
           </div>
 
           <div className="month-summary-strip">
@@ -301,10 +424,10 @@ export default function CalendarPage() {
         </div>
 
         <div className="btn-group" onClick={(e) => e.stopPropagation()}>
-          <button className="btn btn-secondary btn-sm" onClick={handlePrevMonth}>
+          <button className="btn btn-secondary btn-sm" onClick={handlePrevMonth} title="Previous Month">
             <ChevronLeft size={16} />
           </button>
-          <button className="btn btn-secondary btn-sm" onClick={handleNextMonth}>
+          <button className="btn btn-secondary btn-sm" onClick={handleNextMonth} title="Next Month">
             <ChevronRight size={16} />
           </button>
         </div>
@@ -363,7 +486,6 @@ export default function CalendarPage() {
 
       {/* Photo Gallery Card (Month View by default or Selected Day View) */}
       <div className="gallery-section-card card">
-        {/* Requirement 2: Wording & Structure matching Attached Image 2 */}
         <div className="day-header-banner">
           <div className="day-header-left-bar" />
           <div className="day-header-content">
@@ -376,20 +498,32 @@ export default function CalendarPage() {
               </>
             )}
           </div>
-          {viewHeaderInfo.isDateSelected && (
-            <button className="btn-close-view" onClick={() => setSelectedDate(null)} title="Show full month gallery">
-              <X size={16} />
+
+          <div className="day-header-actions">
+            {/* Add Cheki button prefilled with selected date */}
+            <button
+              className="btn btn-primary btn-sm btn-add-day-cheki"
+              onClick={() => handleOpenAddModal(selectedDate || undefined)}
+              title="Add new cheki transaction for this date"
+            >
+              <Plus size={14} />
+              <span>Add Cheki</span>
             </button>
-          )}
+
+            {viewHeaderInfo.isDateSelected && (
+              <button className="btn-close-view" onClick={() => setSelectedDate(null)} title="Show full month gallery">
+                <X size={16} />
+              </button>
+            )}
+          </div>
         </div>
 
         {groupedPhotos.length === 0 ? (
           <div className="no-photos-placeholder">
             <ImageIcon size={32} />
-            <p>No cheki photos recorded for {selectedDate ? selectedDate : monthNames[currentMonth] + ' ' + currentYear}.</p>
+            <p>No cheki photos recorded for {selectedDate ? selectedDate : monthNames[currentMonth].substring(0, 3) + ' ' + currentYear}.</p>
           </div>
         ) : (
-          /* Requirement 1: Grouped cards matching Attached Image 1 */
           <div className="grouped-gallery-grid">
             {groupedPhotos.map((photo, pIdx) => {
               const memberTitle = photo.members.length > 2
@@ -413,7 +547,7 @@ export default function CalendarPage() {
                     </div>
                   ) : null}
 
-                  {/* Top Right Color Dots (Attached Image 1 style) */}
+                  {/* Top Right Color Dots */}
                   <div className="color-dots-group">
                     {photo.colors.map((cName) => {
                       const hex = colorHexMap[cName] || (cName.toLowerCase() === 'white' ? '#ffffff' : '#7f8c8d');
@@ -430,7 +564,7 @@ export default function CalendarPage() {
 
                   {/* Photo Thumbnail */}
                   <div className="grouped-img-wrap">
-                    {/* eslint-disable-next-next/no-img-element */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={photo.cleanUrl} alt={memberTitle} className="grouped-img" />
                   </div>
 
@@ -454,62 +588,245 @@ export default function CalendarPage() {
         />
       )}
 
+      {/* New Transaction Creation Modal */}
+      {isAddModalOpen && (
+        <div className="modal-backdrop" onClick={() => setIsAddModalOpen(false)}>
+          <div className="modal-dialog card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>📸 Add New Cheki Transaction</h3>
+              <button className="btn-close-modal" onClick={() => setIsAddModalOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveNewTransaction} className="modal-form">
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>Date *</label>
+                  <input
+                    type="date"
+                    value={modalDate}
+                    onChange={(e) => setModalDate(e.target.value)}
+                    required
+                    className="input-control"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Member Name *</label>
+                  <input
+                    type="text"
+                    list="member-suggestions"
+                    value={modalMember}
+                    onChange={(e) => handleMemberSelect(e.target.value)}
+                    placeholder="Select or enter member..."
+                    required
+                    className="input-control"
+                  />
+                  <datalist id="member-suggestions">
+                    {members.map((m) => (
+                      <option key={m.id} value={m.member_name} />
+                    ))}
+                  </datalist>
+                </div>
+
+                <div className="form-group">
+                  <label>Group</label>
+                  <input
+                    type="text"
+                    value={modalGroup}
+                    onChange={(e) => setModalGroup(e.target.value)}
+                    placeholder="Group name"
+                    className="input-control"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Color</label>
+                  <select
+                    value={modalColor}
+                    onChange={(e) => setModalColor(e.target.value)}
+                    className="input-control"
+                  >
+                    {colors.length > 0 ? (
+                      colors.map((c) => (
+                        <option key={c.id} value={c.color}>{c.color}</option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="White">White</option>
+                        <option value="Red">Red</option>
+                        <option value="Blue">Blue</option>
+                        <option value="Yellow">Yellow</option>
+                        <option value="Green">Green</option>
+                        <option value="Pink">Pink</option>
+                        <option value="Purple">Purple</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Event Name</label>
+                  <input
+                    type="text"
+                    value={modalEvent}
+                    onChange={(e) => setModalEvent(e.target.value)}
+                    placeholder="e.g. CosQuest 3"
+                    className="input-control"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Cheki Type</label>
+                  <select
+                    value={modalType}
+                    onChange={(e) => setModalType(e.target.value)}
+                    className="input-control"
+                  >
+                    {types.length > 0 ? (
+                      types.map((t) => (
+                        <option key={t.id} value={t.type}>{t.type}</option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="Cheki">Cheki</option>
+                        <option value="Digital Cheki">Digital Cheki</option>
+                        <option value="Signed Photo">Signed Photo</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Quantity</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={modalQty}
+                    onChange={(e) => setModalQty(Number(e.target.value) || 1)}
+                    className="input-control"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Total Price (THB)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={modalPrice}
+                    onChange={(e) => setModalPrice(Number(e.target.value) || 0)}
+                    className="input-control"
+                  />
+                </div>
+
+                <div className="form-group full-width">
+                  <label>Photo URL (Google Drive / Direct Image)</label>
+                  <input
+                    type="url"
+                    value={modalImg}
+                    onChange={(e) => setModalImg(e.target.value)}
+                    placeholder="https://drive.google.com/..."
+                    className="input-control"
+                  />
+                </div>
+
+                <div className="form-group full-width">
+                  <label>Talk Topic / Notes</label>
+                  <textarea
+                    value={modalNotes}
+                    onChange={(e) => setModalNotes(e.target.value)}
+                    placeholder="Memorable talk topic or event notes..."
+                    rows={2}
+                    className="input-control textarea-control"
+                  />
+                </div>
+              </div>
+
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setIsAddModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingTrans}
+                  className="btn btn-primary"
+                >
+                  <Save size={16} />
+                  <span>{isSubmittingTrans ? 'Saving...' : 'Save Transaction'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <style jsx>{`
         .calendar-page {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 20px;
           width: 100%;
           max-width: 100%;
           min-width: 0;
         }
 
-        .page-title { font-size: 1.6rem; }
+        .cal-nav-card {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 16px 20px;
+          gap: 16px;
+          flex-wrap: wrap;
+        }
 
         .clickable-cal-nav {
           cursor: pointer;
-          transition: border-color 0.2s, box-shadow 0.2s;
+          transition: border-color 0.2s;
           &:hover {
-            border-color: var(--accent-primary);
+            border-color: var(--border-strong);
           }
-        }
-
-        .cal-nav-card {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 16px;
-          flex-wrap: wrap;
         }
 
         .cal-title-section {
           display: flex;
-          align-items: center;
-          gap: 16px;
-          flex-wrap: wrap;
+          flex-direction: column;
+          gap: 8px;
         }
 
         .month-year-header {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 12px;
+          h2 {
+            margin: 0;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-main);
+          }
         }
 
-        .cal-title-section h2 {
-          font-size: 1.3rem;
-          font-weight: 700;
+        .header-button-group {
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
 
-        .btn-today {
-          padding: 4px 10px;
-          min-height: 28px;
-          font-size: 0.78rem;
+        .btn-add-cheki {
+          display: flex;
+          align-items: center;
+          gap: 6px;
           font-weight: 600;
         }
 
         .month-summary-strip {
           display: flex;
-          gap: 6px;
+          align-items: center;
+          gap: 12px;
           flex-wrap: wrap;
         }
 
@@ -518,9 +835,14 @@ export default function CalendarPage() {
           border: 1px solid var(--border-subtle);
           padding: 4px 10px;
           border-radius: 12px;
-          font-size: 0.76rem;
-          font-weight: 600;
+          font-size: 0.8rem;
           color: var(--text-muted);
+        }
+
+        .btn-group {
+          display: flex;
+          align-items: center;
+          gap: 6px;
         }
 
         .cal-grid-card {
@@ -537,21 +859,23 @@ export default function CalendarPage() {
           max-width: 100%;
           overflow-x: auto;
           -webkit-overflow-scrolling: touch;
-          display: block;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
         }
 
         .cal-grid-header {
           display: grid;
           grid-template-columns: repeat(7, 1fr);
           text-align: center;
-          margin-bottom: 8px;
-        }
-
-        .weekday-header {
-          font-size: 0.78rem;
+          font-size: 0.8rem;
           font-weight: 700;
           color: var(--text-muted);
           text-transform: uppercase;
+        }
+
+        .weekday-header {
+          padding: 8px 0;
         }
 
         .cal-grid-body {
@@ -570,32 +894,39 @@ export default function CalendarPage() {
         }
 
         .cal-day-cell {
-          background-color: var(--bg-surface-1);
+          aspect-ratio: 1 / 1;
+          background-color: var(--bg-surface-2);
           border: 1px solid var(--border-subtle);
-          border-radius: var(--radius-sm);
-          min-height: 80px;
+          border-radius: 8px;
           padding: 6px;
           display: flex;
           flex-direction: column;
           justify-content: space-between;
           cursor: pointer;
-          transition: border-color 0.15s, background 0.15s;
+          transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+          position: relative;
+          overflow: hidden;
+
           &:hover {
+            transform: translateY(-2px);
             border-color: var(--accent-primary);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
           }
+
           &.other-month {
             opacity: 0.35;
           }
-          &.selected {
-            border-color: var(--accent-primary);
-            box-shadow: 0 0 12px rgba(212, 168, 75, 0.35);
-          }
-        }
 
-        .cal-day-cell.heat-1 { background-color: rgba(212, 168, 75, 0.08); }
-        .cal-day-cell.heat-2 { background-color: rgba(212, 168, 75, 0.16); }
-        .cal-day-cell.heat-3 { background-color: rgba(212, 168, 75, 0.26); }
-        .cal-day-cell.heat-4 { background-color: rgba(212, 168, 75, 0.38); }
+          &.selected {
+            border-color: var(--accent-primary) !important;
+            box-shadow: 0 0 0 2px var(--accent-primary) !important;
+          }
+
+          &.heat-1 { background-color: rgba(212, 168, 75, 0.12); }
+          &.heat-2 { background-color: rgba(212, 168, 75, 0.25); }
+          &.heat-3 { background-color: rgba(212, 168, 75, 0.4); }
+          &.heat-4 { background-color: rgba(212, 168, 75, 0.6); }
+        }
 
         .day-cell-top {
           display: flex;
@@ -604,97 +935,98 @@ export default function CalendarPage() {
         }
 
         .day-num {
-          font-size: 0.84rem;
+          font-size: 0.85rem;
           font-weight: 700;
+          color: var(--text-main);
         }
 
         .qty-badge {
           background-color: var(--accent-primary);
-          color: #000;
-          font-size: 0.7rem;
+          color: #0b0d14;
+          font-size: 0.72rem;
           font-weight: 800;
-          padding: 1px 6px;
+          padding: 1px 5px;
           border-radius: 10px;
         }
 
         .avatar-grid {
           display: flex;
-          gap: 2px;
-          flex-wrap: wrap;
-          margin-top: 4px;
-        }
-
-        .mini-avatar {
-          width: 18px;
-          height: 18px;
-          border-radius: 50%;
-          overflow: hidden;
-          background-color: var(--bg-surface-3);
-          font-size: 0.6rem;
-          display: flex;
           align-items: center;
-          justify-content: center;
-          font-weight: 700;
-          color: var(--text-muted);
-          border: 1px solid rgba(255,255,255,0.2);
+          gap: 2px;
+          margin-top: auto;
+          flex-wrap: wrap;
         }
 
-        .mini-avatar img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
+        .mini-avatar.more {
+          font-size: 0.65rem;
+          color: var(--text-muted);
+          font-weight: 700;
+          margin-left: 2px;
         }
 
         .gallery-section-card {
+          padding: 20px;
           display: flex;
           flex-direction: column;
           gap: 16px;
         }
 
-        /* Day Header Banner Gold Theme Style */
         .day-header-banner {
-          position: relative;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          background: linear-gradient(135deg, var(--bg-surface-2), #1a160d);
-          border: 1px solid rgba(212, 168, 75, 0.35);
-          border-radius: 8px;
-          padding: 10px 16px;
-          overflow: hidden;
+          padding-bottom: 12px;
+          border-bottom: 1px solid var(--border-subtle);
+          position: relative;
         }
 
         .day-header-left-bar {
           position: absolute;
-          left: 0; top: 0; bottom: 0;
+          left: -20px;
+          top: 0;
+          bottom: 12px;
           width: 4px;
-          background: var(--accent-primary);
+          background-color: var(--accent-primary);
+          border-radius: 0 4px 4px 0;
         }
 
         .day-header-content {
           display: flex;
           align-items: center;
           gap: 8px;
-          font-size: 0.95rem;
-          font-weight: 600;
+          font-size: 1.05rem;
+          flex-wrap: wrap;
         }
 
         .day-header-icon {
-          font-size: 1rem;
+          font-size: 1.1rem;
         }
 
         .day-header-date {
-          color: var(--accent-primary);
           font-weight: 700;
+          color: var(--text-main);
         }
 
         .day-header-separator {
-          color: rgba(255,255,255,0.4);
+          color: var(--text-muted);
         }
 
         .day-header-events {
-          color: var(--text-main);
-          font-weight: 500;
+          color: var(--accent-primary);
+          font-weight: 600;
+        }
+
+        .day-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .btn-add-day-cheki {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-weight: 600;
         }
 
         .btn-close-view {
@@ -704,20 +1036,23 @@ export default function CalendarPage() {
           cursor: pointer;
           padding: 4px;
           border-radius: 4px;
-          &:hover { color: #fff; background: rgba(255,255,255,0.1); }
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          &:hover { color: var(--text-main); background-color: var(--bg-surface-2); }
         }
 
         .no-photos-placeholder {
-          padding: 40px;
-          text-align: center;
-          color: var(--text-muted);
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 8px;
+          justify-content: center;
+          padding: 40px 20px;
+          color: var(--text-muted);
+          gap: 12px;
+          text-align: center;
         }
 
-        /* Attached Image 1 Grouped Gallery Grid Style */
         .grouped-gallery-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -726,23 +1061,20 @@ export default function CalendarPage() {
 
         .grouped-cheki-card {
           position: relative;
-          background-color: #161822;
-          border: 1px solid rgba(255,255,255,0.12);
-          border-radius: 12px;
+          background-color: var(--bg-surface-2);
+          border: 1px solid var(--border-subtle);
+          border-radius: 10px;
           overflow: hidden;
-          display: flex;
-          flex-direction: column;
           cursor: pointer;
           transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
-          box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+
           &:hover {
-            transform: translateY(-3px);
-            border-color: rgba(255,255,255,0.3);
-            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            transform: translateY(-4px);
+            border-color: var(--accent-primary);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
           }
         }
 
-        /* Image 1 Badges */
         .badge-pill {
           position: absolute;
           top: 10px;
@@ -751,23 +1083,21 @@ export default function CalendarPage() {
           display: flex;
           align-items: center;
           gap: 4px;
-          padding: 4px 10px;
-          border-radius: 14px;
-          font-size: 0.75rem;
+          padding: 4px 8px;
+          border-radius: 12px;
+          font-size: 0.7rem;
           font-weight: 700;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.5);
         }
 
         .badge-pill.gold {
           background-color: var(--accent-primary);
           color: #0b0d14;
-          font-weight: 800;
         }
 
         .badge-pill.dark {
-          background-color: rgba(24, 27, 38, 0.88);
+          background-color: rgba(15, 17, 23, 0.85);
           color: #ffffff;
-          border: 1px solid rgba(255,255,255,0.2);
+          border: 1px solid var(--border-subtle);
         }
 
         .color-dots-group {
@@ -781,17 +1111,16 @@ export default function CalendarPage() {
         }
 
         .color-dot {
-          width: 10px;
-          height: 10px;
+          width: 8px;
+          height: 8px;
           border-radius: 50%;
-          border: 1px solid rgba(0,0,0,0.4);
-          box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+          border: 1px solid rgba(255,255,255,0.3);
         }
 
         .grouped-img-wrap {
           width: 100%;
-          height: 220px;
-          background-color: #0d0e14;
+          height: 200px;
+          background-color: #000;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -805,19 +1134,135 @@ export default function CalendarPage() {
         }
 
         .photo-card-footer {
-          padding: 10px 12px;
-          background-color: #12131b;
-          border-top: 1px solid rgba(255,255,255,0.06);
+          padding: 8px 12px;
+          background-color: var(--bg-surface-2);
+          border-top: 1px solid var(--border-subtle);
         }
 
         .footer-member-name {
-          font-size: 0.88rem;
+          font-size: 0.82rem;
           font-weight: 600;
           color: var(--text-main);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
           display: block;
+        }
+
+        /* Modal Dialog Styles */
+        .modal-backdrop {
+          position: fixed;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background-color: rgba(0, 0, 0, 0.75);
+          backdrop-filter: blur(6px);
+          z-index: 9999;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 16px;
+        }
+
+        .modal-dialog {
+          width: 100%;
+          max-width: 600px;
+          max-height: 90vh;
+          overflow-y: auto;
+          background-color: var(--bg-surface-1);
+          border: 1px solid var(--border-strong);
+          border-radius: 12px;
+          padding: 24px;
+          box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+        }
+
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+          padding-bottom: 12px;
+          border-bottom: 1px solid var(--border-subtle);
+          h3 {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-main);
+          }
+        }
+
+        .btn-close-modal {
+          background: none;
+          border: none;
+          color: var(--text-muted);
+          cursor: pointer;
+          padding: 4px;
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          &:hover { color: var(--text-main); background: var(--bg-surface-2); }
+        }
+
+        .modal-form {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+
+        .form-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 16px;
+        }
+
+        .form-group {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          label {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-muted);
+          }
+        }
+
+        .form-group.full-width {
+          grid-column: span 2;
+        }
+
+        .input-control {
+          background-color: var(--bg-surface-2);
+          border: 1px solid var(--border-subtle);
+          border-radius: 6px;
+          padding: 8px 12px;
+          color: var(--text-main);
+          font-size: 0.9rem;
+          outline: none;
+          transition: border-color 0.2s;
+
+          &:focus {
+            border-color: var(--accent-primary);
+          }
+        }
+
+        .textarea-control {
+          resize: vertical;
+          font-family: inherit;
+        }
+
+        .modal-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 12px;
+          padding-top: 12px;
+          border-top: 1px solid var(--border-subtle);
+        }
+
+        @media (max-width: 600px) {
+          .form-grid {
+            grid-template-columns: 1fr;
+          }
+          .form-group.full-width {
+            grid-column: span 1;
+          }
         }
       `}</style>
     </div>

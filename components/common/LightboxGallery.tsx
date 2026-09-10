@@ -8,6 +8,10 @@ export interface LightboxItem {
   url: string;
   title?: string;
   subtitle?: string;
+  date?: string;
+  qty?: number;
+  members?: string[];
+  event?: string;
 }
 
 interface LightboxGalleryProps {
@@ -55,66 +59,86 @@ export const LightboxGallery: React.FC<LightboxGalleryProps> = ({
 
   if (!items || items.length === 0 || !currentItem) return null;
 
+  // Extract caption labels
+  const membersText = currentItem.members && currentItem.members.length > 0
+    ? (currentItem.members.length > 3 ? `${currentItem.members.slice(0, 3).join(', ')} +${currentItem.members.length - 3}` : currentItem.members.join(', '))
+    : (currentItem.title || '');
+
+  const eventText = currentItem.event || currentItem.subtitle || '';
+  const dateText = currentItem.date || '';
+  const qtyText = currentItem.qty ? `${currentItem.qty} cheki` : '';
+
   return (
     <div className="lightbox-overlay" onClick={onClose}>
-      <div className="lightbox-container" onClick={(e) => e.stopPropagation()}>
-        
-        {/* Top Bar Header */}
-        <div className="lightbox-header">
-          <div className="lightbox-info">
-            <span className="lightbox-counter">
-              Image {currentIndex + 1} of {items.length}
-            </span>
-            {currentItem.title && <span className="lightbox-title">• {currentItem.title}</span>}
-            {currentItem.subtitle && <span className="lightbox-sub">({currentItem.subtitle})</span>}
-          </div>
-          <button className="btn-close-lightbox" onClick={onClose} title="Close Lightbox (Esc)">
-            <X size={22} />
-          </button>
-        </div>
+      {/* Floating Top-Right Close Button */}
+      <button className="lightbox-close-btn" onClick={onClose} title="Close Lightbox (Esc)">
+        <X size={20} />
+      </button>
 
-        {/* Main Image Area with Previous / Next Arrows */}
-        <div className="lightbox-body">
-          {items.length > 1 && (
-            <button className="nav-arrow left" onClick={handlePrev} title="Previous Image (Left Arrow)">
-              <ChevronLeft size={32} />
-            </button>
-          )}
-
-          <div className="image-display-box">
-            {!imgError && cleanUrl ? (
-              /* eslint-disable-next-next/no-img-element */
-              <img
-                src={cleanUrl}
-                alt={currentItem.title || 'Cheki Photo'}
-                onError={() => setImgError(true)}
-                className="lightbox-image"
-              />
-            ) : (
-              <div className="broken-image-card">
-                <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>📷</div>
-                <h3>Image Preview Restricted</h3>
-                <p>Direct embedding blocked by photo host (e.g. Google Drive/Photos restriction).</p>
-                {currentItem.url && (
-                  <a
-                    href={currentItem.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-primary"
-                    style={{ marginTop: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                  >
-                    Open Original Photo <ExternalLink size={16} />
-                  </a>
-                )}
-              </div>
+      {/* Main Center Image */}
+      <div className="lightbox-image-wrapper" onClick={(e) => e.stopPropagation()}>
+        {!imgError && cleanUrl ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={cleanUrl}
+            alt={membersText || 'Cheki Photo'}
+            onError={() => setImgError(true)}
+            className="lightbox-image"
+          />
+        ) : (
+          <div className="broken-image-card">
+            <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>📷</div>
+            <h3>Image Preview Restricted</h3>
+            <p>Direct embedding blocked by photo host (e.g. Google Drive/Photos restriction).</p>
+            {currentItem.url && (
+              <a
+                href={currentItem.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-primary"
+                style={{ marginTop: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                Open Original Photo <ExternalLink size={16} />
+              </a>
             )}
           </div>
+        )}
+      </div>
 
-          {items.length > 1 && (
-            <button className="nav-arrow right" onClick={handleNext} title="Next Image (Right Arrow)">
-              <ChevronRight size={32} />
-            </button>
-          )}
+      {/* Floating Left Arrow */}
+      {items.length > 1 && (
+        <button
+          className="lightbox-nav-btn left"
+          onClick={(e) => { e.stopPropagation(); handlePrev(); }}
+          title="Previous Image (Left Arrow)"
+        >
+          <ChevronLeft size={24} />
+        </button>
+      )}
+
+      {/* Floating Right Arrow */}
+      {items.length > 1 && (
+        <button
+          className="lightbox-nav-btn right"
+          onClick={(e) => { e.stopPropagation(); handleNext(); }}
+          title="Next Image (Right Arrow)"
+        >
+          <ChevronRight size={24} />
+        </button>
+      )}
+
+      {/* Floating Bottom Translucent Glass Pill Bar */}
+      <div className="lightbox-bottom-bar" onClick={(e) => e.stopPropagation()}>
+        <div className="lightbox-caption-primary">
+          <span className="lightbox-members-gold">{membersText || 'Cheki Photo'}</span>
+          {eventText && <span className="lightbox-dash"> — </span>}
+          {eventText && <span className="lightbox-event-name">{eventText}</span>}
+        </div>
+        <div className="lightbox-caption-secondary">
+          {dateText && <span>{dateText}</span>}
+          {dateText && qtyText && <span> · </span>}
+          {qtyText && <span>{qtyText}</span>}
+          <span> ({currentIndex + 1}/{items.length})</span>
         </div>
       </div>
 
@@ -122,137 +146,162 @@ export const LightboxGallery: React.FC<LightboxGalleryProps> = ({
         .lightbox-overlay {
           position: fixed;
           top: 0; left: 0; right: 0; bottom: 0;
-          background-color: rgba(10, 11, 16, 0.92);
-          backdrop-filter: blur(8px);
+          background-color: rgba(5, 6, 10, 0.94);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
           z-index: 9999;
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 20px;
+          padding: 24px;
         }
 
-        .lightbox-container {
-          display: flex;
-          flex-direction: column;
-          width: 100%;
-          max-width: 1000px;
-          max-height: 90vh;
-          background-color: #161822;
-          border: 1px solid rgba(255,255,255,0.12);
-          border-radius: 12px;
-          overflow: hidden;
-          box-shadow: 0 20px 50px rgba(0,0,0,0.7);
-        }
-
-        .lightbox-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 14px 20px;
-          background-color: #10121a;
-          border-bottom: 1px solid rgba(255,255,255,0.08);
-        }
-
-        .lightbox-info {
+        .lightbox-close-btn {
+          position: fixed;
+          top: 20px;
+          right: 24px;
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          background: rgba(30, 34, 48, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          color: #ffffff;
           display: flex;
           align-items: center;
-          gap: 8px;
-          font-size: 0.9rem;
-          color: var(--text-main);
-        }
-
-        .lightbox-counter {
-          font-weight: 700;
-          color: var(--accent-primary);
-        }
-
-        .lightbox-title {
-          font-weight: 600;
-        }
-
-        .lightbox-sub {
-          color: var(--text-muted);
-          font-size: 0.82rem;
-        }
-
-        .btn-close-lightbox {
-          background: none;
-          border: none;
-          color: var(--text-muted);
+          justify-content: center;
           cursor: pointer;
-          padding: 4px;
-          border-radius: 6px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          &:hover { color: #fff; background: rgba(255,255,255,0.1); }
+          z-index: 10001;
+          transition: background 0.2s, transform 0.2s;
         }
 
-        .lightbox-body {
-          position: relative;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 20px;
-          min-height: 400px;
-          flex: 1;
+        .lightbox-close-btn:hover {
+          background: rgba(212, 168, 75, 0.85);
+          color: #000000;
+          transform: scale(1.08);
         }
 
-        .image-display-box {
+        .lightbox-image-wrapper {
           display: flex;
           align-items: center;
           justify-content: center;
-          max-width: 100%;
-          max-height: 75vh;
+          max-width: 88vw;
+          max-height: 78vh;
         }
 
         .lightbox-image {
-          max-width: 100%;
-          max-height: 75vh;
+          max-width: 88vw;
+          max-height: 78vh;
           object-fit: contain;
-          border-radius: 8px;
-          box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+          border-radius: 12px;
+          box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85);
+          border: 1px solid rgba(212, 168, 75, 0.2);
         }
 
-        .nav-arrow {
-          position: absolute;
+        .lightbox-nav-btn {
+          position: fixed;
           top: 50%;
           transform: translateY(-50%);
-          background: rgba(24, 27, 38, 0.85);
-          border: 1px solid rgba(255,255,255,0.15);
-          color: #fff;
-          width: 48px;
-          height: 48px;
+          width: 44px;
+          height: 44px;
           border-radius: 50%;
+          background: rgba(30, 34, 48, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          color: #ffffff;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
-          z-index: 10;
+          z-index: 10001;
           transition: background 0.2s, transform 0.2s;
-          &:hover {
-            background: var(--accent-primary);
-            color: #000;
-            transform: translateY(-50%) scale(1.08);
-          }
         }
 
-        .nav-arrow.left { left: 16px; }
-        .nav-arrow.right { right: 16px; }
+        .lightbox-nav-btn:hover {
+          background: var(--accent-primary);
+          color: #000000;
+          transform: translateY(-50%) scale(1.1);
+        }
+
+        .lightbox-nav-btn.left { left: 24px; }
+        .lightbox-nav-btn.right { right: 24px; }
+
+        .lightbox-bottom-bar {
+          position: fixed;
+          bottom: 24px;
+          left: 50%;
+          transform: translateX(-50%);
+          z-index: 10001;
+          background: rgba(22, 25, 36, 0.82);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          border-radius: 14px;
+          padding: 10px 24px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 3px;
+          box-shadow: 0 10px 35px rgba(0, 0, 0, 0.65);
+          max-width: 90vw;
+          text-align: center;
+        }
+
+        .lightbox-caption-primary {
+          font-size: 0.95rem;
+          line-height: 1.3;
+        }
+
+        .lightbox-members-gold {
+          color: var(--accent-primary);
+          font-weight: 700;
+        }
+
+        .lightbox-dash {
+          color: var(--text-muted);
+          margin: 0 4px;
+        }
+
+        .lightbox-event-name {
+          color: var(--text-main);
+          font-weight: 500;
+        }
+
+        .lightbox-caption-secondary {
+          font-size: 0.8rem;
+          color: var(--text-muted);
+        }
 
         .broken-image-card {
-          padding: 40px 20px;
+          padding: 40px 24px;
           text-align: center;
           color: var(--text-muted);
-          h3 { color: var(--text-main); font-size: 1.1rem; margin-bottom: 6px; }
-          p { font-size: 0.88rem; max-width: 400px; margin: 0 auto; }
+          background: rgba(20, 22, 32, 0.9);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+        }
+
+        .broken-image-card h3 {
+          color: var(--text-main);
+          font-size: 1.1rem;
+          margin-bottom: 6px;
+        }
+
+        .broken-image-card p {
+          font-size: 0.88rem;
+          max-width: 400px;
+          margin: 0 auto;
         }
 
         @media (max-width: 600px) {
-          .nav-arrow.left { left: 8px; width: 38px; height: 38px; }
-          .nav-arrow.right { right: 8px; width: 38px; height: 38px; }
+          .lightbox-nav-btn.left { left: 12px; width: 38px; height: 38px; }
+          .lightbox-nav-btn.right { right: 12px; width: 38px; height: 38px; }
+          .lightbox-close-btn { top: 14px; right: 14px; width: 36px; height: 36px; }
+          .lightbox-bottom-bar { bottom: 16px; padding: 8px 16px; width: 92vw; }
+          .lightbox-caption-primary { font-size: 0.86rem; }
+          .lightbox-caption-secondary { font-size: 0.75rem; }
         }
       `}</style>
     </div>
   );
 };
+

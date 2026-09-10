@@ -127,15 +127,31 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 
 ### 4.3 Image Grouping & Lightbox Gallery Logic (`groupTransactionsByImage`)
 - **URL Normalization**: Cleans and extracts canonical image links using `extractDirectImageUrl` (handling Google Photos and CDN URLs).
+## 4. Lightbox Gallery Specifications
+
+- **Full Viewport Overlay**: Immersive dark background (`rgba(5, 6, 10, 0.94)`) with backdrop blur (`backdrop-filter: blur(10px)`).
+- **Floating Controls**:
+  - Top-right fixed circular Close `(X)` button (`position: fixed; top: 20px; right: 24px; z-index: 10001`).
+  - Left (`<`) and Right (`>`) floating circular navigation arrows (`position: fixed; top: 50%; transform: translateY(-50%)`).
+- **Centered Image**: Responsive container (`max-width: 88vw; max-height: 78vh; object-fit: contain; border-radius: 12px`).
+- **Translucent Bottom Glass Caption Bar**:
+  - Translucent glassmorphism pill (`background: rgba(22, 25, 36, 0.82); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 14px`).
+  - **Row 1 (Gold Theme)**: `<member-names-gold>` `—` `<event-title>` (Member names rendered in gold `var(--accent-primary)`).
+  - **Row 2 (Metadata)**: `<date>` `·` `<qty> cheki` `(<index>/<total>)`.
 - **Deduplication**: Transactions sharing the same photo URL are grouped together so the Lightbox gallery displays unique image slides without duplicate navigation steps.
 
 ---
 
 ## 5. Calendar Tab Specifications
 
-- **Month Header Format**: Displays 3-character shortened month names (`Jan`, `Feb`, `Mar`, etc.) instead of full names.
-- **Control Layout**: The **"Today"** button is separated from the `Prev` / `Next` navigation arrows and placed on the **right-hand side of the Month, Year header text**.
-- **Day Drilldown Modal**: Clicking on any date cell opens a day summary modal listing all cheki transactions and photos recorded on that date.
+- **Month & Date Format (`MMM`)**: `day-header-date` formats month as 3-character shortened month names (`Jan`, `Feb`, `Mar`, `Sep`, etc.) for both selected date view (`Sep 6, 2026`) and month view (`Sep 2026`).
+- **Control Layout**: The **"Today"** button and **"+ Add Cheki"** button are placed in the header controls of the month/year card.
+- **Transaction Creation Feature**:
+  - Includes `+ Add Cheki` button in the Calendar header and in the `day-header-banner`.
+  - Opens a quick creation modal dialog allowing users to enter transaction details (Date, Member, Group, Color, Event, Type, Quantity, Price, Photo URL, Talk Topic/Notes).
+  - Member selection auto-populates `group` and `color` from existing member metadata.
+- **Day Drilldown Modal**: Clicking on any date cell filters the gallery to that date.
+
 
 ---
 
