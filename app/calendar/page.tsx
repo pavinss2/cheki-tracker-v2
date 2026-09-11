@@ -404,7 +404,7 @@ export default function CalendarPage() {
 
           <div className="month-summary-strip">
             <span className="summary-pill">📸 {monthSummary.monthQty} pcs</span>
-            <span className="summary-pill">฿ {monthSummary.monthPrice.toLocaleString()} THB</span>
+            <span className="summary-pill">฿ {monthSummary.monthPrice.toLocaleString()}</span>
             <span className="summary-pill">👤 {monthSummary.uniqueMembersCount} Member</span>
             <span className="summary-pill">🎪 {monthSummary.eventsCount} Event</span>
           </div>
@@ -965,6 +965,7 @@ export default function CalendarPage() {
           padding-bottom: 12px;
           border-bottom: 1px solid var(--border-subtle);
           position: relative;
+          gap: 2px
         }
 
         .day-header-left-bar {

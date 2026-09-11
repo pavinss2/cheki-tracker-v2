@@ -236,24 +236,6 @@ export default function BackOfficePage() {
 
   return (
     <div className="admin-page">
-      {/* Admin Header Action Bar */}
-      <div className="admin-header-bar card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 18px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <h2 style={{ fontSize: '1.1rem', margin: 0 }}>⚙️ Admin Workspace — Custom Dimensions</h2>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button 
-            className="btn btn-secondary btn-sm" 
-            onClick={() => { setIsImportModalOpen(true); setImportStep(1); setSelectedCountry(''); setSelectedCompany(''); }}
-          >
-            <Download size={14} /> Import from Default
-          </button>
-          <button className="btn btn-outline btn-sm danger-text" onClick={handleResetCustomData} title="Clear user custom data to rely purely on default_dim_*">
-            <RefreshCw size={14} /> Reset Custom Data
-          </button>
-        </div>
-      </div>
-
       {/* Admin Tabs */}
       <div className="tabs-bar">
         <button className={`tab-btn ${activeTab === 'members' ? 'active' : ''}`} onClick={() => setActiveTab('members')}>
@@ -275,11 +257,21 @@ export default function BackOfficePage() {
         {/* MEMBERS TAB */}
         {activeTab === 'members' && (
           <div>
-            <div className="tab-header">
-              {/* <h2>dim_member</h2> */}
+            <div className="tab-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
               <button className="btn btn-primary btn-sm" onClick={handleStartAddMember} disabled={Boolean(tempMember)}>
-                <Plus size={14} /> Add Member
+                <Plus size={14} /> Add
               </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button 
+                  className="btn btn-secondary btn-sm" 
+                  onClick={() => { setIsImportModalOpen(true); setImportStep(1); setSelectedCountry(''); setSelectedCompany(''); }}
+                >
+                  <Download size={14} /> Import from Default
+                </button>
+                <button className="btn btn-outline btn-sm danger-text" onClick={handleResetCustomData} title="Clear user custom data to rely purely on default_dim_*">
+                  <RefreshCw size={14} /> Reset Custom Data
+                </button>
+              </div>
             </div>
             <div className="table-wrapper">
               <table className="dim-table member-table">
@@ -483,7 +475,7 @@ export default function BackOfficePage() {
                   {sortedMembers.length === 0 && !tempMember && (
                     <tr>
                       <td colSpan={13} style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                        No members in your list yet. Click <strong>Import from Default</strong> above to copy choices, or click <strong>+ Add Member</strong> to create a new custom member.
+                        No members in your list yet. Click <strong>Import from Default</strong> above to copy choices, or click <strong>+ Add</strong> to create a new custom member.
                       </td>
                     </tr>
                   )}
@@ -556,11 +548,21 @@ export default function BackOfficePage() {
         {/* GROUPS TAB */}
         {activeTab === 'groups' && (
           <div>
-            <div className="tab-header">
-              {/* <h2>dim_group</h2> */}
+            <div className="tab-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
               <button className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_group', data: { group: '', country: '🇹🇭 TH', company: 'Individual' } })}>
-                <Plus size={14} /> Add Group
+                <Plus size={14} /> Add
               </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button 
+                  className="btn btn-secondary btn-sm" 
+                  onClick={() => { setIsImportModalOpen(true); setImportStep(1); setSelectedCountry(''); setSelectedCompany(''); }}
+                >
+                  <Download size={14} /> Import from Default
+                </button>
+                <button className="btn btn-outline btn-sm danger-text" onClick={handleResetCustomData} title="Clear user custom data to rely purely on default_dim_*">
+                  <RefreshCw size={14} /> Reset Custom Data
+                </button>
+              </div>
             </div>
             <div className="table-wrapper">
               <table className="dim-table">
@@ -578,7 +580,7 @@ export default function BackOfficePage() {
                   {groups.length === 0 && (
                     <tr>
                       <td colSpan={6} style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                        No groups in your list yet. Click <strong>Import from Default</strong> above to copy choices, or click <strong>+ Add Group</strong>.
+                        No groups in your list yet. Click <strong>Import from Default</strong> above to copy choices, or click <strong>+ Add</strong>.
                       </td>
                     </tr>
                   )}
@@ -624,11 +626,21 @@ export default function BackOfficePage() {
         {/* COMPANIES TAB */}
         {activeTab === 'companies' && (
           <div>
-            <div className="tab-header">
-              <h2>dim_company</h2>
+            <div className="tab-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
               <button className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_company', data: { company: '' } })}>
-                <Plus size={14} /> Add Company
+                <Plus size={14} /> Add
               </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button 
+                  className="btn btn-secondary btn-sm" 
+                  onClick={() => { setIsImportModalOpen(true); setImportStep(1); setSelectedCountry(''); setSelectedCompany(''); }}
+                >
+                  <Download size={14} /> Import from Default
+                </button>
+                <button className="btn btn-outline btn-sm danger-text" onClick={handleResetCustomData} title="Clear user custom data to rely purely on default_dim_*">
+                  <RefreshCw size={14} /> Reset Custom Data
+                </button>
+              </div>
             </div>
             <div className="table-wrapper">
               <table className="dim-table">
@@ -644,7 +656,7 @@ export default function BackOfficePage() {
                   {companies.length === 0 && (
                     <tr>
                       <td colSpan={4} style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                        No companies in your list yet. Click <strong>Import from Default</strong> above to copy choices, or click <strong>+ Add Company</strong>.
+                        No companies in your list yet. Click <strong>Import from Default</strong> above to copy choices, or click <strong>+ Add</strong>.
                       </td>
                     </tr>
                   )}

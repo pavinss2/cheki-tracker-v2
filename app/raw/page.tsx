@@ -158,7 +158,7 @@ export default function RawDataPage() {
     }
   };
 
-  // Grid entry features: Add Blank Row
+  // Grid entry features: Add Blank Row (Mobile vs Desktop)
   const handleAddBlankRow = () => {
     const today = new Date().toISOString().split('T')[0];
     const newRow: GridRow = {
@@ -182,6 +182,30 @@ export default function RawDataPage() {
       isDirty: true,
     };
     setBlankRows([newRow, ...blankRows]);
+  };
+
+  const handleAddRow = () => {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    if (isMobile) {
+      const today = new Date().toISOString().split('T')[0];
+      setModalTransaction({
+        date: today,
+        member: '',
+        color: 'White',
+        group: '',
+        nationality: '🇹🇭 TH',
+        event: '',
+        type: 'Cheki',
+        location: 'Bangkok',
+        quantity: 1,
+        totalPrice: 300,
+        img: '',
+        talkTopic: '',
+        company: '',
+      });
+    } else {
+      handleAddBlankRow();
+    }
   };
 
   const handleMemberSelect = (rowIdx: number, memberName: string) => {
@@ -418,7 +442,7 @@ export default function RawDataPage() {
         <button className="btn btn-secondary btn-paste-tsv" onClick={() => setShowPasteModal(true)}>
           <Clipboard size={16} /> Paste TSV
         </button>
-        <button className="btn btn-secondary" onClick={handleAddBlankRow}>
+        <button className="btn btn-secondary" onClick={handleAddRow}>
           <Plus size={16} /> Add Row
         </button>
         <button 
@@ -678,86 +702,191 @@ export default function RawDataPage() {
         </div>
       )}
 
-      {/* EDIT SINGLE TRANSACTION MODAL */}
+      {/* EDIT / ADD SINGLE TRANSACTION MODAL */}
       {modalTransaction && (
         <div className="modal-overlay" onClick={() => setModalTransaction(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>{modalTransaction.id ? 'Edit Transaction' : 'Add New Transaction'}</h2>
+              <h2>{modalTransaction.id ? 'Edit Transaction' : '📸 Add New Cheki Transaction'}</h2>
               <button className="btn-close" onClick={() => setModalTransaction(null)}><X size={18} /></button>
             </div>
             <form onSubmit={handleSaveTransaction} className="form-grid">
               <div className="form-group">
                 <label>Date *</label>
-                <input type="date" required value={modalTransaction.date || ''} onChange={(e) => setModalTransaction({ ...modalTransaction, date: e.target.value })} />
+                <input 
+                  type="date" 
+                  required 
+                  value={modalTransaction.date || ''} 
+                  onChange={(e) => setModalTransaction({ ...modalTransaction, date: e.target.value })} 
+                />
               </div>
+
               <div className="form-group">
-                <label>Member *</label>
-                <select required value={modalTransaction.member || ''} onChange={(e) => handleMemberSelectInModal(e.target.value)}>
-                  <option value="">-- Select Member --</option>
-                  {members.map((m) => (
-                    <option key={m.id} value={m.member_name}>{m.member_name}</option>
+                <label>Member Name *</label>
+                <input
+                  type="text"
+                  list="modal_members_list"
+                  required
+                  placeholder="Select or enter member..."
+                  value={modalTransaction.member || ''}
+                  onChange={(e) => {
+                    handleMemberSelectInModal(e.target.value);
+                    const updated = { ...modalTransaction, member: e.target.value };
+                    updated.totalPrice = calculateRowPrice(updated as GridRow, priceRules);
+                    setModalTransaction(updated);
+                  }}
+                />
+                <datalist id="modal_members_list">
+                  {Array.from(new Set(members.map((m) => m.member_name))).map((name) => (
+                    <option key={name} value={name} />
                   ))}
-                </select>
+                </datalist>
               </div>
+
               <div className="form-group">
                 <label>Group</label>
-                <select value={modalTransaction.group || ''} onChange={(e) => setModalTransaction({ ...modalTransaction, group: e.target.value })}>
-                  <option value="">-- Select Group --</option>
+                <input
+                  type="text"
+                  list="modal_groups_list"
+                  placeholder="Group name"
+                  value={modalTransaction.group || ''}
+                  onChange={(e) => {
+                    const grp = e.target.value;
+                    const mapped = groupLookup[grp];
+                    const updated = { 
+                      ...modalTransaction, 
+                      group: grp,
+                      company: mapped?.company || modalTransaction.company || '',
+                      nationality: mapped?.country || modalTransaction.nationality || '🇹🇭 TH',
+                    };
+                    updated.totalPrice = calculateRowPrice(updated as GridRow, priceRules);
+                    setModalTransaction(updated);
+                  }}
+                />
+                <datalist id="modal_groups_list">
                   {groups.map((g) => (
-                    <option key={g.id} value={g.group}>{g.group}</option>
+                    <option key={g.id} value={g.group} />
                   ))}
-                </select>
+                </datalist>
               </div>
+
               <div className="form-group">
                 <label>Color</label>
-                <select value={modalTransaction.color || ''} onChange={(e) => setModalTransaction({ ...modalTransaction, color: e.target.value })}>
+                <select 
+                  value={modalTransaction.color || 'White'} 
+                  onChange={(e) => {
+                    const updated = { ...modalTransaction, color: e.target.value };
+                    updated.totalPrice = calculateRowPrice(updated as GridRow, priceRules);
+                    setModalTransaction(updated);
+                  }}
+                >
                   {colors.map((c) => (
                     <option key={c.id} value={c.color}>{c.color}</option>
                   ))}
                 </select>
               </div>
+
               <div className="form-group">
-                <label>Type</label>
-                <select value={modalTransaction.type || ''} onChange={(e) => setModalTransaction({ ...modalTransaction, type: e.target.value })}>
+                <label>Event Name</label>
+                <input 
+                  type="text" 
+                  value={modalTransaction.event || ''} 
+                  onChange={(e) => setModalTransaction({ ...modalTransaction, event: e.target.value })} 
+                  placeholder="e.g. CosQuest 3" 
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Cheki Type</label>
+                <select 
+                  value={modalTransaction.type || 'Cheki'} 
+                  onChange={(e) => {
+                    const updated = { ...modalTransaction, type: e.target.value };
+                    updated.totalPrice = calculateRowPrice(updated as GridRow, priceRules);
+                    setModalTransaction(updated);
+                  }}
+                >
                   {types.map((t) => (
                     <option key={t.id} value={t.type}>{t.type}</option>
                   ))}
                 </select>
               </div>
-              <div className="form-group">
-                <label>Location</label>
-                <select value={modalTransaction.location || ''} onChange={(e) => setModalTransaction({ ...modalTransaction, location: e.target.value })}>
-                  {locationOptions.map((loc) => (
-                    <option key={loc} value={loc}>{loc}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Event Name</label>
-                <input type="text" value={modalTransaction.event || ''} onChange={(e) => setModalTransaction({ ...modalTransaction, event: e.target.value })} placeholder="e.g. Minmin Seitan-sai 2026" />
-              </div>
+
               <div className="form-group">
                 <label>Quantity</label>
-                <input type="number" min="1" value={modalTransaction.quantity || 1} onChange={(e) => setModalTransaction({ ...modalTransaction, quantity: Number(e.target.value) })} />
-              </div>
-              <div className="form-group">
-                <label>Total Price (THB)</label>
-                <input type="number" min="0" value={modalTransaction.totalPrice || 0} onChange={(e) => setModalTransaction({ ...modalTransaction, totalPrice: Number(e.target.value) })} />
-              </div>
-              <div className="form-group span-2">
-                <label>Image URL</label>
-                <input type="url" value={modalTransaction.img || ''} onChange={(e) => setModalTransaction({ ...modalTransaction, img: e.target.value })} placeholder="https://lh3.googleusercontent.com/..." />
-              </div>
-              <div className="form-group span-2">
-                <label>Talk Topic / Notes</label>
-                <input type="text" value={modalTransaction.talkTopic || ''} onChange={(e) => setModalTransaction({ ...modalTransaction, talkTopic: e.target.value })} />
+                <input 
+                  type="number" 
+                  min="1" 
+                  value={modalTransaction.quantity ?? 1} 
+                  onChange={(e) => {
+                    const qty = Number(e.target.value) || 1;
+                    const updated = { ...modalTransaction, quantity: qty };
+                    updated.totalPrice = calculateRowPrice(updated as GridRow, priceRules);
+                    setModalTransaction(updated);
+                  }} 
+                />
               </div>
 
-              <div className="form-actions span-2">
-                <button type="button" className="btn btn-secondary" onClick={() => setModalTransaction(null)} disabled={isSaving}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={isSaving}>
-                  {isSaving ? 'Saving...' : 'Save Transaction'}
+              <div className="form-group">
+                <label>Total Price (THB)</label>
+                <input 
+                  type="number" 
+                  min="0" 
+                  value={modalTransaction.totalPrice ?? 300} 
+                  onChange={(e) => setModalTransaction({ ...modalTransaction, totalPrice: Number(e.target.value) })} 
+                />
+              </div>
+
+              <div className="form-group span-2">
+                <label>Photo URL (Google Drive / Direct Image)</label>
+                <input 
+                  type="url" 
+                  value={modalTransaction.img || ''} 
+                  onChange={(e) => setModalTransaction({ ...modalTransaction, img: e.target.value })} 
+                  placeholder="https://drive.google.com/..." 
+                />
+              </div>
+
+              <div className="form-group span-2">
+                <label>Talk Topic / Notes</label>
+                <textarea 
+                  rows={3} 
+                  value={modalTransaction.talkTopic || ''} 
+                  onChange={(e) => setModalTransaction({ ...modalTransaction, talkTopic: e.target.value })} 
+                  placeholder="Memorable talk topic or event notes..."
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: 'var(--radius-sm)',
+                    background: 'var(--bg-surface-2)',
+                    border: '1px solid var(--border-subtle)',
+                    color: 'var(--text-main)',
+                    fontFamily: 'inherit',
+                    fontSize: '0.9rem',
+                    resize: 'vertical',
+                  }}
+                />
+              </div>
+
+              <div className="form-actions span-2" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setModalTransaction(null)} disabled={isSaving}>
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary" 
+                  disabled={isSaving}
+                  style={{
+                    backgroundColor: 'var(--accent-gold, #d97706)',
+                    borderColor: 'var(--accent-gold, #d97706)',
+                    color: '#ffffff',
+                    fontWeight: 600,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <Save size={16} /> {isSaving ? 'Saving...' : 'Save Transaction'}
                 </button>
               </div>
             </form>

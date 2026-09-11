@@ -309,14 +309,6 @@ export default function BackOfficePage() {
 
   return (
     <div className="backoffice-page">
-      <div className="backoffice-banner card">
-        <div className="banner-left">
-          <h2>👑 Back Office — Global Default Settings</h2>
-          <p>Manage system-wide default choices for all application users.</p>
-        </div>
-        <div className="badge-pill gold">Super Admin Workspace</div>
-      </div>
-
       {/* Tabs Navigation */}
       <div className="tabs-bar">
         <button className={`tab-btn ${activeTab === 'members' ? 'active' : ''}`} onClick={() => setActiveTab('members')}>
@@ -353,7 +345,7 @@ export default function BackOfficePage() {
             <div className="tab-header">
               <h2>default_dim_member</h2>
               <button className="btn btn-primary btn-sm" onClick={handleStartAddMember} disabled={Boolean(tempMember)}>
-                <Plus size={14} /> Add Default Member
+                <Plus size={14} /> Add
               </button>
             </div>
 
@@ -561,7 +553,7 @@ export default function BackOfficePage() {
             <div className="tab-header">
               <h2>default_dim_group</h2>
               <button className="btn btn-primary btn-sm" onClick={() => setTempGroup({ group: '', country: '🇹🇭 TH', company: 'Individual' })} disabled={Boolean(tempGroup)}>
-                <Plus size={14} /> Add Default Group
+                <Plus size={14} /> Add
               </button>
             </div>
             <div className="table-wrapper">
@@ -652,7 +644,7 @@ export default function BackOfficePage() {
             <div className="tab-header">
               <h2>default_dim_company</h2>
               <button className="btn btn-primary btn-sm" onClick={() => setTempCompany({ company: '' })} disabled={Boolean(tempCompany)}>
-                <Plus size={14} /> Add Default Company
+                <Plus size={14} /> Add
               </button>
             </div>
             <div className="table-wrapper">
@@ -718,7 +710,7 @@ export default function BackOfficePage() {
             <div className="tab-header">
               <h2>default_dim_color</h2>
               <button className="btn btn-primary btn-sm" onClick={() => setTempColor({ color: '', color_code: '#ffffff' })} disabled={Boolean(tempColor)}>
-                <Plus size={14} /> Add Default Color
+                <Plus size={14} /> Add
               </button>
             </div>
             <div className="table-wrapper">
@@ -823,7 +815,7 @@ export default function BackOfficePage() {
             <div className="tab-header">
               <h2>default_dim_type</h2>
               <button className="btn btn-primary btn-sm" onClick={() => setTempType({ type: '' })} disabled={Boolean(tempType)}>
-                <Plus size={14} /> Add Default Type
+                <Plus size={14} /> Add
               </button>
             </div>
             <div className="table-wrapper">
@@ -889,7 +881,7 @@ export default function BackOfficePage() {
             <div className="tab-header">
               <h2>default_dim_country</h2>
               <button className="btn btn-primary btn-sm" onClick={() => setTempCountry({ country: 'JP', displayed_country: '🇯🇵 JP' })} disabled={Boolean(tempCountry)}>
-                <Plus size={14} /> Add Default Country
+                <Plus size={14} /> Add
               </button>
             </div>
             <div className="table-wrapper">
@@ -955,7 +947,7 @@ export default function BackOfficePage() {
             <div className="tab-header">
               <h2>default_dim_location</h2>
               <button className="btn btn-primary btn-sm" onClick={() => setTempLocation({ location: '' })} disabled={Boolean(tempLocation)}>
-                <Plus size={14} /> Add Default Location
+                <Plus size={14} /> Add
               </button>
             </div>
             <div className="table-wrapper">
@@ -1216,7 +1208,10 @@ export default function BackOfficePage() {
         .backoffice-page {
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 8px;
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
         }
 
         .backoffice-banner {
@@ -1256,7 +1251,7 @@ export default function BackOfficePage() {
         .tabs-bar {
           display: flex;
           gap: 8px;
-          overflow-x: auto;
+          flex-wrap: wrap;
           padding-bottom: 4px;
         }
 

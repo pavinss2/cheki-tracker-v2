@@ -88,47 +88,62 @@ export const PriceRuleBuilderModal: React.FC<PriceRuleBuilderModalProps> = ({
 
             return (
               <div key={rule.id} className="rule-card">
-                <div className="rule-rank">{idx + 1}</div>
+                <div className="rule-top-bar">
+                  <div className="rule-name-wrapper">
+                    <div className="rule-rank">{idx + 1}</div>
+                    <input
+                      type="text"
+                      className="rule-name"
+                      value={rule.name}
+                      onChange={(e) => handleNameChange(rule.id, e.target.value)}
+                      placeholder="Rule Name"
+                    />
+                  </div>
+                  <div className="rule-actions">
+                    <button onClick={() => handleMove(idx, 'up')} disabled={idx === 0} className="btn-icon" title="Move Up"><ArrowUp size={15} /></button>
+                    <button onClick={() => handleMove(idx, 'down')} disabled={idx === ruleList.length - 1} className="btn-icon" title="Move Down"><ArrowDown size={15} /></button>
+                    {!isCatchAll && (
+                      <button onClick={() => handleRemoveRule(rule.id)} className="btn-icon danger" title="Delete Rule"><Trash2 size={15} /></button>
+                    )}
+                  </div>
+                </div>
 
                 <div className="rule-fields">
-                  <input
-                    type="text"
-                    className="rule-name"
-                    value={rule.name}
-                    onChange={(e) => handleNameChange(rule.id, e.target.value)}
-                    placeholder="Rule Name"
-                  />
-
                   {!isCatchAll ? (
-                    <div className="rule-if">
-                      <span>IF</span>
-                      <select
-                        value={cond.field}
-                        onChange={(e) => handleConditionChange(rule.id, e.target.value as unknown as 'type', cond.value)}
-                      >
-                        <option value="type">Type</option>
-                        <option value="country">Country</option>
-                        <option value="group">Group</option>
-                        <option value="member">Member</option>
-                        <option value="company">Company</option>
-                        <option value="location">Location</option>
-                      </select>
+                    <>
+                      <div className="rule-cond-row">
+                        <span className="cond-label">IF</span>
+                        <select
+                          className="cond-select"
+                          value={cond.field}
+                          onChange={(e) => handleConditionChange(rule.id, e.target.value as unknown as 'type', cond.value)}
+                        >
+                          <option value="type">Type</option>
+                          <option value="country">Country</option>
+                          <option value="group">Group</option>
+                          <option value="member">Member</option>
+                          <option value="company">Company</option>
+                          <option value="location">Location</option>
+                        </select>
+                      </div>
 
-                      <span>EQUALS</span>
-
-                      <input
-                        type="text"
-                        value={cond.value}
-                        onChange={(e) => handleConditionChange(rule.id, cond.field, e.target.value)}
-                        placeholder="e.g. Free Cheki, 🇰🇷 KR, Deco Cheki"
-                      />
-                    </div>
+                      <div className="rule-cond-row">
+                        <span className="cond-label">EQUALS</span>
+                        <input
+                          type="text"
+                          className="cond-input"
+                          value={cond.value}
+                          onChange={(e) => handleConditionChange(rule.id, cond.field, e.target.value)}
+                          placeholder="e.g. Free Cheki, 🇰🇷 KR, Deco Cheki"
+                        />
+                      </div>
+                    </>
                   ) : (
                     <div className="rule-if catchall">DEFAULT CATCH-ALL (Any remaining transaction)</div>
                   )}
 
-                  <div className="rule-then">
-                    <span>THEN PRICE = ฿</span>
+                  <div className="rule-cond-row rule-then">
+                    <span className="cond-label then-label">THEN PRICE = ฿</span>
                     <input
                       type="number"
                       className="rule-price"
@@ -136,14 +151,6 @@ export const PriceRuleBuilderModal: React.FC<PriceRuleBuilderModalProps> = ({
                       onChange={(e) => handlePriceChange(rule.id, Number(e.target.value))}
                     />
                   </div>
-                </div>
-
-                <div className="rule-actions">
-                  <button onClick={() => handleMove(idx, 'up')} disabled={idx === 0} className="btn-icon"><ArrowUp size={14} /></button>
-                  <button onClick={() => handleMove(idx, 'down')} disabled={idx === ruleList.length - 1} className="btn-icon"><ArrowDown size={14} /></button>
-                  {!isCatchAll && (
-                    <button onClick={() => handleRemoveRule(rule.id)} className="btn-icon danger"><Trash2 size={14} /></button>
-                  )}
                 </div>
               </div>
             );
@@ -173,17 +180,17 @@ export const PriceRuleBuilderModal: React.FC<PriceRuleBuilderModalProps> = ({
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 20px;
+          padding: 16px;
         }
 
         .modal-card {
           background: var(--bg-surface-1);
           border: 1px solid var(--border-strong);
           border-radius: var(--radius-md);
-          padding: 24px;
+          padding: 20px;
           width: 100%;
-          max-width: 780px;
-          max-height: 85vh;
+          max-width: 680px;
+          max-height: 88vh;
           display: flex;
           flex-direction: column;
         }
@@ -209,8 +216,8 @@ export const PriceRuleBuilderModal: React.FC<PriceRuleBuilderModalProps> = ({
           overflow-y: auto;
           display: flex;
           flex-direction: column;
-          gap: 10px;
-          padding-right: 6px;
+          gap: 12px;
+          padding-right: 4px;
           margin-bottom: 16px;
         }
 
@@ -218,30 +225,41 @@ export const PriceRuleBuilderModal: React.FC<PriceRuleBuilderModalProps> = ({
           background: var(--bg-surface-2);
           border: 1px solid var(--border-subtle);
           border-radius: var(--radius-sm);
-          padding: 12px;
+          padding: 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .rule-top-bar {
           display: flex;
           align-items: center;
-          gap: 12px;
+          justify-content: space-between;
+          gap: 8px;
+          width: 100%;
+          border-bottom: 1px dashed var(--border-subtle);
+          padding-bottom: 8px;
+        }
+
+        .rule-name-wrapper {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex: 1;
         }
 
         .rule-rank {
-          width: 24px;
-          height: 24px;
+          width: 22px;
+          height: 22px;
           border-radius: 50%;
           background: var(--bg-surface-3);
           color: var(--accent-primary);
           font-weight: 700;
-          font-size: 0.78rem;
+          font-size: 0.76rem;
           display: flex;
           align-items: center;
           justify-content: center;
-        }
-
-        .rule-fields {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
+          flex-shrink: 0;
         }
 
         .rule-name {
@@ -250,47 +268,68 @@ export const PriceRuleBuilderModal: React.FC<PriceRuleBuilderModalProps> = ({
           background: none;
           color: var(--text-main);
           padding: 0;
-          font-size: 0.9rem;
-        }
-
-        .rule-if {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 0.78rem;
-          color: var(--text-muted);
-        }
-        .rule-if.catchall {
-          color: var(--accent-primary);
-          font-weight: 600;
-        }
-
-        .rule-if select {
-          width: 110px;
-          padding: 4px 8px;
-        }
-        .rule-if input {
+          font-size: 0.92rem;
           flex: 1;
-          padding: 4px 8px;
-        }
-
-        .rule-then {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 0.78rem;
-          color: var(--color-success);
-          font-weight: 600;
-        }
-
-        .rule-price {
-          width: 90px;
-          padding: 4px 8px;
         }
 
         .rule-actions {
           display: flex;
+          align-items: center;
           gap: 4px;
+        }
+
+        .rule-fields {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .rule-cond-row {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 0.82rem;
+          color: var(--text-muted);
+          width: 100%;
+        }
+
+        .cond-label {
+          min-width: 70px;
+          font-weight: 700;
+          font-size: 0.76rem;
+          color: var(--text-muted);
+          text-transform: uppercase;
+        }
+
+        .cond-label.then-label {
+          min-width: 110px;
+          color: var(--color-success, #22c55e);
+        }
+
+        .cond-select, .cond-input, .rule-price {
+          flex: 1;
+          padding: 6px 10px;
+          border-radius: var(--radius-sm);
+          background: var(--bg-surface-1);
+          border: 1px solid var(--border-subtle);
+          color: var(--text-main);
+          font-size: 0.85rem;
+        }
+
+        .rule-if.catchall {
+          color: var(--accent-primary);
+          font-weight: 600;
+          font-size: 0.82rem;
+          padding: 4px 0;
+        }
+
+        .rule-then {
+          font-weight: 600;
+        }
+
+        .rule-price {
+          width: 110px;
+          flex: initial;
         }
 
         .btn-icon {
