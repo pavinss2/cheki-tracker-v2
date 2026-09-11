@@ -168,6 +168,7 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 - **Default Metadata Management (`default_dim_*`)**:
   - Back Office manages app-wide global default dimension tables: `default_dim_member`, `default_dim_group`, `default_dim_company`, `default_dim_color`, `default_dim_type`, `default_dim_country`, `default_dim_location`.
   - Audit logs for default metadata mutations are recorded in `fact_admin_log`.
+- **Table Filter Group & Add Button Placement**: All primary **"Add"** buttons (`.btn-primary`) across all default metadata tables in `/backoffice/page.tsx` are nested directly inside the `.table-filter-group` container for unified filter and action bar layout alignment.
 - **Top-Row Inline Draft Rows (Desktop Viewports > 640px)**: Creating new values pins a temporary draft row (`<tr className="temp-row">`) at the very top of the table for all dimensions.
 - **Exclusive Dimensions**: `Location` (`default_dim_location`), `Color` (`default_dim_color`), `Type` (`default_dim_type`), and `Countries` (`default_dim_country`) are managed **exclusively** by the super admin in the Back Office tab. They are completely hidden from regular users.
 

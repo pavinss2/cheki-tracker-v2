@@ -648,7 +648,7 @@ export default function BackOfficePage() {
             <div className="tab-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
                 <h2>default_dim_member</h2>
-                <div className="table-filter-group" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <div className="table-filter-group" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                   <select
                     className="filter-select"
                     value={memberCompanyFilter}
@@ -686,11 +686,12 @@ export default function BackOfficePage() {
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
+
+                  <button className="btn btn-primary btn-sm" onClick={handleStartAddMember} disabled={Boolean(tempMember)}>
+                    <Plus size={14} /> Add
+                  </button>
                 </div>
               </div>
-              <button className="btn btn-primary btn-sm" onClick={handleStartAddMember} disabled={Boolean(tempMember)}>
-                <Plus size={14} /> Add
-              </button>
             </div>
 
             <div className="table-wrapper">
@@ -907,7 +908,7 @@ export default function BackOfficePage() {
             <div className="tab-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
                 <h2>default_dim_group</h2>
-                <div className="table-filter-group" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <div className="table-filter-group" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                   <select
                     className="filter-select"
                     value={groupCompanyFilter}
@@ -928,11 +929,11 @@ export default function BackOfficePage() {
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
+                  <button className="btn btn-primary btn-sm" onClick={() => setTempGroup({ group: '', country: '🇹🇭 TH', company: 'Individual' })} disabled={Boolean(tempGroup)}>
+                    <Plus size={14} /> Add
+                  </button>
                 </div>
               </div>
-              <button className="btn btn-primary btn-sm" onClick={() => setTempGroup({ group: '', country: '🇹🇭 TH', company: 'Individual' })} disabled={Boolean(tempGroup)}>
-                <Plus size={14} /> Add
-              </button>
             </div>
             <div className="table-wrapper">
               <table className="dim-table">
@@ -1059,10 +1060,14 @@ export default function BackOfficePage() {
         {activeTab === 'companies' && (
           <div>
             <div className="tab-header">
-              <h2>default_dim_company</h2>
-              <button className="btn btn-primary btn-sm" onClick={() => setTempCompany({ company: '' })} disabled={Boolean(tempCompany)}>
-                <Plus size={14} /> Add
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                <h2>default_dim_company</h2>
+                <div className="table-filter-group" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <button className="btn btn-primary btn-sm" onClick={() => setTempCompany({ company: '' })} disabled={Boolean(tempCompany)}>
+                    <Plus size={14} /> Add
+                  </button>
+                </div>
+              </div>
             </div>
             <div className="table-wrapper">
               <table className="dim-table">
@@ -1155,10 +1160,14 @@ export default function BackOfficePage() {
         {activeTab === 'colors' && (
           <div>
             <div className="tab-header">
-              <h2>default_dim_color</h2>
-              <button className="btn btn-primary btn-sm" onClick={() => setTempColor({ color: '', color_code: '#ffffff' })} disabled={Boolean(tempColor)}>
-                <Plus size={14} /> Add
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                <h2>default_dim_color</h2>
+                <div className="table-filter-group" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <button className="btn btn-primary btn-sm" onClick={() => setTempColor({ color: '', color_code: '#ffffff' })} disabled={Boolean(tempColor)}>
+                    <Plus size={14} /> Add
+                  </button>
+                </div>
+              </div>
             </div>
             <div className="table-wrapper">
               <table className="dim-table">
@@ -1259,10 +1268,14 @@ export default function BackOfficePage() {
         {activeTab === 'types' && (
           <div>
             <div className="tab-header">
-              <h2>default_dim_type</h2>
-              <button className="btn btn-primary btn-sm" onClick={() => setTempType({ type: '' })} disabled={Boolean(tempType)}>
-                <Plus size={14} /> Add
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                <h2>default_dim_type</h2>
+                <div className="table-filter-group" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <button className="btn btn-primary btn-sm" onClick={() => setTempType({ type: '' })} disabled={Boolean(tempType)}>
+                    <Plus size={14} /> Add
+                  </button>
+                </div>
+              </div>
             </div>
             <div className="table-wrapper">
               <table className="dim-table">
@@ -1325,10 +1338,14 @@ export default function BackOfficePage() {
         {activeTab === 'countries' && (
           <div>
             <div className="tab-header">
-              <h2>default_dim_country</h2>
-              <button className="btn btn-primary btn-sm" onClick={() => setTempCountry({ country: 'JP', displayed_country: '🇯🇵 JP' })} disabled={Boolean(tempCountry)}>
-                <Plus size={14} /> Add
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                <h2>default_dim_country</h2>
+                <div className="table-filter-group" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <button className="btn btn-primary btn-sm" onClick={() => setTempCountry({ country: 'JP', displayed_country: '🇯🇵 JP' })} disabled={Boolean(tempCountry)}>
+                    <Plus size={14} /> Add
+                  </button>
+                </div>
+              </div>
             </div>
             <div className="table-wrapper">
               <table className="dim-table">
@@ -1391,10 +1408,14 @@ export default function BackOfficePage() {
         {activeTab === 'locations' && (
           <div>
             <div className="tab-header">
-              <h2>default_dim_location</h2>
-              <button className="btn btn-primary btn-sm" onClick={() => setTempLocation({ location: '' })} disabled={Boolean(tempLocation)}>
-                <Plus size={14} /> Add
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                <h2>default_dim_location</h2>
+                <div className="table-filter-group" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <button className="btn btn-primary btn-sm" onClick={() => setTempLocation({ location: '' })} disabled={Boolean(tempLocation)}>
+                    <Plus size={14} /> Add
+                  </button>
+                </div>
+              </div>
             </div>
             <div className="table-wrapper">
               <table className="dim-table">
@@ -2326,7 +2347,7 @@ export default function BackOfficePage() {
           display: flex;
           gap: 8px;
           align-items: center;
-          flex-wrap: wrap;
+          flex-wrap: nowrap;
         }
 
         .selected-row td {
