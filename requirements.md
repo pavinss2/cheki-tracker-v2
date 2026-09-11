@@ -237,11 +237,11 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 - **Action Column & Checkbox Multiselect (1st & 2nd Column)**:
   - Column 1 contains a checkbox selector for multiselect batch operations (with a Select All checkbox in the table header).
   - Column 2 contains the Edit pencil icon button (`<Edit2 size={15} />`).
-- **Batch Action Bar**: Selecting one or more rows triggers a floating batch bar with actions to **Set Active**, **Set Inactive**, or **Unsubscribe Selected**.
+- **Batch Action Bar**: Selecting one or more rows triggers a floating batch bar with actions restricted strictly to **Set Active**, **Set Inactive**, and **Delete**. Subscribing/unsubscribing default data is managed exclusively through the "Manage Subscriptions" menu modal.
 - **Delete Button inside Edit Modal**: Custom (editable) records display a red **"Delete Record"** button at the bottom-left of the Edit Record modal dialog.
 - **Static "Status" Pill Tag (3rd Column)**:
-  - Displays **`Sub`** (gold pill) for active subscribed items, **`Active`** (green pill) for active custom items, and **`Inactive`** (red pill) for inactive items.
-  - Rendered as static, non-toggleable `<span>` pill tags (`border-radius: 9999px`, `cursor: default`, `user-select: none`). Hover translation/clicks are disabled to prevent accidental status changes during cell selection. Active/Inactive adjustments are made via batch action bar or edit modal.
+  - Displays **`Sub`** (blue pill tag), **`Active`** (green pill tag), and **`Inactive`** (red pill tag).
+  - Rendered as static, non-toggleable `<span>` pill tags (`border-radius: 9999px`, `padding: 4px 14px`, `cursor: default`, `user-select: none`). Hover translation/clicks are disabled to prevent accidental status changes during cell selection. Active/Inactive adjustments are made via batch action bar or edit modal.
 - **Back Office Entity Key Connection (`backoffice_id`)**:
   - User overrides on default items directly preserve and bind to the Back Office primary key (`id` / `backoffice_id`).
   - When an item's name or metadata is modified in Back Office (e.g. `"Tonliw"` $\rightarrow$ `"Tonliw (BNK48)"`), the live updates flow through to the Admin tab row in real time while preserving user active preferences, avoiding duplicate row creation.
