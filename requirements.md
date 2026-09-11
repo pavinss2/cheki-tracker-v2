@@ -235,7 +235,7 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 ### 6.15 Admin Tab Table Layout, Combined Status & Entity Key Linking
 - **Action Column & Checkbox Multiselect (1st & 2nd Column)**:
   - Column 1 contains a checkbox selector for multiselect batch operations **rendered exclusively for custom-made user items** (`is_custom: true`). Subscribed default items (`default_dims`) cannot be multiselected or checked in Column 1 and are managed exclusively via the "Manage Subscriptions" menu popup.
-  - Column 2 contains the Edit pencil icon button (`<Edit2 size={15} />`).
+  - Column 2 contains the Edit pencil icon button (`<Edit2 size={15} />`), **rendered exclusively for custom-made user items**. For subscribed default data rows (`status: Sub`), the Edit `.btn-icon` button is hidden.
 - **Batch Action Bar**: Selecting one or more custom-made rows triggers a floating batch bar above the table with actions restricted strictly to **Set Active**, **Set Inactive**, **Delete**, and **Deselect All**.
 - **1-to-1 Backoffice Status Tag Styling (`.status-tag`)**:
   - Displays **`Sub`** (blue tag), **`Active`** (green tag), and **`Inactive`** (red tag) matching Back Office `.status-tag` dimensions 1-to-1 (`padding: 2px 8px`, `border-radius: 10px`, `font-size: 0.75rem`, `font-weight: 700`, `cursor: default`, `user-select: none`).
