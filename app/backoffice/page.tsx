@@ -335,6 +335,56 @@ export default function BackOfficePage() {
     setSelectedIds(next);
   };
 
+  const triggerCompanyCascadeDisallow = async (compNameRaw: string) => {
+    const compName = String(compNameRaw || '').trim().toLowerCase();
+    if (!compName) return;
+
+    // 1. Prompt for related groups
+    const relatedGroups = groups.filter(g => String(g.company || '').trim().toLowerCase() === compName);
+    const allowedRelatedGroups = relatedGroups.filter(g => g.is_allowed_import !== false && g.allow_import !== false);
+
+    if (allowedRelatedGroups.length > 0) {
+      if (confirm(`Do you also want to disallow all ${allowedRelatedGroups.length} related group(s) under company "${compNameRaw}"?`)) {
+        for (const g of allowedRelatedGroups) {
+          await updateDefaultMetadataDoc('dim_group', g.id, { ...g, is_allowed_import: false, allow_import: false }, isDemoUser);
+        }
+      }
+    }
+
+    // 2. Prompt for related members (either directly matching company or under groups of this company)
+    const companyGroupNames = new Set(relatedGroups.map(g => String(g.group || '').trim().toLowerCase()));
+    const allowedRelatedMembers = members.filter(m => 
+      (String(m.company || '').trim().toLowerCase() === compName || companyGroupNames.has(String(m.group || '').trim().toLowerCase())) &&
+      m.is_allowed_import !== false && m.allow_import !== false
+    );
+
+    if (allowedRelatedMembers.length > 0) {
+      if (confirm(`Do you also want to disallow all ${allowedRelatedMembers.length} related member(s) under company "${compNameRaw}"?`)) {
+        for (const m of allowedRelatedMembers) {
+          await updateDefaultMetadataDoc('dim_member', m.id, { ...m, is_allowed_import: false, allow_import: false }, isDemoUser);
+        }
+      }
+    }
+  };
+
+  const triggerGroupCascadeDisallow = async (grpNameRaw: string) => {
+    const grpName = String(grpNameRaw || '').trim().toLowerCase();
+    if (!grpName) return;
+
+    const allowedRelatedMembers = members.filter(m => 
+      String(m.group || '').trim().toLowerCase() === grpName &&
+      m.is_allowed_import !== false && m.allow_import !== false
+    );
+
+    if (allowedRelatedMembers.length > 0) {
+      if (confirm(`Do you also want to disallow all ${allowedRelatedMembers.length} related member(s) in group "${grpNameRaw}"?`)) {
+        for (const m of allowedRelatedMembers) {
+          await updateDefaultMetadataDoc('dim_member', m.id, { ...m, is_allowed_import: false, allow_import: false }, isDemoUser);
+        }
+      }
+    }
+  };
+
   const handleBatchToggleAllowImport = async (allowed: boolean) => {
     if (!activeTableName || selectedIds.size === 0) return;
     const items = activeItems.filter(item => selectedIds.has(item.id));
@@ -345,33 +395,12 @@ export default function BackOfficePage() {
 
       if (!allowed) {
         if (activeTab === 'companies') {
-          const compNames = new Set(items.map(i => String((i as any).company || '').trim().toLowerCase()));
-          const relatedGroups = groups.filter(g => compNames.has(String(g.company || '').trim().toLowerCase()) && g.is_allowed_import !== false && g.allow_import !== false);
-          if (relatedGroups.length > 0) {
-            if (confirm(`Do you also want to disallow all ${relatedGroups.length} related group(s) for the selected companies?`)) {
-              for (const g of relatedGroups) {
-                await updateDefaultMetadataDoc('dim_group', g.id, { ...g, is_allowed_import: false, allow_import: false }, isDemoUser);
-              }
-              const relGroupNames = new Set(relatedGroups.map(g => String(g.group || '').trim().toLowerCase()));
-              const relatedMembers = members.filter(m => relGroupNames.has(String(m.group || '').trim().toLowerCase()) && m.is_allowed_import !== false && m.allow_import !== false);
-              if (relatedMembers.length > 0) {
-                if (confirm(`Do you also want to disallow all ${relatedMembers.length} related member(s) in those groups?`)) {
-                  for (const m of relatedMembers) {
-                    await updateDefaultMetadataDoc('dim_member', m.id, { ...m, is_allowed_import: false, allow_import: false }, isDemoUser);
-                  }
-                }
-              }
-            }
+          for (const compItem of items) {
+            await triggerCompanyCascadeDisallow(String((compItem as any).company || ''));
           }
         } else if (activeTab === 'groups') {
-          const groupNames = new Set(items.map(i => String((i as any).group || '').trim().toLowerCase()));
-          const relatedMembers = members.filter(m => groupNames.has(String(m.group || '').trim().toLowerCase()) && m.is_allowed_import !== false && m.allow_import !== false);
-          if (relatedMembers.length > 0) {
-            if (confirm(`Do you also want to disallow all ${relatedMembers.length} related member(s) in the selected groups?`)) {
-              for (const m of relatedMembers) {
-                await updateDefaultMetadataDoc('dim_member', m.id, { ...m, is_allowed_import: false, allow_import: false }, isDemoUser);
-              }
-            }
+          for (const grpItem of items) {
+            await triggerGroupCascadeDisallow(String((grpItem as any).group || ''));
           }
         }
       }
@@ -404,34 +433,9 @@ export default function BackOfficePage() {
 
       if (!nextAllowed) {
         if (table === 'dim_company') {
-          const compName = String(item.company || '').trim().toLowerCase();
-          const relatedGroups = groups.filter(g => String(g.company || '').trim().toLowerCase() === compName && g.is_allowed_import !== false && g.allow_import !== false);
-          if (relatedGroups.length > 0) {
-            if (confirm(`Do you also want to disallow all ${relatedGroups.length} related group(s) for company "${item.company}"?`)) {
-              for (const g of relatedGroups) {
-                await updateDefaultMetadataDoc('dim_group', g.id, { ...g, is_allowed_import: false, allow_import: false }, isDemoUser);
-              }
-              const relGroupNames = new Set(relatedGroups.map(g => String(g.group || '').trim().toLowerCase()));
-              const relatedMembers = members.filter(m => relGroupNames.has(String(m.group || '').trim().toLowerCase()) && m.is_allowed_import !== false && m.allow_import !== false);
-              if (relatedMembers.length > 0) {
-                if (confirm(`Do you also want to disallow all ${relatedMembers.length} related member(s) in those groups?`)) {
-                  for (const m of relatedMembers) {
-                    await updateDefaultMetadataDoc('dim_member', m.id, { ...m, is_allowed_import: false, allow_import: false }, isDemoUser);
-                  }
-                }
-              }
-            }
-          }
+          await triggerCompanyCascadeDisallow(item.company);
         } else if (table === 'dim_group') {
-          const grpName = String(item.group || '').trim().toLowerCase();
-          const relatedMembers = members.filter(m => String(m.group || '').trim().toLowerCase() === grpName && m.is_allowed_import !== false && m.allow_import !== false);
-          if (relatedMembers.length > 0) {
-            if (confirm(`Do you also want to disallow all ${relatedMembers.length} related member(s) in group "${item.group}"?`)) {
-              for (const m of relatedMembers) {
-                await updateDefaultMetadataDoc('dim_member', m.id, { ...m, is_allowed_import: false, allow_import: false }, isDemoUser);
-              }
-            }
-          }
+          await triggerGroupCascadeDisallow(item.group);
         }
       }
     } catch (err) {
@@ -535,9 +539,18 @@ export default function BackOfficePage() {
     if (!editingItem) return;
     const { table, data } = editingItem;
     const id = data.id as string;
+    const isAllowedNow = data.is_allowed_import !== false && data.allow_import !== false;
     try {
       await updateDefaultMetadataDoc(table, id, data, isDemoUser);
       setEditingItem(null);
+
+      if (!isAllowedNow) {
+        if (table === 'dim_company') {
+          await triggerCompanyCascadeDisallow(String(data.company || ''));
+        } else if (table === 'dim_group') {
+          await triggerGroupCascadeDisallow(String(data.group || ''));
+        }
+      }
     } catch (err) {
       alert("Error updating default record: " + (err instanceof Error ? err.message : String(err)));
     }
@@ -953,10 +966,10 @@ export default function BackOfficePage() {
                           value={tempGroup.country} 
                           onChange={(e) => setTempGroup({ ...tempGroup, country: e.target.value })}
                         >
-                          {countries.map((c) => {
+                          {(countries.length > 0 ? countries : DEFAULT_COUNTRIES).map((c: any) => {
                             const val = c.displayed_country || c.country;
                             return (
-                              <option key={c.id} value={val}>{val}</option>
+                              <option key={c.id || val} value={val}>{val}</option>
                             );
                           })}
                         </select>
@@ -1608,15 +1621,21 @@ export default function BackOfficePage() {
                   </div>
                   <div className="form-group">
                     <label>Country</label>
-                    <input
-                      type="text"
+                    <select
                       className="input-control"
                       value={String(editingItem.data.country || '')}
                       onChange={(e) => setEditingItem({
                         ...editingItem,
                         data: { ...editingItem.data, country: e.target.value }
                       })}
-                    />
+                    >
+                      {(countries.length > 0 ? countries : DEFAULT_COUNTRIES).map((c: any) => {
+                        const val = c.displayed_country || c.country;
+                        return (
+                          <option key={c.id || val} value={val}>{val}</option>
+                        );
+                      })}
+                    </select>
                   </div>
                   <div className="form-group">
                     <label>Company</label>
@@ -1834,10 +1853,10 @@ export default function BackOfficePage() {
                     value={tempGroup.country} 
                     onChange={(e) => setTempGroup({ ...tempGroup, country: e.target.value })}
                   >
-                    {countries.map((c) => {
+                    {(countries.length > 0 ? countries : DEFAULT_COUNTRIES).map((c: any) => {
                       const val = c.displayed_country || c.country;
                       return (
-                        <option key={c.id} value={val}>{val}</option>
+                        <option key={c.id || val} value={val}>{val}</option>
                       );
                     })}
                   </select>

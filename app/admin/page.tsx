@@ -274,21 +274,21 @@ export default function AdminPage() {
   }, [defaultCompanies]);
 
   const allowedCompanyNames = useMemo(() => {
-    return new Set(allowedCompanies.map(c => c.company));
+    return new Set(allowedCompanies.map(c => String(c.company || '').trim().toLowerCase()));
   }, [allowedCompanies]);
 
   const allowedGroups = useMemo(() => {
     const list = defaultGroups.length > 0 ? defaultGroups : DEFAULT_GROUPS;
-    return list.filter(g => isImportAllowed(g) && (!g.company || allowedCompanyNames.has(g.company)));
+    return list.filter(g => isImportAllowed(g) && (!g.company || allowedCompanyNames.has(String(g.company || '').trim().toLowerCase())));
   }, [defaultGroups, allowedCompanyNames]);
 
   const allowedGroupNames = useMemo(() => {
-    return new Set(allowedGroups.map(g => g.group));
+    return new Set(allowedGroups.map(g => String(g.group || '').trim().toLowerCase()));
   }, [allowedGroups]);
 
   const allowedMembers = useMemo(() => {
     const list = defaultMembers.length > 0 ? defaultMembers : DEFAULT_MEMBERS;
-    return list.filter(m => isImportAllowed(m) && allowedGroupNames.has(m.group));
+    return list.filter(m => isImportAllowed(m) && allowedGroupNames.has(String(m.group || '').trim().toLowerCase()));
   }, [defaultMembers, allowedGroupNames]);
 
   const availableCountries = useMemo(() => {
