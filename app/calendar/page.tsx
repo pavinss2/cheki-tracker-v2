@@ -62,7 +62,7 @@ function groupTransactionsByImage(rows: Transaction[]): GroupedChekiPhoto[] {
 
 export default function CalendarPage() {
   const { user, isDemoUser } = useAuth();
-  const { allTransactions, members, colors, types, userId, loading } = useChekiData();
+  const { allTransactions, members, colors, types, groups, userId, loading } = useChekiData();
 
   const memberAvatarMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -724,160 +724,167 @@ export default function CalendarPage() {
 
       {/* New Transaction Creation Modal */}
       {isAddModalOpen && (
-        <div className="modal-backdrop" onClick={() => setIsAddModalOpen(false)}>
-          <div className="modal-dialog card" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={() => setIsAddModalOpen(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>📸 Add New Cheki Transaction</h3>
-              <button className="btn-close-modal" onClick={() => setIsAddModalOpen(false)}>
+              <h2>📸 Add New Cheki Transaction</h2>
+              <button className="btn-close" onClick={() => setIsAddModalOpen(false)}>
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleSaveNewTransaction} className="modal-form">
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>Date *</label>
-                  <input
-                    type="date"
-                    value={modalDate}
-                    onChange={(e) => setModalDate(e.target.value)}
-                    required
-                    className="input-control"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Member Name *</label>
-                  <input
-                    type="text"
-                    list="member-suggestions"
-                    value={modalMember}
-                    onChange={(e) => handleMemberSelect(e.target.value)}
-                    placeholder="Select or enter member..."
-                    required
-                    className="input-control"
-                  />
-                  <datalist id="member-suggestions">
-                    {members.map((m) => (
-                      <option key={m.id} value={m.member_name} />
-                    ))}
-                  </datalist>
-                </div>
-
-                <div className="form-group">
-                  <label>Group</label>
-                  <input
-                    type="text"
-                    value={modalGroup}
-                    onChange={(e) => setModalGroup(e.target.value)}
-                    placeholder="Group name"
-                    className="input-control"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Color</label>
-                  <select
-                    value={modalColor}
-                    onChange={(e) => setModalColor(e.target.value)}
-                    className="input-control"
-                  >
-                    {colors.length > 0 ? (
-                      colors.map((c) => (
-                        <option key={c.id} value={c.color}>{c.color}</option>
-                      ))
-                    ) : (
-                      <>
-                        <option value="White">White</option>
-                        <option value="Red">Red</option>
-                        <option value="Blue">Blue</option>
-                        <option value="Yellow">Yellow</option>
-                        <option value="Green">Green</option>
-                        <option value="Pink">Pink</option>
-                        <option value="Purple">Purple</option>
-                      </>
-                    )}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label>Event Name</label>
-                  <input
-                    type="text"
-                    value={modalEvent}
-                    onChange={(e) => setModalEvent(e.target.value)}
-                    placeholder="e.g. CosQuest 3"
-                    className="input-control"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Cheki Type</label>
-                  <select
-                    value={modalType}
-                    onChange={(e) => setModalType(e.target.value)}
-                    className="input-control"
-                  >
-                    {types.length > 0 ? (
-                      types.map((t) => (
-                        <option key={t.id} value={t.type}>{t.type}</option>
-                      ))
-                    ) : (
-                      <>
-                        <option value="Cheki">Cheki</option>
-                        <option value="Digital Cheki">Digital Cheki</option>
-                        <option value="Signed Photo">Signed Photo</option>
-                      </>
-                    )}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label>Quantity</label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={modalQty}
-                    onChange={(e) => setModalQty(Number(e.target.value) || 1)}
-                    className="input-control"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Total Price (THB)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={modalPrice}
-                    onChange={(e) => setModalPrice(Number(e.target.value) || 0)}
-                    className="input-control"
-                  />
-                </div>
-
-                <div className="form-group full-width">
-                  <label>Photo URL (Google Drive / Direct Image)</label>
-                  <input
-                    type="url"
-                    value={modalImg}
-                    onChange={(e) => setModalImg(e.target.value)}
-                    placeholder="https://drive.google.com/..."
-                    className="input-control"
-                  />
-                </div>
-
-                <div className="form-group full-width">
-                  <label>Talk Topic / Notes</label>
-                  <textarea
-                    value={modalNotes}
-                    onChange={(e) => setModalNotes(e.target.value)}
-                    placeholder="Memorable talk topic or event notes..."
-                    rows={2}
-                    className="input-control textarea-control"
-                  />
-                </div>
+            <form onSubmit={handleSaveNewTransaction} className="form-grid">
+              <div className="form-group">
+                <label>Date *</label>
+                <input
+                  type="date"
+                  value={modalDate}
+                  onChange={(e) => setModalDate(e.target.value)}
+                  required
+                />
               </div>
 
-              <div className="modal-actions">
+              <div className="form-group">
+                <label>Member Name *</label>
+                <input
+                  type="text"
+                  list="member-suggestions"
+                  value={modalMember}
+                  onChange={(e) => handleMemberSelect(e.target.value)}
+                  placeholder="Select or enter member..."
+                  required
+                />
+                <datalist id="member-suggestions">
+                  {members.map((m) => (
+                    <option key={m.id} value={m.member_name} />
+                  ))}
+                </datalist>
+              </div>
+
+              <div className="form-group">
+                <label>Cheki Type *</label>
+                <select
+                  value={modalType}
+                  onChange={(e) => setModalType(e.target.value)}
+                >
+                  {types.length > 0 ? (
+                    types.map((t) => (
+                      <option key={t.id} value={t.type}>{t.type}</option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="Cheki">Cheki</option>
+                      <option value="Digital Cheki">Digital Cheki</option>
+                      <option value="Signed Photo">Signed Photo</option>
+                    </>
+                  )}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Quantity *</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={modalQty}
+                  onChange={(e) => setModalQty(Number(e.target.value) || 1)}
+                />
+              </div>
+
+              {/* Thin Divider 1 */}
+              <hr className="form-divider" />
+
+              {/* Group 2: Auto-Mapped Fields */}
+              <div className="form-group-title">AUTO-MAPPED DETAILS</div>
+
+              <div className="form-group">
+                <label>Group</label>
+                <input
+                  type="text"
+                  list="modal_groups_list"
+                  value={modalGroup}
+                  onChange={(e) => setModalGroup(e.target.value)}
+                  placeholder="Group name"
+                />
+                <datalist id="modal_groups_list">
+                  {groups.map((g) => (
+                    <option key={g.id} value={g.group} />
+                  ))}
+                </datalist>
+              </div>
+
+              <div className="form-group">
+                <label>Color</label>
+                <select
+                  value={modalColor}
+                  onChange={(e) => setModalColor(e.target.value)}
+                >
+                  <option value="">Select Color...</option>
+                  {colors.length > 0 ? (
+                    colors.map((c) => (
+                      <option key={c.id} value={c.color}>{c.color}</option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="White">White</option>
+                      <option value="Red">Red</option>
+                      <option value="Blue">Blue</option>
+                      <option value="Yellow">Yellow</option>
+                      <option value="Green">Green</option>
+                      <option value="Pink">Pink</option>
+                      <option value="Purple">Purple</option>
+                    </>
+                  )}
+                </select>
+              </div>
+
+              {/* Thin Divider 2 */}
+              <hr className="form-divider" />
+
+              {/* Group 3: Optional Details */}
+              <div className="form-group-title">OPTIONAL DETAILS</div>
+
+              <div className="form-group">
+                <label>Event Name</label>
+                <input
+                  type="text"
+                  value={modalEvent}
+                  onChange={(e) => setModalEvent(e.target.value)}
+                  placeholder="e.g. CosQuest 3"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Photo URL (Google Drive / Direct Image)</label>
+                <input
+                  type="url"
+                  value={modalImg}
+                  onChange={(e) => setModalImg(e.target.value)}
+                  placeholder="https://drive.google.com/..."
+                />
+              </div>
+
+              <div className="form-group span-2">
+                <label>Talk Topic / Notes</label>
+                <textarea
+                  value={modalNotes}
+                  onChange={(e) => setModalNotes(e.target.value)}
+                  placeholder="Memorable talk topic or event notes..."
+                  rows={2}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: 'var(--radius-sm)',
+                    background: 'var(--bg-surface-2)',
+                    border: '1px solid var(--border-subtle)',
+                    color: 'var(--text-main)',
+                    fontSize: '0.85rem',
+                    resize: 'vertical',
+                  }}
+                />
+              </div>
+
+              <div className="form-actions span-2" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
                 <button
                   type="button"
                   className="btn btn-secondary"
@@ -888,7 +895,19 @@ export default function CalendarPage() {
                 <button
                   type="submit"
                   disabled={isSubmittingTrans}
-                  className="btn btn-primary"
+                  className="btn btn-warning"
+                  style={{
+                    background: 'linear-gradient(135deg, #e58e26, #f39c12)',
+                    color: '#fff',
+                    border: 'none',
+                    fontWeight: 600,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 16px',
+                    borderRadius: 'var(--radius-sm)',
+                    cursor: 'pointer'
+                  }}
                 >
                   <Save size={16} />
                   <span>{isSubmittingTrans ? 'Saving...' : 'Save Transaction'}</span>
@@ -1330,7 +1349,34 @@ export default function CalendarPage() {
           }
         }
 
-        .btn-close-modal {
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.75);
+          backdrop-filter: blur(4px);
+          z-index: 10000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+        }
+
+        .modal-card {
+          background: var(--bg-surface-1);
+          border: 1px solid var(--border-strong);
+          border-radius: var(--radius-md);
+          padding: 18px 20px;
+          width: 100%;
+          max-width: 520px;
+          max-height: 90vh;
+          overflow-y: auto;
+          box-shadow: var(--shadow-card);
+        }
+
+        .btn-close {
           background: none;
           border: none;
           color: var(--text-muted);
@@ -1339,70 +1385,72 @@ export default function CalendarPage() {
           border-radius: 4px;
           display: flex;
           align-items: center;
-          &:hover { color: var(--text-main); background: var(--bg-surface-2); }
+          transition: color 0.2s;
         }
-
-        .modal-form {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
+        .btn-close:hover {
+          color: var(--text-main);
         }
 
         .form-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
-          gap: 14px;
+          gap: 10px 12px;
+        }
+
+        .form-divider {
+          grid-column: 1 / -1;
+          border: none;
+          border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+          margin: 4px 0;
+          width: 100%;
+        }
+
+        .form-group-title {
+          grid-column: 1 / -1;
+          font-size: 0.72rem;
+          font-weight: 700;
+          color: #d4a84b;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          margin-top: 2px;
+          margin-bottom: -2px;
         }
 
         .form-group {
           display: flex;
           flex-direction: column;
-          gap: 6px;
-          label {
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: var(--text-muted);
-          }
+          gap: 4px;
         }
 
+        .form-group label {
+          font-size: 0.78rem;
+          font-weight: 600;
+          color: var(--text-muted);
+        }
+
+        .form-group input,
+        .form-group select {
+          background-color: var(--bg-surface-2);
+          border: 1px solid var(--border-subtle);
+          border-radius: var(--radius-sm);
+          padding: 8px 12px;
+          color: var(--text-main);
+          font-size: 0.88rem;
+          outline: none;
+          width: 100%;
+        }
+
+        .span-2,
         .form-group.full-width {
           grid-column: span 2;
         }
 
-        .input-control {
-          background-color: var(--bg-surface-2);
-          border: 1px solid var(--border-subtle);
-          border-radius: 6px;
-          padding: 8px 12px;
-          color: var(--text-main);
-          font-size: 0.9rem;
-          outline: none;
-          width: 100%;
-          transition: border-color 0.2s;
-
-          &:focus {
-            border-color: var(--accent-primary);
-          }
-        }
-
-        .textarea-control {
-          resize: vertical;
-          font-family: inherit;
-        }
-
-        .modal-actions {
-          display: flex;
-          justify-content: flex-end;
-          gap: 12px;
-          padding-top: 12px;
-          border-top: 1px solid var(--border-subtle);
-        }
-
-        @media (max-width: 600px) {
-          .modal-dialog { padding: 16px; }
+        @media (max-width: 540px) {
+          .modal-card { padding: 16px; }
           .form-grid {
             grid-template-columns: 1fr;
           }
+          .span-2,
           .form-group.full-width {
             grid-column: span 1;
           }

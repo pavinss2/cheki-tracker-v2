@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useChekiData } from '@/hooks/useChekiData';
-import { addMetadataDoc, updateMetadataDoc, deleteMetadataDoc, getAdminLogs, getItemValueString, importFromDefaultMetadata, clearUserCustomMetadata } from '@/lib/dataStore';
+import { addMetadataDoc, updateMetadataDoc, deleteMetadataDoc, getAdminLogs, getItemValueString, importFromDefaultMetadata, clearUserCustomMetadata, subscribeDefaultMetadata } from '@/lib/dataStore';
 import { DEFAULT_COUNTRIES, DEFAULT_COMPANIES, DEFAULT_GROUPS, DEFAULT_MEMBERS } from '@/lib/seedData';
 import { useAuth } from '@/context/AuthContext';
 import { LoginPrompt } from '@/components/layout/LoginPrompt';
@@ -25,12 +25,39 @@ interface TempMemberRow {
   date_added: string;
 }
 
-export default function BackOfficePage() {
+export default function AdminPage() {
   const { user, isDemoUser } = useAuth();
   const { members, companies, groups, colors, types, countries, userId, loading } = useChekiData();
 
   const [activeTab, setActiveTab] = useState<'members' | 'groups' | 'companies' | 'logs'>('members');
   const [editingItem, setEditingItem] = useState<{ table: string; data: Record<string, unknown> } | null>(null);
+
+  // Default metadata from Back Office
+  const [defaultMembers, setDefaultMembers] = useState<any[]>([]);
+  const [defaultGroups, setDefaultGroups] = useState<any[]>([]);
+  const [defaultCompanies, setDefaultCompanies] = useState<any[]>([]);
+  const [defaultCountries, setDefaultCountries] = useState<any[]>([]);
+
+  useEffect(() => {
+    const unsubMem = subscribeDefaultMetadata<any>('dim_member', DEFAULT_MEMBERS, setDefaultMembers, isDemoUser);
+    const unsubGrp = subscribeDefaultMetadata<any>('dim_group', DEFAULT_GROUPS, setDefaultGroups, isDemoUser);
+    const unsubCmp = subscribeDefaultMetadata<any>('dim_company', DEFAULT_COMPANIES, setDefaultCompanies, isDemoUser);
+    const unsubCnt = subscribeDefaultMetadata<any>('dim_country', DEFAULT_COUNTRIES, setDefaultCountries, isDemoUser);
+    return () => {
+      unsubMem();
+      unsubGrp();
+      unsubCmp();
+      unsubCnt();
+    };
+  }, [isDemoUser]);
+
+  const [isMobile, setIsMobile] = useState<boolean>(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth <= 640);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   
   // Sorting state for dim_member (Defaults to date_added descending)
   const [memberSortKey, setMemberSortKey] = useState<MemberSortKey>('date_added');
@@ -38,6 +65,8 @@ export default function BackOfficePage() {
 
   // Temporary draft row state for creating a new member (pinned at top row)
   const [tempMember, setTempMember] = useState<TempMemberRow | null>(null);
+  const [tempGroup, setTempGroup] = useState<{ group: string; country: string; company: string } | null>(null);
+  const [tempCompany, setTempCompany] = useState<{ company: string } | null>(null);
   const [isSavingTemp, setIsSavingTemp] = useState(false);
 
   // Quick inline new option modal for creating missing choices on the fly
@@ -53,11 +82,7 @@ export default function BackOfficePage() {
   // Import Wizard Modal State
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importStep, setImportStep] = useState<1 | 2 | 3>(1);
-  const [selectedCountry, setSelectedCountry] = useState<string>(() => {
-    const countries = Array.from(new Set(DEFAULT_COUNTRIES.map(c => c.displayed_country || c.country)));
-    const th = countries.find(c => c === '🇹🇭 TH' || c.includes('TH') || c.includes('Thailand'));
-    return th ? th : '__ALL__';
-  });
+  const [selectedCountry, setSelectedCountry] = useState<string>('__ALL__');
   const [selectedCompany, setSelectedCompany] = useState<string>('');
   const [selectedGroup, setSelectedGroup] = useState<string>('');
   const [isImporting, setIsImporting] = useState(false);
@@ -96,9 +121,9 @@ export default function BackOfficePage() {
       const res = await importFromDefaultMetadata(
         userId,
         selection,
-        DEFAULT_MEMBERS,
-        DEFAULT_GROUPS,
-        DEFAULT_COMPANIES,
+        defaultMembers.length > 0 ? defaultMembers : DEFAULT_MEMBERS,
+        defaultGroups.length > 0 ? defaultGroups : DEFAULT_GROUPS,
+        defaultCompanies.length > 0 ? defaultCompanies : DEFAULT_COMPANIES,
         isDemoUser
       );
       setImportSuccessMsg(`Successfully imported ${res.count} items from Default settings!`);
@@ -236,53 +261,87 @@ export default function BackOfficePage() {
     setDeleteConfirmModal(null);
   };
 
-  // Filter choices for Import Wizard
+  // Helper to check if item has import allowed in Back Office
+  const isImportAllowed = (item: any) => {
+    if (!item) return false;
+    if (item.is_allowed_import === false || item.allow_import === false) return false;
+    return true;
+  };
+
+  const allowedCompanies = useMemo(() => {
+    const list = defaultCompanies.length > 0 ? defaultCompanies : DEFAULT_COMPANIES;
+    return list.filter(c => isImportAllowed(c));
+  }, [defaultCompanies]);
+
+  const allowedCompanyNames = useMemo(() => {
+    return new Set(allowedCompanies.map(c => c.company));
+  }, [allowedCompanies]);
+
+  const allowedGroups = useMemo(() => {
+    const list = defaultGroups.length > 0 ? defaultGroups : DEFAULT_GROUPS;
+    return list.filter(g => isImportAllowed(g) && (!g.company || allowedCompanyNames.has(g.company)));
+  }, [defaultGroups, allowedCompanyNames]);
+
+  const allowedGroupNames = useMemo(() => {
+    return new Set(allowedGroups.map(g => g.group));
+  }, [allowedGroups]);
+
+  const allowedMembers = useMemo(() => {
+    const list = defaultMembers.length > 0 ? defaultMembers : DEFAULT_MEMBERS;
+    return list.filter(m => isImportAllowed(m) && allowedGroupNames.has(m.group));
+  }, [defaultMembers, allowedGroupNames]);
+
   const availableCountries = useMemo(() => {
-    return Array.from(new Set(DEFAULT_COUNTRIES.map(c => c.displayed_country || c.country)));
-  }, []);
+    const list = defaultCountries.length > 0 ? defaultCountries : DEFAULT_COUNTRIES;
+    const activeCountries = list.filter(c => isImportAllowed(c)).map(c => c.displayed_country || c.country);
+    if (activeCountries.length === 0) {
+      return Array.from(new Set(allowedGroups.map(g => g.country)));
+    }
+    return Array.from(new Set(activeCountries));
+  }, [defaultCountries, allowedGroups]);
 
   const availableCompanies = useMemo(() => {
     return Array.from(new Set(
-      DEFAULT_GROUPS
+      allowedGroups
         .filter(g => !selectedCountry || selectedCountry === '__ALL__' || g.country === selectedCountry || g.country.includes(selectedCountry))
         .map(g => g.company)
     ));
-  }, [selectedCountry]);
+  }, [allowedGroups, selectedCountry]);
 
   const availableGroups = useMemo(() => {
-    return DEFAULT_GROUPS.filter(g => {
+    return allowedGroups.filter(g => {
       if (selectedCountry && selectedCountry !== '__ALL__' && (g.country !== selectedCountry && !g.country.includes(selectedCountry))) return false;
       if (selectedCompany && selectedCompany !== '__ALL__' && g.company !== selectedCompany) return false;
       return true;
     });
-  }, [selectedCountry, selectedCompany]);
+  }, [allowedGroups, selectedCountry, selectedCompany]);
 
   const importPreviewCount = useMemo(() => {
     const targetCountry = (!selectedCountry || selectedCountry === '__ALL__') ? undefined : selectedCountry;
     const targetCompany = (!selectedCompany || selectedCompany === '__ALL__') ? undefined : selectedCompany;
     const targetGroup = (!selectedGroup || selectedGroup === '__ALL__') ? undefined : selectedGroup;
 
-    const matchingMembers = DEFAULT_MEMBERS.filter((m) => {
+    const matchingMembers = allowedMembers.filter((m) => {
       if (targetCountry && m.country !== targetCountry && !m.country.includes(targetCountry)) return false;
       if (targetCompany && m.company !== targetCompany) return false;
       if (targetGroup && m.group !== targetGroup) return false;
       return true;
     });
 
-    const matchingGroups = DEFAULT_GROUPS.filter((g) => {
+    const matchingGroups = allowedGroups.filter((g) => {
       if (targetCountry && g.country !== targetCountry && !g.country.includes(targetCountry)) return false;
       if (targetCompany && g.company !== targetCompany) return false;
       if (targetGroup && g.group !== targetGroup) return false;
       return true;
     });
 
-    const matchingCompanies = DEFAULT_COMPANIES.filter((c) => {
-      if (targetCompany && c.company !== targetCompany) return false;
-      return true;
+    const matchingCompanies = allowedCompanies.filter((c) => {
+      if (targetCompany) return c.company === targetCompany;
+      return matchingGroups.some(g => g.company === c.company);
     });
 
     return matchingMembers.length + matchingGroups.length + matchingCompanies.length;
-  }, [selectedCountry, selectedCompany, selectedGroup]);
+  }, [selectedCountry, selectedCompany, selectedGroup, allowedMembers, allowedGroups, allowedCompanies]);
 
   if (!user && !isDemoUser) return <LoginPrompt />;
   if (loading) return <CircularSpinner />;
@@ -1183,6 +1242,120 @@ export default function BackOfficePage() {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Add Dim Modal */}
+      {isMobile && (tempMember || tempGroup || tempCompany) && (
+        <div className="modal-overlay" onClick={() => { setTempMember(null); setTempGroup(null); setTempCompany(null); }}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>
+                {tempMember && '📸 Add New Member'}
+                {tempGroup && '📸 Add New Group'}
+                {tempCompany && '📸 Add New Company'}
+              </h2>
+              <button className="btn-close" onClick={() => { setTempMember(null); setTempGroup(null); setTempCompany(null); }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {tempMember && (
+              <div className="form-grid">
+                <div className="form-group span-2">
+                  <label>Member Name *</label>
+                  <input type="text" value={tempMember.member_name} onChange={(e) => setTempMember({ ...tempMember, member_name: e.target.value })} placeholder="Member name" autoFocus />
+                </div>
+                <div className="form-group">
+                  <label>Color</label>
+                  <select value={tempMember.color} onChange={(e) => setTempMember({ ...tempMember, color: e.target.value })}>
+                    {colors.map(c => <option key={c.id} value={c.color}>{c.color}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Group</label>
+                  <select value={tempMember.group} onChange={(e) => {
+                    const grpName = e.target.value;
+                    const matchG = groups.find(g => g.group === grpName);
+                    setTempMember({
+                      ...tempMember,
+                      group: grpName,
+                      country: matchG?.country || tempMember.country,
+                      company: matchG?.company || tempMember.company,
+                    });
+                  }}>
+                    <option value="">Select Group...</option>
+                    {groups.map(g => <option key={g.id} value={g.group}>{g.group}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Country (Auto)</label>
+                  <input type="text" value={tempMember.country} readOnly style={{ opacity: 0.7 }} />
+                </div>
+                <div className="form-group">
+                  <label>Company (Auto)</label>
+                  <input type="text" value={tempMember.company} readOnly style={{ opacity: 0.7 }} />
+                </div>
+                <div className="form-group span-2">
+                  <label>Member Image URL</label>
+                  <input type="text" value={tempMember.member_image} onChange={(e) => setTempMember({ ...tempMember, member_image: e.target.value })} placeholder="https://..." />
+                </div>
+                <div className="form-group span-2">
+                  <label>X Profile URL</label>
+                  <input type="text" value={tempMember.x_profile} onChange={(e) => setTempMember({ ...tempMember, x_profile: e.target.value })} placeholder="https://x.com/..." />
+                </div>
+                <div className="form-actions span-2" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+                  <button className="btn btn-secondary" onClick={() => setTempMember(null)}>Cancel</button>
+                  <button className="btn btn-primary" onClick={handleSaveTempMember} disabled={isSavingTemp}><Save size={14} /> Save Member</button>
+                </div>
+              </div>
+            )}
+
+            {tempGroup && (
+              <div className="form-grid">
+                <div className="form-group span-2">
+                  <label>Group Name *</label>
+                  <input type="text" value={tempGroup.group} onChange={(e) => setTempGroup({ ...tempGroup, group: e.target.value })} placeholder="Group name" autoFocus />
+                </div>
+                <div className="form-group">
+                  <label>Country</label>
+                  <input type="text" value={tempGroup.country} onChange={(e) => setTempGroup({ ...tempGroup, country: e.target.value })} placeholder="🇹🇭 TH" />
+                </div>
+                <div className="form-group">
+                  <label>Company</label>
+                  <select value={tempGroup.company} onChange={(e) => setTempGroup({ ...tempGroup, company: e.target.value })}>
+                    <option value="Individual">Individual</option>
+                    {companies.filter(c => c.company !== 'Individual').map(c => <option key={c.id} value={c.company}>{c.company}</option>)}
+                  </select>
+                </div>
+                <div className="form-actions span-2" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+                  <button className="btn btn-secondary" onClick={() => setTempGroup(null)}>Cancel</button>
+                  <button className="btn btn-primary" onClick={async () => {
+                    if (!tempGroup || !tempGroup.group.trim()) return;
+                    await addMetadataDoc('dim_group', userId, tempGroup as unknown as Record<string, unknown>, isDemoUser);
+                    setTempGroup(null);
+                  }}><Save size={14} /> Save Group</button>
+                </div>
+              </div>
+            )}
+
+            {tempCompany && (
+              <div className="form-grid">
+                <div className="form-group span-2">
+                  <label>Company Name *</label>
+                  <input type="text" value={tempCompany.company} onChange={(e) => setTempCompany({ company: e.target.value })} placeholder="Company name" autoFocus />
+                </div>
+                <div className="form-actions span-2" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+                  <button className="btn btn-secondary" onClick={() => setTempCompany(null)}>Cancel</button>
+                  <button className="btn btn-primary" onClick={async () => {
+                    if (!tempCompany || !tempCompany.company.trim()) return;
+                    await addMetadataDoc('dim_company', userId, tempCompany as unknown as Record<string, unknown>, isDemoUser);
+                    setTempCompany(null);
+                  }}><Save size={14} /> Save Company</button>
+                </div>
               </div>
             )}
           </div>

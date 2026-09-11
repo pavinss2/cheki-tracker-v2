@@ -52,7 +52,9 @@ import { CircularSpinner } from '@/components/common/CircularSpinner';
 import { MemberAvatar } from '@/components/common/MemberAvatar';
 import { formatBrowserTimestamp } from '@/lib/imageUtils';
 
-type MemberSortKey = 'date_added' | 'member_name' | 'color' | 'group' | 'country' | 'company' | 'is_active';
+type MemberSortKey = 'date_added' | 'member_name' | 'color' | 'group' | 'country' | 'company' | 'is_active' | 'is_allowed_import' | 'member_image' | 'x_profile';
+type GroupSortKey = 'group' | 'country' | 'company' | 'is_allowed_import';
+type CompanySortKey = 'company' | 'is_allowed_import';
 
 interface TempMemberRow {
   member_name: string;
@@ -84,14 +86,30 @@ export default function BackOfficePage() {
   // Filters state for default_dim_member and default_dim_group
   const [memberCompanyFilter, setMemberCompanyFilter] = useState<string>('');
   const [memberGroupFilter, setMemberGroupFilter] = useState<string>('');
+  const [memberCountryFilter, setMemberCountryFilter] = useState<string>('');
   const [groupCompanyFilter, setGroupCompanyFilter] = useState<string>('');
 
   // Multiselect state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Sorting state for dim_member
+  // Sorting state for dim_member, dim_group, dim_company
   const [memberSortKey, setMemberSortKey] = useState<MemberSortKey>('date_added');
   const [memberSortAsc, setMemberSortAsc] = useState<boolean>(false);
+
+  const [groupSortKey, setGroupSortKey] = useState<GroupSortKey>('group');
+  const [groupSortAsc, setGroupSortAsc] = useState<boolean>(true);
+
+  const [companySortKey, setCompanySortKey] = useState<CompanySortKey>('company');
+  const [companySortAsc, setCompanySortAsc] = useState<boolean>(true);
+
+  const [isMobile, setIsMobile] = useState<boolean>(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth <= 640);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Temporary draft row state for top-row inline additions
   const [tempMember, setTempMember] = useState<TempMemberRow | null>(null);
@@ -114,7 +132,7 @@ export default function BackOfficePage() {
   // Reset selected items when active tab or filters change
   useEffect(() => {
     setSelectedIds(new Set());
-  }, [activeTab, memberCompanyFilter, memberGroupFilter, groupCompanyFilter]);
+  }, [activeTab, memberCompanyFilter, memberGroupFilter, memberCountryFilter, groupCompanyFilter]);
 
   // Subscribe to default metadata collections
   useEffect(() => {
@@ -172,6 +190,11 @@ export default function BackOfficePage() {
       if (memberSortKey === 'is_active') {
         valA = a.is_active ? 1 : 0;
         valB = b.is_active ? 1 : 0;
+      } else if (memberSortKey === 'is_allowed_import') {
+        const aAllowed = a.is_allowed_import !== false && a.allow_import !== false;
+        const bAllowed = b.is_allowed_import !== false && b.allow_import !== false;
+        valA = aAllowed ? 1 : 0;
+        valB = bAllowed ? 1 : 0;
       } else if (memberSortKey === 'date_added') {
         valA = a.date_added || '1000-12-26';
         valB = b.date_added || '1000-12-26';
@@ -186,34 +209,95 @@ export default function BackOfficePage() {
     });
   }, [members, memberSortKey, memberSortAsc]);
 
-  // Filtered members list based on company and group filter
+  // Filtered members list based on company, group, and country filter
   const filteredMembers = useMemo(() => {
     return sortedMembers.filter((m) => {
       if (memberCompanyFilter && m.company !== memberCompanyFilter) return false;
       if (memberGroupFilter && m.group !== memberGroupFilter) return false;
+      if (memberCountryFilter && m.country !== memberCountryFilter) return false;
       return true;
     });
-  }, [sortedMembers, memberCompanyFilter, memberGroupFilter]);
+  }, [sortedMembers, memberCompanyFilter, memberGroupFilter, memberCountryFilter]);
+
+  const handleSortGroups = (key: GroupSortKey) => {
+    if (groupSortKey === key) {
+      setGroupSortAsc(!groupSortAsc);
+    } else {
+      setGroupSortKey(key);
+      setGroupSortAsc(true);
+    }
+  };
+
+  const sortedGroups = useMemo(() => {
+    return [...groups].sort((a, b) => {
+      let valA: string | number = '';
+      let valB: string | number = '';
+
+      if (groupSortKey === 'is_allowed_import') {
+        const aAllowed = a.is_allowed_import !== false && a.allow_import !== false;
+        const bAllowed = b.is_allowed_import !== false && b.allow_import !== false;
+        valA = aAllowed ? 1 : 0;
+        valB = bAllowed ? 1 : 0;
+      } else {
+        valA = String(a[groupSortKey] ?? '').toLowerCase();
+        valB = String(b[groupSortKey] ?? '').toLowerCase();
+      }
+
+      if (valA < valB) return groupSortAsc ? -1 : 1;
+      if (valA > valB) return groupSortAsc ? 1 : -1;
+      return 0;
+    });
+  }, [groups, groupSortKey, groupSortAsc]);
 
   // Filtered groups list based on company filter
   const filteredGroups = useMemo(() => {
-    return groups.filter((g) => {
+    return sortedGroups.filter((g) => {
       if (groupCompanyFilter && g.company !== groupCompanyFilter) return false;
       return true;
     });
-  }, [groups, groupCompanyFilter]);
+  }, [sortedGroups, groupCompanyFilter]);
+
+  const handleSortCompanies = (key: CompanySortKey) => {
+    if (companySortKey === key) {
+      setCompanySortAsc(!companySortAsc);
+    } else {
+      setCompanySortKey(key);
+      setCompanySortAsc(true);
+    }
+  };
+
+  const sortedCompanies = useMemo(() => {
+    return [...companies].sort((a, b) => {
+      let valA: string | number = '';
+      let valB: string | number = '';
+
+      if (companySortKey === 'is_allowed_import') {
+        const aAllowed = a.is_allowed_import !== false && a.allow_import !== false;
+        const bAllowed = b.is_allowed_import !== false && b.allow_import !== false;
+        valA = aAllowed ? 1 : 0;
+        valB = bAllowed ? 1 : 0;
+      } else {
+        valA = String(a[companySortKey] ?? '').toLowerCase();
+        valB = String(b[companySortKey] ?? '').toLowerCase();
+      }
+
+      if (valA < valB) return companySortAsc ? -1 : 1;
+      if (valA > valB) return companySortAsc ? 1 : -1;
+      return 0;
+    });
+  }, [companies, companySortKey, companySortAsc]);
 
   // Resolve active dataset and table name for multiselect batch operations
   const activeItems = useMemo(() => {
     if (activeTab === 'members') return filteredMembers;
     if (activeTab === 'groups') return filteredGroups;
-    if (activeTab === 'companies') return companies;
+    if (activeTab === 'companies') return sortedCompanies;
     if (activeTab === 'colors') return colors;
     if (activeTab === 'types') return types;
     if (activeTab === 'countries') return countries;
     if (activeTab === 'locations') return locations;
     return [];
-  }, [activeTab, filteredMembers, filteredGroups, companies, colors, types, countries, locations]);
+  }, [activeTab, filteredMembers, filteredGroups, sortedCompanies, colors, types, countries, locations]);
 
   const activeTableName = useMemo(() => {
     if (activeTab === 'members') return 'dim_member';
@@ -226,13 +310,18 @@ export default function BackOfficePage() {
     return '';
   }, [activeTab]);
 
-  const isAllSelected = activeItems.length > 0 && activeItems.every(item => selectedIds.has(item.id));
+  const isAllSelected = useMemo(() => {
+    if (activeItems.length === 0) return false;
+    return activeItems.every(item => selectedIds.has(item.id));
+  }, [activeItems, selectedIds]);
 
   const handleToggleSelectAll = () => {
     if (isAllSelected) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(activeItems.map(item => item.id)));
+      const next = new Set<string>();
+      activeItems.forEach(item => next.add(item.id));
+      setSelectedIds(next);
     }
   };
 
@@ -246,7 +335,7 @@ export default function BackOfficePage() {
     setSelectedIds(next);
   };
 
-  const handleBatchSetAllowImport = async (allowed: boolean) => {
+  const handleBatchToggleAllowImport = async (allowed: boolean) => {
     if (!activeTableName || selectedIds.size === 0) return;
     const items = activeItems.filter(item => selectedIds.has(item.id));
     try {
@@ -279,6 +368,30 @@ export default function BackOfficePage() {
     const nextAllowed = !currentAllowed;
     try {
       await updateDefaultMetadataDoc(table, item.id, { ...item, is_allowed_import: nextAllowed, allow_import: nextAllowed }, isDemoUser);
+
+      if (!nextAllowed) {
+        if (table === 'dim_company') {
+          const compName = item.company;
+          const relatedGroups = groups.filter(g => g.company === compName && g.is_allowed_import !== false && g.allow_import !== false);
+          if (relatedGroups.length > 0) {
+            if (confirm(`Do you also want to disallow all ${relatedGroups.length} related group(s) for company "${compName}"?`)) {
+              for (const g of relatedGroups) {
+                await updateDefaultMetadataDoc('dim_group', g.id, { ...g, is_allowed_import: false, allow_import: false }, isDemoUser);
+              }
+            }
+          }
+        } else if (table === 'dim_group') {
+          const grpName = item.group;
+          const relatedMembers = members.filter(m => m.group === grpName && m.is_allowed_import !== false && m.allow_import !== false);
+          if (relatedMembers.length > 0) {
+            if (confirm(`Do you also want to disallow all ${relatedMembers.length} related member(s) in group "${grpName}"?`)) {
+              for (const m of relatedMembers) {
+                await updateDefaultMetadataDoc('dim_member', m.id, { ...m, is_allowed_import: false, allow_import: false }, isDemoUser);
+              }
+            }
+          }
+        }
+      }
     } catch (err) {
       alert("Error updating import permission: " + (err instanceof Error ? err.message : String(err)));
     }
@@ -456,10 +569,10 @@ export default function BackOfficePage() {
               <span className="badge-pill primary" style={{ fontWeight: 600 }}>{selectedIds.size} item(s) selected</span>
             </div>
             <div className="batch-buttons">
-              <button type="button" className="btn btn-secondary btn-xs" onClick={() => handleBatchSetAllowImport(true)}>
+              <button type="button" className="btn btn-secondary btn-xs" onClick={() => handleBatchToggleAllowImport(true)}>
                 <CheckCircle size={13} /> Allow Import
               </button>
-              <button type="button" className="btn btn-secondary btn-xs" onClick={() => handleBatchSetAllowImport(false)}>
+              <button type="button" className="btn btn-secondary btn-xs" onClick={() => handleBatchToggleAllowImport(false)}>
                 <XCircle size={13} /> Disallow Import
               </button>
               <button type="button" className="btn btn-danger btn-xs" onClick={handleBatchDelete}>
@@ -478,7 +591,7 @@ export default function BackOfficePage() {
             <div className="tab-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
                 <h2>default_dim_member</h2>
-                <div className="table-filter-group">
+                <div className="table-filter-group" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <select
                     className="filter-select"
                     value={memberCompanyFilter}
@@ -500,10 +613,21 @@ export default function BackOfficePage() {
                   >
                     <option value="">All Groups ({groups.length})</option>
                     {groups
-                      .filter(g => !memberCompanyFilter || g.company === memberCompanyFilter)
+                      .filter(g => (!memberCompanyFilter || g.company === memberCompanyFilter) && (!memberCountryFilter || g.country === memberCountryFilter))
                       .map(g => (
                         <option key={g.id} value={g.group}>{g.group}</option>
                       ))}
+                  </select>
+
+                  <select
+                    className="filter-select"
+                    value={memberCountryFilter}
+                    onChange={(e) => setMemberCountryFilter(e.target.value)}
+                  >
+                    <option value="">All Countries ({countries.length})</option>
+                    {countries.map(c => (
+                      <option key={c.id} value={c.country}>{c.country}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -519,7 +643,9 @@ export default function BackOfficePage() {
                     <th style={{ width: '38px', textAlign: 'center' }}>
                       <input type="checkbox" checked={isAllSelected} onChange={handleToggleSelectAll} />
                     </th>
-                    <th>Avatar</th>
+                    <th className="sortable-th" onClick={() => handleSortMembers('member_image')}>
+                      Avatar {memberSortKey === 'member_image' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                    </th>
                     <th className="sortable-th" onClick={() => handleSortMembers('member_name')}>
                       Member Name {memberSortKey === 'member_name' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                     </th>
@@ -538,8 +664,12 @@ export default function BackOfficePage() {
                     <th className="sortable-th" onClick={() => handleSortMembers('is_active')}>
                       Status {memberSortKey === 'is_active' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                     </th>
-                    <th>Allow Import</th>
-                    <th>X Profile</th>
+                    <th className="sortable-th" onClick={() => handleSortMembers('is_allowed_import')}>
+                      Allow Import {memberSortKey === 'is_allowed_import' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                    </th>
+                    <th className="sortable-th" onClick={() => handleSortMembers('x_profile')}>
+                      X Profile {memberSortKey === 'x_profile' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                    </th>
                     <th className="sortable-th" onClick={() => handleSortMembers('date_added')}>
                       Date Added {memberSortKey === 'date_added' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                     </th>
@@ -548,7 +678,7 @@ export default function BackOfficePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {tempMember && (
+                  {tempMember && !isMobile && (
                     <tr className="temp-row">
                       <td style={{ textAlign: 'center' }}>-</td>
                       <td style={{ minWidth: '160px' }}>
@@ -556,13 +686,13 @@ export default function BackOfficePage() {
                           <MemberAvatar 
                             src={tempMember.member_image} 
                             name={tempMember.member_name || 'New'} 
-                            size={32} 
+                            size={28} 
                             colorHex={colors.find(c => c.color === tempMember.color)?.color_code} 
                           />
                           <input 
-                            type="url" 
+                            type="text" 
                             className="table-input" 
-                            placeholder="Image URL..." 
+                            placeholder="Image URL" 
                             value={tempMember.member_image} 
                             onChange={(e) => setTempMember({ ...tempMember, member_image: e.target.value })}
                           />
@@ -580,8 +710,8 @@ export default function BackOfficePage() {
                       </td>
                       <td>
                         <select 
-                          className="table-select"
-                          value={tempMember.color}
+                          className="table-select" 
+                          value={tempMember.color} 
                           onChange={(e) => setTempMember({ ...tempMember, color: e.target.value })}
                         >
                           {colors.map((c) => (
@@ -591,36 +721,40 @@ export default function BackOfficePage() {
                       </td>
                       <td>
                         <select 
-                          className="table-select"
-                          value={tempMember.group}
+                          className="table-select" 
+                          value={tempMember.group} 
                           onChange={(e) => {
-                            const selectedGrp = e.target.value;
-                            const mapped = groupLookup[selectedGrp] || { company: 'Individual', country: '🇹🇭 TH' };
+                            const grp = e.target.value;
+                            const mapped = groupLookup[grp];
                             setTempMember({
                               ...tempMember,
-                              group: selectedGrp,
-                              company: mapped.company,
-                              country: mapped.country,
+                              group: grp,
+                              company: mapped?.company || tempMember.company,
+                              country: mapped?.country || tempMember.country,
                             });
                           }}
                         >
-                          <option value="">-- Select Group --</option>
+                          <option value="">Select Group...</option>
                           {groups.map((g) => (
                             <option key={g.id} value={g.group}>{g.group}</option>
                           ))}
                         </select>
                       </td>
-                      <td><span className="locked-cell">{tempMember.country}</span></td>
-                      <td><span className="locked-cell">{tempMember.company}</span></td>
                       <td>
-                        <select 
-                          className="table-select"
-                          value={tempMember.is_active ? 'true' : 'false'}
-                          onChange={(e) => setTempMember({ ...tempMember, is_active: e.target.value === 'true' })}
-                        >
-                          <option value="true">Active</option>
-                          <option value="false">Inactive</option>
-                        </select>
+                        <input type="text" className="table-input locked-input" value={tempMember.country} readOnly title="Auto-mapped by Group" />
+                      </td>
+                      <td>
+                        <input type="text" className="table-input locked-input" value={tempMember.company} readOnly title="Auto-mapped by Group" />
+                      </td>
+                      <td>
+                        <label className="toggle-label" style={{ margin: 0 }}>
+                          <input 
+                            type="checkbox" 
+                            checked={tempMember.is_active} 
+                            onChange={(e) => setTempMember({ ...tempMember, is_active: e.target.checked })} 
+                          />
+                          <span className="toggle-text">{tempMember.is_active ? 'Active' : 'Inactive'}</span>
+                        </label>
                       </td>
                       <td>
                         <span className="badge-toggle allowed" style={{ cursor: 'default' }}>Allowed</span>
@@ -628,8 +762,8 @@ export default function BackOfficePage() {
                       <td>
                         <input 
                           type="text" 
-                          className="table-input"
-                          placeholder="@username"
+                          className="table-input" 
+                          placeholder="@username" 
                           value={tempMember.x_profile} 
                           onChange={(e) => setTempMember({ ...tempMember, x_profile: e.target.value })}
                         />
@@ -740,17 +874,25 @@ export default function BackOfficePage() {
                     <th style={{ width: '38px', textAlign: 'center' }}>
                       <input type="checkbox" checked={isAllSelected} onChange={handleToggleSelectAll} />
                     </th>
-                    <th>Group</th>
-                    <th>Country</th>
-                    <th>Company</th>
-                    <th>Allow Import</th>
+                    <th className="sortable-th" onClick={() => handleSortGroups('group')}>
+                      Group {groupSortKey === 'group' ? (groupSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                    </th>
+                    <th className="sortable-th" onClick={() => handleSortGroups('country')}>
+                      Country {groupSortKey === 'country' ? (groupSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                    </th>
+                    <th className="sortable-th" onClick={() => handleSortGroups('company')}>
+                      Company {groupSortKey === 'company' ? (groupSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                    </th>
+                    <th className="sortable-th" onClick={() => handleSortGroups('is_allowed_import')}>
+                      Allow Import {groupSortKey === 'is_allowed_import' ? (groupSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                    </th>
                     <th>Date Added</th>
                     <th>Date Modified</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {tempGroup && (
+                  {tempGroup && !isMobile && (
                     <tr className="temp-row">
                       <td style={{ textAlign: 'center' }}>-</td>
                       <td>
@@ -854,15 +996,24 @@ export default function BackOfficePage() {
               <table className="dim-table">
                 <thead>
                   <tr>
-                    <th>Company</th>
+                    <th style={{ width: '38px', textAlign: 'center' }}>
+                      <input type="checkbox" checked={isAllSelected} onChange={handleToggleSelectAll} />
+                    </th>
+                    <th className="sortable-th" onClick={() => handleSortCompanies('company')}>
+                      Company {companySortKey === 'company' ? (companySortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                    </th>
+                    <th className="sortable-th" onClick={() => handleSortCompanies('is_allowed_import')}>
+                      Allow Import {companySortKey === 'is_allowed_import' ? (companySortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                    </th>
                     <th>Date Added</th>
                     <th>Date Modified</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {tempCompany && (
+                  {tempCompany && !isMobile && (
                     <tr className="temp-row">
+                      <td style={{ textAlign: 'center' }}>-</td>
                       <td>
                         <input 
                           type="text" 
@@ -872,6 +1023,9 @@ export default function BackOfficePage() {
                           value={tempCompany.company} 
                           onChange={(e) => setTempCompany({ company: e.target.value })}
                         />
+                      </td>
+                      <td>
+                        <span className="badge-toggle allowed" style={{ cursor: 'default' }}>Allowed</span>
                       </td>
                       <td className="mono">{new Date().toISOString().split('T')[0]}</td>
                       <td className="mono">{new Date().toISOString().split('T')[0]}</td>
@@ -884,23 +1038,41 @@ export default function BackOfficePage() {
                     </tr>
                   )}
 
-                  {companies.map((c) => (
-                    <tr key={c.id}>
-                      <td className="bold">{c.company}</td>
-                      <td className="mono">{formatBrowserTimestamp(c.date_added, c.createdAt)}</td>
-                      <td className="mono">{formatBrowserTimestamp(c.date_modified, c.updatedAt)}</td>
-                      <td>
-                        <div className="action-btns">
-                          <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_company', data: { ...c } })}>
-                            <Edit2 size={14} />
+                  {sortedCompanies.map((c) => {
+                    const isSelected = selectedIds.has(c.id);
+                    const isAllowed = c.is_allowed_import !== false && c.allow_import !== false;
+
+                    return (
+                      <tr key={c.id} className={isSelected ? 'selected-row' : ''}>
+                        <td style={{ textAlign: 'center' }}>
+                          <input type="checkbox" checked={isSelected} onChange={() => handleToggleSelect(c.id)} />
+                        </td>
+                        <td className="bold">{c.company}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className={`badge-toggle ${isAllowed ? 'allowed' : 'disallowed'}`}
+                            onClick={() => handleToggleSingleAllowImport('dim_company', c)}
+                            title="Click to toggle import permission for user import wizard"
+                          >
+                            {isAllowed ? 'Allowed' : 'Disabled'}
                           </button>
-                          <button className="btn-icon danger" onClick={() => setDeleteConfirmModal({ table: 'dim_company', id: c.id, displayValue: getItemValueString(c as unknown as Record<string, unknown>) })}>
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="mono">{formatBrowserTimestamp(c.date_added, c.createdAt)}</td>
+                        <td className="mono">{formatBrowserTimestamp(c.date_modified, c.updatedAt)}</td>
+                        <td>
+                          <div className="action-btns">
+                            <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_company', data: { ...c } })}>
+                              <Edit2 size={14} />
+                            </button>
+                            <button className="btn-icon danger" onClick={() => setDeleteConfirmModal({ table: 'dim_company', id: c.id, displayValue: getItemValueString(c as unknown as Record<string, unknown>) })}>
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1523,6 +1695,121 @@ export default function BackOfficePage() {
               <button className="btn btn-secondary" onClick={() => setDeleteConfirmModal(null)}>Cancel</button>
               <button className="btn btn-danger" onClick={handleConfirmDelete}>Confirm Delete</button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Mobile Add Dim Modal */}
+      {isMobile && (tempMember || tempGroup || tempCompany || tempColor || tempType || tempCountry || tempLocation) && (
+        <div className="modal-backdrop" onClick={() => {
+          setTempMember(null); setTempGroup(null); setTempCompany(null);
+          setTempColor(null); setTempType(null); setTempCountry(null); setTempLocation(null);
+        }}>
+          <div className="modal-dialog card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>
+                {tempMember && '📸 Add New Member'}
+                {tempGroup && '📸 Add New Group'}
+                {tempCompany && '📸 Add New Company'}
+                {tempColor && '📸 Add New Color'}
+                {tempType && '📸 Add New Type'}
+                {tempCountry && '📸 Add New Country'}
+                {tempLocation && '📸 Add New Location'}
+              </h3>
+              <button className="btn-close-modal" onClick={() => {
+                setTempMember(null); setTempGroup(null); setTempCompany(null);
+                setTempColor(null); setTempType(null); setTempCountry(null); setTempLocation(null);
+              }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {tempMember && (
+              <div className="modal-form">
+                <div className="form-group span-2">
+                  <label>Member Name *</label>
+                  <input type="text" className="input-control" value={tempMember.member_name} onChange={(e) => setTempMember({ ...tempMember, member_name: e.target.value })} placeholder="Member name" autoFocus />
+                </div>
+                <div className="form-group">
+                  <label>Color</label>
+                  <select className="input-control" value={tempMember.color} onChange={(e) => setTempMember({ ...tempMember, color: e.target.value })}>
+                    {colors.map(c => <option key={c.id} value={c.color}>{c.color}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Group</label>
+                  <select className="input-control" value={tempMember.group} onChange={(e) => {
+                    const grpName = e.target.value;
+                    const matchG = groups.find(g => g.group === grpName);
+                    setTempMember({
+                      ...tempMember,
+                      group: grpName,
+                      country: matchG?.country || tempMember.country,
+                      company: matchG?.company || tempMember.company,
+                    });
+                  }}>
+                    <option value="">Select Group...</option>
+                    {groups.map(g => <option key={g.id} value={g.group}>{g.group}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Country (Auto)</label>
+                  <input type="text" className="input-control" value={tempMember.country} readOnly style={{ opacity: 0.7 }} />
+                </div>
+                <div className="form-group">
+                  <label>Company (Auto)</label>
+                  <input type="text" className="input-control" value={tempMember.company} readOnly style={{ opacity: 0.7 }} />
+                </div>
+                <div className="form-group span-2">
+                  <label>Member Image URL</label>
+                  <input type="text" className="input-control" value={tempMember.member_image} onChange={(e) => setTempMember({ ...tempMember, member_image: e.target.value })} placeholder="https://..." />
+                </div>
+                <div className="form-group span-2">
+                  <label>X Profile URL</label>
+                  <input type="text" className="input-control" value={tempMember.x_profile} onChange={(e) => setTempMember({ ...tempMember, x_profile: e.target.value })} placeholder="https://x.com/..." />
+                </div>
+                <div className="modal-actions" style={{ marginTop: '12px' }}>
+                  <button className="btn btn-secondary" onClick={() => setTempMember(null)}>Cancel</button>
+                  <button className="btn btn-primary" onClick={handleSaveTempMember}><Save size={14} /> Save Member</button>
+                </div>
+              </div>
+            )}
+
+            {tempGroup && (
+              <div className="modal-form">
+                <div className="form-group span-2">
+                  <label>Group Name *</label>
+                  <input type="text" className="input-control" value={tempGroup.group} onChange={(e) => setTempGroup({ ...tempGroup, group: e.target.value })} placeholder="Group name" autoFocus />
+                </div>
+                <div className="form-group">
+                  <label>Country</label>
+                  <input type="text" className="input-control" value={tempGroup.country} onChange={(e) => setTempGroup({ ...tempGroup, country: e.target.value })} placeholder="🇹🇭 TH" />
+                </div>
+                <div className="form-group">
+                  <label>Company</label>
+                  <select className="input-control" value={tempGroup.company} onChange={(e) => setTempGroup({ ...tempGroup, company: e.target.value })}>
+                    <option value="Individual">Individual</option>
+                    {companies.filter(c => c.company !== 'Individual').map(c => <option key={c.id} value={c.company}>{c.company}</option>)}
+                  </select>
+                </div>
+                <div className="modal-actions" style={{ marginTop: '12px' }}>
+                  <button className="btn btn-secondary" onClick={() => setTempGroup(null)}>Cancel</button>
+                  <button className="btn btn-primary" onClick={handleSaveTempGroup}><Save size={14} /> Save Group</button>
+                </div>
+              </div>
+            )}
+
+            {tempCompany && (
+              <div className="modal-form">
+                <div className="form-group span-2">
+                  <label>Company Name *</label>
+                  <input type="text" className="input-control" value={tempCompany.company} onChange={(e) => setTempCompany({ company: e.target.value })} placeholder="Company name" autoFocus />
+                </div>
+                <div className="modal-actions" style={{ marginTop: '12px' }}>
+                  <button className="btn btn-secondary" onClick={() => setTempCompany(null)}>Cancel</button>
+                  <button className="btn btn-primary" onClick={handleSaveTempCompany}><Save size={14} /> Save Company</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
