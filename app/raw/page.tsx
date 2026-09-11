@@ -920,7 +920,7 @@ export default function RawDataPage() {
           gap: 8px;
           flex-wrap: wrap;
           align-items: center;
-          margin-bottom: 14px;
+          margin-bottom: 10px;
         }
 
         .raw-actions-bar > button {
@@ -951,15 +951,15 @@ export default function RawDataPage() {
           min-width: 0;
           overflow: hidden;
           box-sizing: border-box;
-          padding: 20px;
+          padding: 15px;
         }
 
         .table-wrapper {
           overflow-x: auto;
-          width: calc(100% + 30px);
-          max-width: calc(100% + 30px);
-          margin-left: -15px;
-          margin-right: -15px;
+          width: calc(100% + 20px);
+          max-width: calc(100% + 20px);
+          margin-left: -10px;
+          margin-right: -10px;
           -webkit-overflow-scrolling: touch;
           display: block;
         }

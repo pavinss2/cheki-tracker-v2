@@ -1283,14 +1283,14 @@ export default function BackOfficePage() {
         }
 
         .table-card {
-          padding: 20px;
+          padding: 15px;
         }
 
         .tab-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 16px;
+          margin-bottom: 10px;
 
           h2 {
             margin: 0;
@@ -1301,10 +1301,10 @@ export default function BackOfficePage() {
 
         .table-wrapper {
           overflow-x: auto;
-          width: calc(100% + 30px);
-          max-width: calc(100% + 30px);
-          margin-left: -15px;
-          margin-right: -15px;
+          width: calc(100% + 20px);
+          max-width: calc(100% + 20px);
+          margin-left: -10px;
+          margin-right: -10px;
         }
 
         .dim-table {

@@ -1249,14 +1249,15 @@ export default function BackOfficePage() {
           min-width: 0;
           overflow: hidden;
           box-sizing: border-box;
+          padding: 15px;
         }
 
         .table-wrapper {
           overflow-x: auto;
-          width: calc(100% + 30px);
-          max-width: calc(100% + 30px);
-          margin-left: -15px;
-          margin-right: -15px;
+          width: calc(100% + 20px);
+          max-width: calc(100% + 20px);
+          margin-left: -10px;
+          margin-right: -10px;
           -webkit-overflow-scrolling: touch;
           display: block;
         }
@@ -1271,7 +1272,7 @@ export default function BackOfficePage() {
           min-width: 980px;
         }
 
-        .tab-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+        .tab-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; }
 
         .sortable-th {
           cursor: pointer;

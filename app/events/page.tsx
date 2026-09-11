@@ -193,12 +193,15 @@ export default function EventsPage() {
           min-width: 0;
           overflow: hidden;
           box-sizing: border-box;
+          padding: 15px;
         }
 
         .table-wrapper {
           overflow-x: auto;
-          width: 100%;
-          max-width: 100%;
+          width: calc(100% + 20px);
+          max-width: calc(100% + 20px);
+          margin-left: -10px;
+          margin-right: -10px;
           -webkit-overflow-scrolling: touch;
           display: block;
         }
