@@ -518,26 +518,63 @@ export function subscribeMergedMetadata<T>(
   let userItems: T[] = [];
 
   const emitMerged = () => {
-    const combined = [...userItems, ...defaultItems];
-    const seen = new Set<string>();
-    const deduplicated: T[] = [];
+    // Maps for fast user override lookups
+    const userOverridesById = new Map<string, any>();
+    const userOverridesByKey = new Map<string, any>();
 
-    combined.forEach((item) => {
-      const val = getItemValueString(item as Record<string, unknown>).toLowerCase();
-      const key = val || String((item as any).id);
-      if (!seen.has(key)) {
-        seen.add(key);
-        const isDef = Boolean((item as any).isDefault || (item as any).id?.toString().startsWith('default_'));
-        const activeState = (item as any).is_active !== undefined ? (item as any).is_active : true;
-        deduplicated.push({
-          ...item,
-          isDefault: isDef,
-          is_active: activeState,
+    userItems.forEach(u => {
+      const uId = String((u as any).id || '');
+      if (uId) userOverridesById.set(uId, u);
+      const val = getItemValueString(u as Record<string, unknown>).toLowerCase();
+      if (val) userOverridesByKey.set(val, u);
+    });
+
+    const merged: T[] = [];
+    const processedKeys = new Set<string>();
+
+    // 1. Process Default items from Back Office (filter out disallowed items)
+    defaultItems.forEach((d) => {
+      const isAllowed = (d as any).is_allowed_import !== false && (d as any).allow_import !== false;
+      if (!isAllowed) return; // Disallowed in Back Office
+
+      const dId = String((d as any).id || '');
+      const val = getItemValueString(d as Record<string, unknown>).toLowerCase();
+      const key = val || dId;
+
+      processedKeys.add(key);
+      if (dId) processedKeys.add(dId);
+
+      const override = (dId ? userOverridesById.get(dId) : null) || (val ? userOverridesByKey.get(val) : null);
+      const activeState = override && (override as any).is_active !== undefined
+        ? Boolean((override as any).is_active)
+        : ((d as any).is_active !== undefined ? Boolean((d as any).is_active) : true);
+
+      merged.push({
+        ...d,
+        isDefault: true,
+        is_active: activeState,
+      });
+    });
+
+    // 2. Process Custom User-Created items
+    userItems.forEach((u) => {
+      const uId = String((u as any).id || '');
+      const val = getItemValueString(u as Record<string, unknown>).toLowerCase();
+      const key = val || uId;
+
+      if (!processedKeys.has(key) && (!uId || !processedKeys.has(uId))) {
+        processedKeys.add(key);
+        if (uId) processedKeys.add(uId);
+
+        merged.push({
+          ...u,
+          isDefault: false,
+          is_active: (u as any).is_active !== undefined ? Boolean((u as any).is_active) : true,
         });
       }
     });
 
-    onData(deduplicated);
+    onData(merged);
   };
 
   const defaultTable = `default_${tableName}`;
@@ -545,7 +582,7 @@ export function subscribeMergedMetadata<T>(
     defaultItems = items.map(i => ({ 
       ...i, 
       isDefault: true,
-      is_active: (i as any).is_active !== undefined ? (i as any).is_active : true
+      is_active: (i as any).is_active !== undefined ? Boolean((i as any).is_active) : true
     }));
     emitMerged();
   }, isDemo);

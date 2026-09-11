@@ -29,7 +29,14 @@ The application employs a dual-storage strategy to ensure real-time Cloud persis
    - Keys prefixed with `cheki_tracker_v2_*` (e.g., `cheki_tracker_v2_transactions`, `cheki_tracker_v2_dim_member`).
    - Seeded initially from [lib/seedData.ts](file:///Users/pavin/01%20Pavin%20Coding/cheki-tracker-v2/lib/seedData.ts).
 
-### 1.2 Data Integrity & Blank Transaction Prevention Rules
+### 1.2 Real-Time Live Subscription Architecture
+- **Live Subscription Model**: Instead of a manual one-time import wizard, the application continuously subscribes to Back Office default dimensions (`default_dim_member`, `default_dim_group`, `default_dim_company`) via `subscribeMergedMetadata`.
+- **Automatic Propagation**: Any additions, edits, or permission updates made in Back Office automatically reflect across all user accounts and Admin views in real time.
+- **Subscribed Item Protection**: Subscribed default items are read-only for general properties (Name, Color, Group, Company, photo URL). Users cannot edit or delete subscribed items directly.
+- **User Active Status Preference**: Users can freely toggle **Active / Inactive** (`is_active`) on any subscribed item to control whether it appears in their personal dropdowns. User active/inactive preferences are stored per-user and merged seamlessly with live Back Office updates.
+- **Custom User Dimensions**: Users can still create custom items (`+ Add Member`, `+ Add Group`, `+ Add Company`) in the Admin tab for their private use. Custom user-created items can be fully edited and deleted.
+
+### 1.3 Data Integrity & Blank Transaction Prevention Rules
 - **Definition of Blank Transaction**: Any transaction document where **both `member` AND `date` are empty or whitespace**.
 - **Frontend & Backend Constraints**:
   - `addTransaction` and `batchUpsertTransactions` in `lib/dataStore.ts` strictly filter out and reject blank rows before writing to Cloud Firestore or LocalStorage.
@@ -38,9 +45,8 @@ The application employs a dual-storage strategy to ensure real-time Cloud persis
 - **Firestore Security Rules Enforcement (`firestore.rules`)**:
   - Requires `request.resource.data.member != ""` OR `request.resource.data.date != ""` for `create` and `update` operations on `fact_cheki_transaction`.
 - **Timestamping & Sorting**: Every inserted or updated metadata and transaction document appends ISO `createdAt` and `updatedAt` timestamps. Metadata lists in `subscribeMetadata` are sorted by `createdAt`/`updatedAt` descending so newly added records automatically appear at the **most top row**.
-- **Boolean Normalization (`is_active`, `allow_import`)**: `is_active` in `dim_member` and `allow_import` / `is_allowed_import` across metadata must strictly be evaluated as booleans (`true`/`false`), defaulting to `true` (allowed) if not explicitly set to `false`.
 
-### 1.3 Page Authentication & Login Gating
+### 1.4 Page Authentication & Login Gating
 - **Universal Protection**: All primary page routes (`Home`, `Calendar`, `Analytics`, `Raw Data`, `Events`, `Back Office`, `Admin`) strictly enforce authentication gating via `useAuth()`.
 - **Unauthenticated State**: If `!user && !isDemoUser`, the page immediately renders `<LoginPrompt />` to prevent unauthenticated access to system data.
 
@@ -160,17 +166,12 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 - **Top-Row Inline Draft Rows (Desktop Viewports > 640px)**: Creating new values pins a temporary draft row (`<tr className="temp-row">`) at the very top of the table for all dimensions.
 - **Exclusive Dimensions**: `Location` (`default_dim_location`), `Color` (`default_dim_color`), `Type` (`default_dim_type`), and `Countries` (`default_dim_country`) are managed **exclusively** by the super admin in the Back Office tab. They are completely hidden from regular users.
 
-### 6.2 Admin Tab (`/admin`), Explicit Import Rules & Inactivate/Delete Capabilities
-- **Explicit Import Rule**: Upon starting fresh or after clearing custom data, `dim_member`, `dim_group`, `dim_company` in the Admin tab start completely empty (`Members (0)`, `Groups (0)`, `Companies (0)`). Items from `default_dim_*` are **not defaultly shown** in `/admin` unless explicitly imported by the user using the **"Import from Default"** button.
-- **Back Office `allow_import` Permission Enforcement**:
-  - The Admin tab import wizard strictly checks `is_allowed_import` / `allow_import` flags on `default_dim_*` items.
-  - Items or groups marked as `allow_import = false` in Back Office (or belonging to a disallowed parent company) are automatically hidden from the Admin tab import wizard and cannot be imported by users.
-- **Import from Default Settings Wizard**:
-  - A 3-step wizard modal (`Step 1: Country` $\rightarrow$ `Step 2: Company` $\rightarrow$ `Step 3: Group`) allows users to import subsets of default metadata into their custom `dim_*` tables without creating duplicates.
-  - **Step 1 Available Countries Scan**: Step 1 strictly scans `default_dim_group` items that have the `Allow Import` option turned ON (`allow_import !== false` and allowed parent company) and populates the Country selection dropdown with available allowed countries only.
-  - An **"Import All"** button is accessible at any step of the journey (`Import All Default Data`, `Import All in [Country]`, `Import All in [Company]`).
-- **Full Editing, Inactivating & Deleting Capabilities**: Once an item is imported or manually created in `/admin`, the user can edit, set status to `Inactive`, or permanently delete it.
-- **Reset Custom Data**: Provides a top bar action to clear user custom `dim_*` data (`clearUserCustomMetadata`), restoring `/admin` tables to empty states (`0` items).
+### 6.2 Admin Tab (`/admin`) Live Subscription & Active Status Control
+- **Live Subscription Model**: Replaces the legacy manual import wizard with an automatic real-time subscription from Back Office.
+- **Subscribed Badge**: Items subscribed from Back Office render a **"Subscribed"** gold-outline badge in Admin tables.
+- **ReadOnly Subscribed Properties**: General properties (Name, Color, Group, Company, Image URL) of subscribed items are read-only in the Admin tab and cannot be modified or deleted by general users.
+- **User Active / Inactive Status Toggle**: Clicking the Active Status badge on any row (subscribed or custom) toggles `is_active` for the user's account, allowing users to customize which members/groups appear in their personal drop-down choices.
+- **Custom User Dimensions**: Users can click **"+ Add"** to create private custom members, groups, or companies. Custom items render a **"Custom"** badge and can be fully edited and deleted.
 
 ### 6.3 Dimension Table Sorting & `date_added` Rule
 - **Full Header Column Sorting**:
@@ -212,7 +213,7 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 - All headers in the Events tab table (`Date`/`Month`, `Event Name`, `Members`, `QTY`, `%`, `Total (THB)`) are clickable and sortable (defaulting to `period` descending).
 
 ### 6.10 Delete Confirmation Popup Modal
-- Deleting any dimension record displays a custom **Confirm Delete** modal displaying Record ID, Item Display Value, and explicit Confirm Delete / Cancel actions.
+- Deleting any custom dimension record displays a custom **Confirm Delete** modal displaying Record ID, Item Display Value, and explicit Confirm Delete / Cancel actions.
 
 ### 6.11 Audit Logs Value Display (`fact_admin_log`)
 - Audit log entries record the display value alongside document IDs for all mutations (e.g., `Deleted ID h6YTWUygR5D5QZ2enZ47 (Siso)`).

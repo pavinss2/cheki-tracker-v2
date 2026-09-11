@@ -2,16 +2,17 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useChekiData } from '@/hooks/useChekiData';
-import { addMetadataDoc, updateMetadataDoc, deleteMetadataDoc, getAdminLogs, getItemValueString, importFromDefaultMetadata, clearUserCustomMetadata, subscribeDefaultMetadata } from '@/lib/dataStore';
-import { DEFAULT_COUNTRIES, DEFAULT_COMPANIES, DEFAULT_GROUPS, DEFAULT_MEMBERS } from '@/lib/seedData';
+import { addMetadataDoc, updateMetadataDoc, deleteMetadataDoc, getAdminLogs, getItemValueString } from '@/lib/dataStore';
 import { useAuth } from '@/context/AuthContext';
 import { LoginPrompt } from '@/components/layout/LoginPrompt';
-import { Plus, Edit2, Trash2, Shield, Users, Building, Layers, X, Save, ArrowUpDown, ExternalLink, Lock, Download, ChevronRight, Sparkles, RefreshCw } from 'lucide-react';
+import { Plus, Edit2, Trash2, Shield, Users, Building, Layers, X, Save, ArrowUpDown, ExternalLink, Lock, Sparkles } from 'lucide-react';
 import { CircularSpinner } from '@/components/common/CircularSpinner';
 import { MemberAvatar } from '@/components/common/MemberAvatar';
 import { formatDisplayName, formatBrowserTimestamp } from '@/lib/imageUtils';
 
 type MemberSortKey = 'date_added' | 'member_name' | 'color' | 'group' | 'country' | 'company' | 'is_active';
+type GroupSortKey = 'group' | 'country' | 'company' | 'is_active';
+type CompanySortKey = 'company' | 'is_active';
 
 interface TempMemberRow {
   member_name: string;
@@ -32,25 +33,6 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<'members' | 'groups' | 'companies' | 'logs'>('members');
   const [editingItem, setEditingItem] = useState<{ table: string; data: Record<string, unknown> } | null>(null);
 
-  // Default metadata from Back Office
-  const [defaultMembers, setDefaultMembers] = useState<any[]>([]);
-  const [defaultGroups, setDefaultGroups] = useState<any[]>([]);
-  const [defaultCompanies, setDefaultCompanies] = useState<any[]>([]);
-  const [defaultCountries, setDefaultCountries] = useState<any[]>([]);
-
-  useEffect(() => {
-    const unsubMem = subscribeDefaultMetadata<any>('dim_member', DEFAULT_MEMBERS, setDefaultMembers, isDemoUser);
-    const unsubGrp = subscribeDefaultMetadata<any>('dim_group', DEFAULT_GROUPS, setDefaultGroups, isDemoUser);
-    const unsubCmp = subscribeDefaultMetadata<any>('dim_company', DEFAULT_COMPANIES, setDefaultCompanies, isDemoUser);
-    const unsubCnt = subscribeDefaultMetadata<any>('dim_country', DEFAULT_COUNTRIES, setDefaultCountries, isDemoUser);
-    return () => {
-      unsubMem();
-      unsubGrp();
-      unsubCmp();
-      unsubCnt();
-    };
-  }, [isDemoUser]);
-
   const [isMobile, setIsMobile] = useState<boolean>(false);
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth <= 640);
@@ -63,11 +45,16 @@ export default function AdminPage() {
   const [memberSortKey, setMemberSortKey] = useState<MemberSortKey>('date_added');
   const [memberSortAsc, setMemberSortAsc] = useState<boolean>(false);
 
+  // Sorting state for dim_group and dim_company
+  const [groupSortKey, setGroupSortKey] = useState<GroupSortKey>('group');
+  const [groupSortAsc, setGroupSortAsc] = useState<boolean>(true);
+  const [companySortKey, setCompanySortKey] = useState<CompanySortKey>('company');
+  const [companySortAsc, setCompanySortAsc] = useState<boolean>(true);
+
   // Temporary draft row state for creating a new member (pinned at top row)
   const [tempMember, setTempMember] = useState<TempMemberRow | null>(null);
   const [tempGroup, setTempGroup] = useState<{ group: string; country: string; company: string } | null>(null);
   const [tempCompany, setTempCompany] = useState<{ company: string } | null>(null);
-  const [isSavingTemp, setIsSavingTemp] = useState(false);
 
   // Quick inline new option modal for creating missing choices on the fly
   const [inlineNewModal, setInlineNewModal] = useState<{ table: string; fieldKey: string; name: string } | null>(null);
@@ -79,25 +66,7 @@ export default function AdminPage() {
     displayValue: string;
   } | null>(null);
 
-  // Import Wizard Modal State
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [importStep, setImportStep] = useState<1 | 2 | 3>(1);
-  const [selectedCountry, setSelectedCountry] = useState<string>('__ALL__');
-  const [selectedCompany, setSelectedCompany] = useState<string>('');
-  const [selectedGroup, setSelectedGroup] = useState<string>('');
-  const [isImporting, setIsImporting] = useState(false);
-  const [importSuccessMsg, setImportSuccessMsg] = useState<string | null>(null);
-
   const logs = getAdminLogs(userId);
-
-  const handleOpenImportModal = () => {
-    const thOption = availableCountries.find(c => c === '🇹🇭 TH' || c.includes('TH') || c.includes('Thailand'));
-    setSelectedCountry(thOption ? thOption : '__ALL__');
-    setSelectedCompany('');
-    setSelectedGroup('');
-    setImportStep(1);
-    setIsImportModalOpen(true);
-  };
 
   // Group lookup map for auto-populating country & company when group is selected
   const groupLookup = useMemo(() => {
@@ -108,76 +77,55 @@ export default function AdminPage() {
     return map;
   }, [groups]);
 
-  // Execute Import from Default Metadata Wizard
-  const handleConfirmImport = async () => {
-    setIsImporting(true);
-    try {
-      const selection = {
-        country: (!selectedCountry || selectedCountry === '__ALL__') ? undefined : selectedCountry,
-        company: (!selectedCompany || selectedCompany === '__ALL__') ? undefined : selectedCompany,
-        group: (!selectedGroup || selectedGroup === '__ALL__') ? undefined : selectedGroup,
-      };
-
-      const res = await importFromDefaultMetadata(
-        userId,
-        selection,
-        defaultMembers.length > 0 ? defaultMembers : DEFAULT_MEMBERS,
-        defaultGroups.length > 0 ? defaultGroups : DEFAULT_GROUPS,
-        defaultCompanies.length > 0 ? defaultCompanies : DEFAULT_COMPANIES,
-        isDemoUser
-      );
-      setImportSuccessMsg(`Successfully imported ${res.count} items from Default settings!`);
-      setTimeout(() => {
-        setImportSuccessMsg(null);
-        setIsImportModalOpen(false);
-        setImportStep(1);
-        const thOption = availableCountries.find(c => c === '🇹🇭 TH' || c.includes('TH') || c.includes('Thailand'));
-        setSelectedCountry(thOption ? thOption : '__ALL__');
-        setSelectedCompany('');
-        setSelectedGroup('');
-      }, 1800);
-    } catch (err) {
-      alert("Failed importing: " + (err instanceof Error ? err.message : String(err)));
-    } finally {
-      setIsImporting(false);
-    }
-  };
-
-  // Reset/Clear user custom dim_* metadata
-  const handleResetCustomData = async () => {
-    if (!confirm("Are you sure you want to clear all your custom dim_* data? Your view will rely on Back Office global defaults.")) return;
-    try {
-      await clearUserCustomMetadata(userId, isDemoUser);
-      alert("Custom data cleared! Now using global Back Office default settings.");
-    } catch (err) {
-      alert("Error clearing custom data: " + (err instanceof Error ? err.message : String(err)));
-    }
-  };
-
   // Handle column sorting
   const handleSortMembers = (key: MemberSortKey) => {
     if (memberSortKey === key) {
       setMemberSortAsc(!memberSortAsc);
     } else {
       setMemberSortKey(key);
-      setMemberSortAsc(key === 'date_added' ? false : true);
+      setMemberSortAsc(true);
+    }
+  };
+
+  const handleSortGroups = (key: GroupSortKey) => {
+    if (groupSortKey === key) {
+      setGroupSortAsc(!groupSortAsc);
+    } else {
+      setGroupSortKey(key);
+      setGroupSortAsc(true);
+    }
+  };
+
+  const handleSortCompanies = (key: CompanySortKey) => {
+    if (companySortKey === key) {
+      setCompanySortAsc(!companySortAsc);
+    } else {
+      setCompanySortKey(key);
+      setCompanySortAsc(true);
+    }
+  };
+
+  // Toggle user active status override for subscribed or custom item
+  const handleToggleUserActive = async (table: string, item: any) => {
+    const nextActive = item.is_active === false ? true : false;
+    try {
+      await updateMetadataDoc(table, item.id, userId, { ...item, is_active: nextActive }, isDemoUser);
+    } catch (err) {
+      alert("Error updating active status: " + (err instanceof Error ? err.message : String(err)));
     }
   };
 
   const sortedMembers = useMemo(() => {
     return [...members].sort((a, b) => {
-      let valA: string | number = '';
-      let valB: string | number = '';
+      let valA: any = a[memberSortKey] ?? '';
+      let valB: any = b[memberSortKey] ?? '';
 
       if (memberSortKey === 'is_active') {
         valA = a.is_active ? 1 : 0;
         valB = b.is_active ? 1 : 0;
-      } else if (memberSortKey === 'date_added') {
-        valA = a.date_added || '1000-12-26';
-        valB = b.date_added || '1000-12-26';
       } else {
-        valA = String(a[memberSortKey] ?? '').toLowerCase();
-        valB = String(b[memberSortKey] ?? '').toLowerCase();
+        valA = String(valA).toLowerCase();
+        valB = String(valB).toLowerCase();
       }
 
       if (valA < valB) return memberSortAsc ? -1 : 1;
@@ -186,15 +134,51 @@ export default function AdminPage() {
     });
   }, [members, memberSortKey, memberSortAsc]);
 
-  // Init temporary member draft row (Default dates: 1000-12-26, 9999-12-31, date_added: today)
+  const sortedGroups = useMemo(() => {
+    return [...groups].sort((a, b) => {
+      let valA: any = a[groupSortKey] ?? '';
+      let valB: any = b[groupSortKey] ?? '';
+      if (groupSortKey === 'is_active') {
+        valA = a.is_active ? 1 : 0;
+        valB = b.is_active ? 1 : 0;
+      } else {
+        valA = String(valA).toLowerCase();
+        valB = String(valB).toLowerCase();
+      }
+      if (valA < valB) return groupSortAsc ? -1 : 1;
+      if (valA > valB) return groupSortAsc ? 1 : -1;
+      return 0;
+    });
+  }, [groups, groupSortKey, groupSortAsc]);
+
+  const sortedCompanies = useMemo(() => {
+    return [...companies].sort((a, b) => {
+      let valA: any = a[companySortKey] ?? '';
+      let valB: any = b[companySortKey] ?? '';
+      if (companySortKey === 'is_active') {
+        valA = a.is_active ? 1 : 0;
+        valB = b.is_active ? 1 : 0;
+      } else {
+        valA = String(valA).toLowerCase();
+        valB = String(valB).toLowerCase();
+      }
+      if (valA < valB) return companySortAsc ? -1 : 1;
+      if (valA > valB) return companySortAsc ? 1 : -1;
+      return 0;
+    });
+  }, [companies, companySortKey, companySortAsc]);
+
+  // Init temporary member draft row
   const handleStartAddMember = () => {
     const todayStr = new Date().toISOString().split('T')[0];
+    const firstGroup = groups[0]?.group || '';
+    const mapped = groupLookup[firstGroup];
     setTempMember({
       member_name: '',
-      color: 'White',
-      group: '',
-      country: '🇹🇭 TH',
-      company: 'Individual',
+      color: colors[0]?.color || 'White',
+      group: firstGroup,
+      country: mapped?.country || '🇹🇭 TH',
+      company: mapped?.company || 'Individual',
       is_active: true,
       x_profile: '',
       member_image: '',
@@ -202,41 +186,65 @@ export default function AdminPage() {
     });
   };
 
-  // Confirm & Save Temporary Member Row to Database
   const handleSaveTempMember = async () => {
     if (!tempMember) return;
     if (!tempMember.member_name.trim()) {
       alert("Please enter a Member Name.");
       return;
     }
-
-    setIsSavingTemp(true);
     try {
-      await addMetadataDoc('dim_member', userId, tempMember as unknown as Record<string, unknown>, isDemoUser);
+      await addMetadataDoc('dim_member', userId, {
+        ...tempMember,
+        start_date: '1000-12-26',
+        end_date: '9999-12-31',
+      }, isDemoUser);
       setTempMember(null);
     } catch (err) {
-      console.error("Failed saving member:", err);
-      alert("Failed saving member: " + (err instanceof Error ? err.message : String(err)));
-    } finally {
-      setIsSavingTemp(false);
+      alert("Error saving custom member: " + (err instanceof Error ? err.message : String(err)));
     }
   };
 
-  // Quick inline creation of missing choice (Color, Group, Company)
+  const handleSaveTempGroup = async () => {
+    if (!tempGroup || !tempGroup.group.trim()) return;
+    try {
+      await addMetadataDoc('dim_group', userId, { ...tempGroup, is_active: true }, isDemoUser);
+      setTempGroup(null);
+    } catch (err) {
+      alert("Error saving group: " + (err instanceof Error ? err.message : String(err)));
+    }
+  };
+
+  const handleSaveTempCompany = async () => {
+    if (!tempCompany || !tempCompany.company.trim()) return;
+    try {
+      await addMetadataDoc('dim_company', userId, { ...tempCompany, is_active: true }, isDemoUser);
+      setTempCompany(null);
+    } catch (err) {
+      alert("Error saving company: " + (err instanceof Error ? err.message : String(err)));
+    }
+  };
+
   const handleSaveInlineOption = async () => {
     if (!inlineNewModal || !inlineNewModal.name.trim()) return;
-    const { table, fieldKey, name } = inlineNewModal;
-    const cleanName = name.trim();
-
+    const { table, name } = inlineNewModal;
     try {
+      let defaultObj: Record<string, unknown> = {};
       if (table === 'dim_color') {
-        await addMetadataDoc('dim_color', userId, { color: cleanName, color_code: '#ffffff' }, isDemoUser);
-        if (tempMember) setTempMember({ ...tempMember, color: cleanName });
+        defaultObj = { color: name.trim(), color_code: '#ffffff' };
       } else if (table === 'dim_group') {
-        await addMetadataDoc('dim_group', userId, { group: cleanName, country: '🇹🇭 TH', company: 'Individual' }, isDemoUser);
-        if (tempMember) setTempMember({ ...tempMember, group: cleanName });
+        defaultObj = { group: name.trim(), country: '🇹🇭 TH', company: 'Individual' };
       } else if (table === 'dim_company') {
-        await addMetadataDoc('dim_company', userId, { company: cleanName }, isDemoUser);
+        defaultObj = { company: name.trim() };
+      } else {
+        defaultObj = { [inlineNewModal.fieldKey]: name.trim() };
+      }
+      await addMetadataDoc(table, userId, defaultObj, isDemoUser);
+      
+      if (tempMember) {
+        if (table === 'dim_color') setTempMember({ ...tempMember, color: name.trim() });
+        if (table === 'dim_group') {
+          setTempMember({ ...tempMember, group: name.trim(), country: '🇹🇭 TH', company: 'Individual' });
+        }
       }
       setInlineNewModal(null);
     } catch (err) {
@@ -261,92 +269,12 @@ export default function AdminPage() {
     setDeleteConfirmModal(null);
   };
 
-  // Helper to check if item has import allowed in Back Office
-  const isImportAllowed = (item: any) => {
-    if (!item) return false;
-    if (item.is_allowed_import === false || item.allow_import === false) return false;
-    return true;
-  };
-
-  const allowedCompanies = useMemo(() => {
-    const list = defaultCompanies.length > 0 ? defaultCompanies : DEFAULT_COMPANIES;
-    return list.filter(c => isImportAllowed(c));
-  }, [defaultCompanies]);
-
-  const allowedCompanyNames = useMemo(() => {
-    return new Set(allowedCompanies.map(c => String(c.company || '').trim().toLowerCase()));
-  }, [allowedCompanies]);
-
-  const allowedGroups = useMemo(() => {
-    const list = defaultGroups.length > 0 ? defaultGroups : DEFAULT_GROUPS;
-    return list.filter(g => isImportAllowed(g) && (!g.company || allowedCompanyNames.has(String(g.company || '').trim().toLowerCase())));
-  }, [defaultGroups, allowedCompanyNames]);
-
-  const allowedGroupNames = useMemo(() => {
-    return new Set(allowedGroups.map(g => String(g.group || '').trim().toLowerCase()));
-  }, [allowedGroups]);
-
-  const allowedMembers = useMemo(() => {
-    const list = defaultMembers.length > 0 ? defaultMembers : DEFAULT_MEMBERS;
-    return list.filter(m => isImportAllowed(m) && allowedGroupNames.has(String(m.group || '').trim().toLowerCase()));
-  }, [defaultMembers, allowedGroupNames]);
-
-  const availableCountries = useMemo(() => {
-    const countriesFromAllowedGroups = allowedGroups
-      .map(g => g.country)
-      .filter(Boolean);
-    return Array.from(new Set(countriesFromAllowedGroups));
-  }, [allowedGroups]);
-
-  const availableCompanies = useMemo(() => {
-    return Array.from(new Set(
-      allowedGroups
-        .filter(g => !selectedCountry || selectedCountry === '__ALL__' || g.country === selectedCountry || g.country.includes(selectedCountry))
-        .map(g => g.company)
-    ));
-  }, [allowedGroups, selectedCountry]);
-
-  const availableGroups = useMemo(() => {
-    return allowedGroups.filter(g => {
-      if (selectedCountry && selectedCountry !== '__ALL__' && (g.country !== selectedCountry && !g.country.includes(selectedCountry))) return false;
-      if (selectedCompany && selectedCompany !== '__ALL__' && g.company !== selectedCompany) return false;
-      return true;
-    });
-  }, [allowedGroups, selectedCountry, selectedCompany]);
-
-  const importPreviewCount = useMemo(() => {
-    const targetCountry = (!selectedCountry || selectedCountry === '__ALL__') ? undefined : selectedCountry;
-    const targetCompany = (!selectedCompany || selectedCompany === '__ALL__') ? undefined : selectedCompany;
-    const targetGroup = (!selectedGroup || selectedGroup === '__ALL__') ? undefined : selectedGroup;
-
-    const matchingMembers = allowedMembers.filter((m) => {
-      if (targetCountry && m.country !== targetCountry && !m.country.includes(targetCountry)) return false;
-      if (targetCompany && m.company !== targetCompany) return false;
-      if (targetGroup && m.group !== targetGroup) return false;
-      return true;
-    });
-
-    const matchingGroups = allowedGroups.filter((g) => {
-      if (targetCountry && g.country !== targetCountry && !g.country.includes(targetCountry)) return false;
-      if (targetCompany && g.company !== targetCompany) return false;
-      if (targetGroup && g.group !== targetGroup) return false;
-      return true;
-    });
-
-    const matchingCompanies = allowedCompanies.filter((c) => {
-      if (targetCompany) return c.company === targetCompany;
-      return matchingGroups.some(g => g.company === c.company);
-    });
-
-    return matchingMembers.length + matchingGroups.length + matchingCompanies.length;
-  }, [selectedCountry, selectedCompany, selectedGroup, allowedMembers, allowedGroups, allowedCompanies]);
-
   if (!user && !isDemoUser) return <LoginPrompt />;
   if (loading) return <CircularSpinner />;
 
   return (
     <div className="admin-page">
-      {/* Admin Tabs */}
+      {/* Tabs Bar */}
       <div className="tabs-bar">
         <button className={`tab-btn ${activeTab === 'members' ? 'active' : ''}`} onClick={() => setActiveTab('members')}>
           <Users size={16} /> Members ({members.length})
@@ -369,15 +297,9 @@ export default function AdminPage() {
           <div>
             <div className="tab-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <button 
-                  className="btn btn-secondary btn-sm" 
-                  onClick={handleOpenImportModal}
-                >
-                  <Download size={14} /> Import from Default
-                </button>
-                <button className="btn btn-outline btn-sm danger-text" onClick={handleResetCustomData} title="Clear user custom data to rely purely on default_dim_*">
-                  <RefreshCw size={14} /> Reset Custom Data
-                </button>
+                <span className="badge-pill gold-outline" style={{ fontSize: '0.82rem', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <Sparkles size={14} /> Subscribed live from Back Office
+                </span>
               </div>
               <button className="btn btn-primary btn-sm" onClick={handleStartAddMember} disabled={Boolean(tempMember)}>
                 <Plus size={14} /> Add
@@ -416,7 +338,7 @@ export default function AdminPage() {
                 </thead>
                 <tbody>
                   {/* Temporary Unsaved New Member Row Pinned at Top Row */}
-                  {tempMember && (
+                  {tempMember && !isMobile && (
                     <tr className="temp-row">
                       <td><span className="badge-pill dark" style={{ fontSize: '0.72rem' }}>New Draft</span></td>
                       <td style={{ minWidth: '160px' }}>
@@ -510,7 +432,7 @@ export default function AdminPage() {
                         />
                       </td>
                       <td>
-                        <select 
+                        <select
                           className="table-select"
                           value={tempMember.is_active ? 'active' : 'inactive'}
                           onChange={(e) => setTempMember({ ...tempMember, is_active: e.target.value === 'active' })}
@@ -523,47 +445,17 @@ export default function AdminPage() {
                         <input 
                           type="text" 
                           className="table-input" 
-                          placeholder="https://x.com/..." 
+                          placeholder="X Profile" 
                           value={tempMember.x_profile} 
                           onChange={(e) => setTempMember({ ...tempMember, x_profile: e.target.value })}
                         />
                       </td>
-                      <td>
-                        <input 
-                          type="date" 
-                          className="table-input" 
-                          value={tempMember.date_added} 
-                          onChange={(e) => setTempMember({ ...tempMember, date_added: e.target.value })}
-                          title="Date Added"
-                        />
-                      </td>
+                      <td className="mono">{tempMember.date_added}</td>
                       <td>
                         <div className="action-btns">
-                          <button 
-                            className="btn btn-primary btn-xs" 
-                            onClick={handleSaveTempMember}
-                            disabled={isSavingTemp}
-                            title="Save New Member to Database"
-                          >
-                            <Save size={13} /> {isSavingTemp ? 'Saving...' : 'Save'}
-                          </button>
-                          <button 
-                            className="btn btn-secondary btn-xs" 
-                            onClick={() => setTempMember(null)}
-                            title="Cancel"
-                          >
-                            <X size={13} />
-                          </button>
+                          <button className="btn btn-primary btn-xs" onClick={handleSaveTempMember}><Save size={13} /> Save</button>
+                          <button className="btn btn-secondary btn-xs" onClick={() => setTempMember(null)}><X size={13} /></button>
                         </div>
-                      </td>
-                    </tr>
-                  )}
-
-                  {/* Empty state message */}
-                  {sortedMembers.length === 0 && !tempMember && (
-                    <tr>
-                      <td colSpan={11} style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                        No members in your list yet. Click <strong>Import from Default</strong> above to copy choices, or click <strong>+ Add</strong> to create a new custom member.
                       </td>
                     </tr>
                   )}
@@ -574,13 +466,13 @@ export default function AdminPage() {
                     const xUrl = m.x_profile 
                       ? (m.x_profile.startsWith('http') ? m.x_profile : `https://x.com/${m.x_profile.replace('@', '')}`)
                       : '';
-                    const isImp = m.is_imported || m.isDefault || m.id.startsWith('default_');
+                    const isSubscribed = Boolean(m.isDefault || m.is_imported || m.id?.startsWith('default_'));
 
                     return (
                       <tr key={m.id}>
                         <td>
-                          {isImp ? (
-                            <span className="badge-pill gold-outline" style={{ fontSize: '0.72rem', padding: '2px 8px', fontWeight: 600 }}>Imported</span>
+                          {isSubscribed ? (
+                            <span className="badge-pill gold-outline" style={{ fontSize: '0.72rem', padding: '2px 8px', fontWeight: 600 }}>Subscribed</span>
                           ) : (
                             <span className="badge-pill dark" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>Custom</span>
                           )}
@@ -599,9 +491,14 @@ export default function AdminPage() {
                         <td>{m.country}</td>
                         <td>{m.company}</td>
                         <td>
-                          <span className={`status-badge ${m.is_active !== false ? 'active' : ''}`}>
+                          <button
+                            type="button"
+                            className={`status-badge ${m.is_active !== false ? 'active' : 'inactive'}`}
+                            onClick={() => handleToggleUserActive('dim_member', m)}
+                            title="Click to toggle Active/Inactive status for your account"
+                          >
                             {m.is_active !== false ? 'Active' : 'Inactive'}
-                          </span>
+                          </button>
                         </td>
                         <td>
                           {xUrl ? (
@@ -613,13 +510,26 @@ export default function AdminPage() {
                         <td className="mono">{formatBrowserTimestamp(m.date_added, m.createdAt)}</td>
                         <td>
                           <div className="action-btns">
-                            <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_member', data: { ...m } })}><Edit2 size={15} /></button>
                             <button 
-                              className="btn-icon danger" 
-                              onClick={() => setDeleteConfirmModal({ table: 'dim_member', id: m.id, displayValue: getItemValueString(m as unknown as Record<string, unknown>) })}
+                              className="btn-icon" 
+                              onClick={() => setEditingItem({ table: 'dim_member', data: { ...m } })}
+                              title={isSubscribed ? "View / toggle status for subscribed item" : "Edit custom member"}
                             >
-                              <Trash2 size={15} />
+                              <Edit2 size={15} />
                             </button>
+                            {isSubscribed ? (
+                              <button className="btn-icon danger" disabled style={{ opacity: 0.3, cursor: 'not-allowed' }} title="Subscribed items cannot be deleted">
+                                <Trash2 size={15} />
+                              </button>
+                            ) : (
+                              <button 
+                                className="btn-icon danger" 
+                                onClick={() => setDeleteConfirmModal({ table: 'dim_member', id: m.id, displayValue: getItemValueString(m as unknown as Record<string, unknown>) })}
+                                title="Delete custom member"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -636,15 +546,9 @@ export default function AdminPage() {
           <div>
             <div className="tab-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <button 
-                  className="btn btn-secondary btn-sm" 
-                  onClick={handleOpenImportModal}
-                >
-                  <Download size={14} /> Import from Default
-                </button>
-                <button className="btn btn-outline btn-sm danger-text" onClick={handleResetCustomData} title="Clear user custom data to rely purely on default_dim_*">
-                  <RefreshCw size={14} /> Reset Custom Data
-                </button>
+                <span className="badge-pill gold-outline" style={{ fontSize: '0.82rem', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <Sparkles size={14} /> Subscribed live from Back Office
+                </span>
               </div>
               <button className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_group', data: { group: '', country: '🇹🇭 TH', company: 'Individual' } })}>
                 <Plus size={14} /> Add
@@ -655,28 +559,29 @@ export default function AdminPage() {
                 <thead>
                   <tr>
                     <th>Origin</th>
-                    <th>Group Name</th>
-                    <th>Country</th>
-                    <th>Company</th>
-                    <th>Active Status</th>
+                    <th className="sortable-th" onClick={() => handleSortGroups('group')}>
+                      Group Name {groupSortKey === 'group' ? (groupSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                    </th>
+                    <th className="sortable-th" onClick={() => handleSortGroups('country')}>
+                      Country {groupSortKey === 'country' ? (groupSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                    </th>
+                    <th className="sortable-th" onClick={() => handleSortGroups('company')}>
+                      Company {groupSortKey === 'company' ? (groupSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                    </th>
+                    <th className="sortable-th" onClick={() => handleSortGroups('is_active')}>
+                      Active Status {groupSortKey === 'is_active' ? (groupSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                    </th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {groups.length === 0 && (
-                    <tr>
-                      <td colSpan={6} style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                        No groups in your list yet. Click <strong>Import from Default</strong> above to copy choices, or click <strong>+ Add</strong>.
-                      </td>
-                    </tr>
-                  )}
-                  {groups.map((g) => {
-                    const isImp = g.is_imported || g.isDefault || g.id.startsWith('default_');
+                  {sortedGroups.map((g) => {
+                    const isSubscribed = Boolean(g.isDefault || g.is_imported || g.id?.startsWith('default_'));
                     return (
                       <tr key={g.id}>
                         <td>
-                          {isImp ? (
-                            <span className="badge-pill gold-outline" style={{ fontSize: '0.72rem', padding: '2px 8px', fontWeight: 600 }}>Imported</span>
+                          {isSubscribed ? (
+                            <span className="badge-pill gold-outline" style={{ fontSize: '0.72rem', padding: '2px 8px', fontWeight: 600 }}>Subscribed</span>
                           ) : (
                             <span className="badge-pill dark" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>Custom</span>
                           )}
@@ -685,19 +590,37 @@ export default function AdminPage() {
                         <td>{g.country}</td>
                         <td>{g.company}</td>
                         <td>
-                          <span className={`status-badge ${g.is_active !== false ? 'active' : ''}`}>
+                          <button
+                            type="button"
+                            className={`status-badge ${g.is_active !== false ? 'active' : 'inactive'}`}
+                            onClick={() => handleToggleUserActive('dim_group', g)}
+                            title="Click to toggle Active/Inactive status for your account"
+                          >
                             {g.is_active !== false ? 'Active' : 'Inactive'}
-                          </span>
+                          </button>
                         </td>
                         <td>
                           <div className="action-btns">
-                            <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_group', data: { ...g } })}><Edit2 size={15} /></button>
                             <button 
-                              className="btn-icon danger" 
-                              onClick={() => setDeleteConfirmModal({ table: 'dim_group', id: g.id, displayValue: getItemValueString(g as unknown as Record<string, unknown>) })}
+                              className="btn-icon" 
+                              onClick={() => setEditingItem({ table: 'dim_group', data: { ...g } })}
+                              title={isSubscribed ? "View / toggle status for subscribed item" : "Edit custom group"}
                             >
-                              <Trash2 size={15} />
+                              <Edit2 size={15} />
                             </button>
+                            {isSubscribed ? (
+                              <button className="btn-icon danger" disabled style={{ opacity: 0.3, cursor: 'not-allowed' }} title="Subscribed items cannot be deleted">
+                                <Trash2 size={15} />
+                              </button>
+                            ) : (
+                              <button 
+                                className="btn-icon danger" 
+                                onClick={() => setDeleteConfirmModal({ table: 'dim_group', id: g.id, displayValue: getItemValueString(g as unknown as Record<string, unknown>) })}
+                                title="Delete custom group"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -714,15 +637,9 @@ export default function AdminPage() {
           <div>
             <div className="tab-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <button 
-                  className="btn btn-secondary btn-sm" 
-                  onClick={handleOpenImportModal}
-                >
-                  <Download size={14} /> Import from Default
-                </button>
-                <button className="btn btn-outline btn-sm danger-text" onClick={handleResetCustomData} title="Clear user custom data to rely purely on default_dim_*">
-                  <RefreshCw size={14} /> Reset Custom Data
-                </button>
+                <span className="badge-pill gold-outline" style={{ fontSize: '0.82rem', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <Sparkles size={14} /> Subscribed live from Back Office
+                </span>
               </div>
               <button className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_company', data: { company: '' } })}>
                 <Plus size={14} /> Add
@@ -733,45 +650,60 @@ export default function AdminPage() {
                 <thead>
                   <tr>
                     <th>Origin</th>
-                    <th>Company Name</th>
-                    <th>Active Status</th>
+                    <th className="sortable-th" onClick={() => handleSortCompanies('company')}>
+                      Company Name {companySortKey === 'company' ? (companySortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                    </th>
+                    <th className="sortable-th" onClick={() => handleSortCompanies('is_active')}>
+                      Active Status {companySortKey === 'is_active' ? (companySortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                    </th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {companies.length === 0 && (
-                    <tr>
-                      <td colSpan={4} style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                        No companies in your list yet. Click <strong>Import from Default</strong> above to copy choices, or click <strong>+ Add</strong>.
-                      </td>
-                    </tr>
-                  )}
-                  {companies.map((c) => {
-                    const isImp = c.is_imported || c.isDefault || c.id.startsWith('default_');
+                  {sortedCompanies.map((c) => {
+                    const isSubscribed = Boolean(c.isDefault || c.is_imported || c.id?.startsWith('default_'));
                     return (
                       <tr key={c.id}>
                         <td>
-                          {isImp ? (
-                            <span className="badge-pill gold-outline" style={{ fontSize: '0.72rem', padding: '2px 8px', fontWeight: 600 }}>Imported</span>
+                          {isSubscribed ? (
+                            <span className="badge-pill gold-outline" style={{ fontSize: '0.72rem', padding: '2px 8px', fontWeight: 600 }}>Subscribed</span>
                           ) : (
                             <span className="badge-pill dark" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>Custom</span>
                           )}
                         </td>
                         <td><strong>{c.company}</strong></td>
                         <td>
-                          <span className={`status-badge ${c.is_active !== false ? 'active' : ''}`}>
+                          <button
+                            type="button"
+                            className={`status-badge ${c.is_active !== false ? 'active' : 'inactive'}`}
+                            onClick={() => handleToggleUserActive('dim_company', c)}
+                            title="Click to toggle Active/Inactive status for your account"
+                          >
                             {c.is_active !== false ? 'Active' : 'Inactive'}
-                          </span>
+                          </button>
                         </td>
                         <td>
                           <div className="action-btns">
-                            <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_company', data: { ...c } })}><Edit2 size={15} /></button>
                             <button 
-                              className="btn-icon danger" 
-                              onClick={() => setDeleteConfirmModal({ table: 'dim_company', id: c.id, displayValue: getItemValueString(c as unknown as Record<string, unknown>) })}
+                              className="btn-icon" 
+                              onClick={() => setEditingItem({ table: 'dim_company', data: { ...c } })}
+                              title={isSubscribed ? "View / toggle status for subscribed item" : "Edit custom company"}
                             >
-                              <Trash2 size={15} />
+                              <Edit2 size={15} />
                             </button>
+                            {isSubscribed ? (
+                              <button className="btn-icon danger" disabled style={{ opacity: 0.3, cursor: 'not-allowed' }} title="Subscribed items cannot be deleted">
+                                <Trash2 size={15} />
+                              </button>
+                            ) : (
+                              <button 
+                                className="btn-icon danger" 
+                                onClick={() => setDeleteConfirmModal({ table: 'dim_company', id: c.id, displayValue: getItemValueString(c as unknown as Record<string, unknown>) })}
+                                title="Delete custom company"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -783,27 +715,33 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* LOGS TAB */}
+        {/* AUDIT LOGS TAB */}
         {activeTab === 'logs' && (
           <div>
-            <div className="tab-header">
-              {/* <h2>fact_admin_log</h2> */}
+            <div className="tab-header" style={{ marginBottom: '14px' }}>
+              <h2>User Audit Logs</h2>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Historical mutations and updates for your user account.</p>
             </div>
             <div className="table-wrapper">
               <table className="dim-table">
                 <thead>
                   <tr>
                     <th>Timestamp</th>
-                    <th>Action Type</th>
-                    <th>Action Detail</th>
+                    <th>Action / Change Summary</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {logs.map((l) => (
-                    <tr key={l.id}>
-                      <td>{new Date(l.timestamp).toLocaleString()}</td>
-                      <td><span className="log-badge">{l.actionType}</span></td>
-                      <td><strong>{l.actionDetail}</strong></td>
+                  {logs.length === 0 && (
+                    <tr>
+                      <td colSpan={2} style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-muted)' }}>
+                        No audit logs recorded yet.
+                      </td>
+                    </tr>
+                  )}
+                  {logs.map((log) => (
+                    <tr key={log.id}>
+                      <td className="mono">{log.timestamp}</td>
+                      <td>{log.actionDetail || log.actionType}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -813,248 +751,252 @@ export default function AdminPage() {
         )}
       </div>
 
-      {/* Delete Confirmation Modal Popup */}
-      {deleteConfirmModal && (
-        <div className="modal-overlay" onClick={() => setDeleteConfirmModal(null)}>
-          <div className="modal-card small" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2 style={{ color: 'var(--color-danger, #ef4444)' }}>Confirm Delete</h2>
-              <button className="btn-close" onClick={() => setDeleteConfirmModal(null)}><X size={18} /></button>
-            </div>
-            <p style={{ margin: '12px 0 6px 0', fontSize: '0.9rem', color: 'var(--text-main)' }}>
-              Are you sure you want to delete this record from <strong>{deleteConfirmModal.table}</strong>?
-            </p>
-            <div style={{ padding: '10px 14px', background: 'var(--bg-surface-2)', borderRadius: '6px', fontSize: '0.85rem', marginBottom: '16px' }}>
-              <div><strong>ID:</strong> {deleteConfirmModal.id}</div>
-              <div><strong>Value:</strong> {deleteConfirmModal.displayValue || '(empty)'}</div>
-            </div>
-            <div className="form-actions">
-              <button type="button" className="btn btn-secondary" onClick={() => setDeleteConfirmModal(null)}>Cancel</button>
-              <button 
-                type="button" 
-                className="btn btn-primary" 
-                style={{ backgroundColor: 'var(--color-danger, #ef4444)', borderColor: 'var(--color-danger, #ef4444)' }} 
-                onClick={handleConfirmDelete}
-              >
-                Confirm Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Structured Edit Form Modal for Modifying Existing Records */}
-      {editingItem && (
-        <div className="modal-overlay" onClick={() => setEditingItem(null)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>{editingItem.data.id ? 'Edit' : 'Add New'} {editingItem.table} Record</h2>
-              <button className="btn-close" onClick={() => setEditingItem(null)}><X size={18} /></button>
-            </div>
-
-            <form onSubmit={handleSaveEdit} className="form-grid">
-              {editingItem.table === 'dim_member' && (
-                <>
-                  <div className="form-group span-2">
-                    <label>Member Name *</label>
-                    <input
-                      type="text"
-                      required
-                      value={String(editingItem.data.member_name || '')}
-                      onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, member_name: e.target.value } })}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label>Color</label>
-                    <select
-                      value={String(editingItem.data.color || '')}
-                      onChange={(e) => {
-                        if (e.target.value === '__CREATE_NEW__') {
-                          setInlineNewModal({ table: 'dim_color', fieldKey: 'color', name: '' });
-                        } else {
-                          setEditingItem({ ...editingItem, data: { ...editingItem.data, color: e.target.value } });
-                        }
-                      }}
-                    >
-                      {colors.map((c) => (
-                        <option key={c.id} value={c.color}>{c.color}</option>
-                      ))}
-                      <option value="__CREATE_NEW__">+ Create New Color...</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label>Group</label>
-                    <select
-                      value={String(editingItem.data.group || '')}
-                      onChange={(e) => {
-                        if (e.target.value === '__CREATE_NEW__') {
-                          setInlineNewModal({ table: 'dim_group', fieldKey: 'group', name: '' });
-                        } else {
-                          const grpVal = e.target.value;
-                          const mapped = groupLookup[grpVal];
-                          setEditingItem({ 
-                            ...editingItem, 
-                            data: { 
-                              ...editingItem.data, 
-                              group: grpVal,
-                              company: mapped?.company || 'Individual',
-                              country: mapped?.country || '🇹🇭 TH',
-                            } 
-                          });
-                        }
-                      }}
-                    >
-                      <option value="">-- Select Group --</option>
-                      {groups.map((g) => (
-                        <option key={g.id} value={g.group}>{g.group}</option>
-                      ))}
-                      <option value="__CREATE_NEW__">+ Create New Group...</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      Country <span title="Locked & auto-mapped by Group"><Lock size={12} /></span>
-                    </label>
-                    <input
-                      type="text"
-                      disabled
-                      value={String(editingItem.data.country || '🇹🇭 TH')}
-                      title="Country is locked and auto-mapped by Group"
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      Company <span title="Locked & auto-mapped by Group"><Lock size={12} /></span>
-                    </label>
-                    <input
-                      type="text"
-                      disabled
-                      value={String(editingItem.data.company || 'Individual')}
-                      title="Company is locked and auto-mapped by Group"
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label>Date Added</label>
-                    <input
-                      type="date"
-                      value={String(editingItem.data.date_added || new Date().toISOString().split('T')[0])}
-                      onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, date_added: e.target.value } })}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label>Status</label>
-                    <select
-                      value={editingItem.data.is_active !== false ? 'active' : 'inactive'}
-                      onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, is_active: e.target.value === 'active' } })}
-                    >
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group span-2">
-                    <label>Member Avatar Image URL</label>
-                    <input
-                      type="url"
-                      value={String(editingItem.data.member_image || '')}
-                      onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, member_image: e.target.value } })}
-                      placeholder="https://..."
-                    />
-                  </div>
-
-                  <div className="form-group span-2">
-                    <label>X / Twitter Profile</label>
-                    <input
-                      type="text"
-                      value={String(editingItem.data.x_profile || '')}
-                      onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, x_profile: e.target.value } })}
-                      placeholder="https://x.com/username or @username"
-                    />
-                  </div>
-                </>
-              )}
-
-              {editingItem.table === 'dim_group' && (
-                <>
-                  <div className="form-group span-2">
-                    <label>Group Name *</label>
-                    <input
-                      type="text"
-                      required
-                      value={String(editingItem.data.group || '')}
-                      onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, group: e.target.value } })}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Country</label>
-                    <select
-                      value={String(editingItem.data.country || '')}
-                      onChange={(e) => {
-                        if (e.target.value === '__CREATE_NEW__') {
-                          setInlineNewModal({ table: 'dim_country', fieldKey: 'country', name: '' });
-                        } else {
-                          setEditingItem({ ...editingItem, data: { ...editingItem.data, country: e.target.value } });
-                        }
-                      }}
-                    >
-                      {countries.map((c) => (
-                        <option key={c.id} value={c.displayed_country}>{c.displayed_country}</option>
-                      ))}
-                      <option value="__CREATE_NEW__">+ Create New Country...</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Company</label>
-                    <select
-                      value={String(editingItem.data.company || '')}
-                      onChange={(e) => {
-                        if (e.target.value === '__CREATE_NEW__') {
-                          setInlineNewModal({ table: 'dim_company', fieldKey: 'company', name: '' });
-                        } else {
-                          setEditingItem({ ...editingItem, data: { ...editingItem.data, company: e.target.value } });
-                        }
-                      }}
-                    >
-                      {companies.map((c) => (
-                        <option key={c.id} value={c.company}>{c.company}</option>
-                      ))}
-                      <option value="__CREATE_NEW__">+ Create New Company...</option>
-                    </select>
-                  </div>
-                </>
-              )}
-
-              {/* Generic fallback for other tables */}
-              {editingItem.table !== 'dim_member' && editingItem.table !== 'dim_group' && (
-                Object.keys(editingItem.data).filter(k => k !== 'id' && k !== 'userId' && k !== 'updatedAt' && k !== 'createdAt').map((key) => (
-                  <div key={key} className="form-group">
-                    <label>{key.replace('_', ' ').toUpperCase()}</label>
-                    <input
-                      type="text"
-                      value={String(editingItem.data[key] ?? '')}
-                      onChange={(e) => setEditingItem({
-                        ...editingItem,
-                        data: { ...editingItem.data, [key]: e.target.value },
-                      })}
-                    />
-                  </div>
-                ))
-              )}
-
-              <div className="form-actions span-2">
-                <button type="button" className="btn btn-secondary" onClick={() => setEditingItem(null)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Save Record (Confirm)</button>
+      {/* Edit Record Modal */}
+      {editingItem && (() => {
+        const isSubscribed = Boolean(editingItem.data.isDefault || editingItem.data.is_imported || String(editingItem.data.id || '').startsWith('default_'));
+        return (
+          <div className="modal-overlay" onClick={() => setEditingItem(null)}>
+            <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>{editingItem.data.id ? (isSubscribed ? 'View Subscribed Record' : 'Edit Custom Record') : 'Add Custom Record'}</h3>
+                <button className="btn-close" onClick={() => setEditingItem(null)}><X size={18} /></button>
               </div>
-            </form>
+              <form onSubmit={handleSaveEdit} className="modal-form">
+                {isSubscribed && (
+                  <div className="form-group span-2" style={{ background: 'rgba(212, 168, 75, 0.12)', border: '1px solid rgba(212, 168, 75, 0.3)', padding: '10px 14px', borderRadius: '8px', marginBottom: '8px', fontSize: '0.85rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Lock size={16} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                    Subscribed live from Back Office. Record properties (name, photo, group, company) are managed globally. You can toggle your Active/Inactive status preference below.
+                  </div>
+                )}
+
+                {editingItem.table === 'dim_member' && (
+                  <>
+                    <div className="form-group">
+                      <label>Member Name *</label>
+                      <input
+                        type="text"
+                        required
+                        disabled={isSubscribed}
+                        value={String(editingItem.data.member_name || '')}
+                        onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, member_name: e.target.value } })}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Color</label>
+                      <select
+                        disabled={isSubscribed}
+                        value={String(editingItem.data.color || '')}
+                        onChange={(e) => {
+                          if (e.target.value === '__CREATE_NEW__') {
+                            setInlineNewModal({ table: 'dim_color', fieldKey: 'color', name: '' });
+                          } else {
+                            setEditingItem({ ...editingItem, data: { ...editingItem.data, color: e.target.value } });
+                          }
+                        }}
+                      >
+                        {colors.map((c) => (
+                          <option key={c.id} value={c.color}>{c.color}</option>
+                        ))}
+                        {!isSubscribed && <option value="__CREATE_NEW__">+ Create New Color...</option>}
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label>Group</label>
+                      <select
+                        disabled={isSubscribed}
+                        value={String(editingItem.data.group || '')}
+                        onChange={(e) => {
+                          const grpVal = e.target.value;
+                          if (grpVal === '__CREATE_NEW__') {
+                            setInlineNewModal({ table: 'dim_group', fieldKey: 'group', name: '' });
+                          } else {
+                            const mapped = groupLookup[grpVal];
+                            setEditingItem({ 
+                              ...editingItem, 
+                              data: { 
+                                ...editingItem.data, 
+                                group: grpVal,
+                                company: mapped?.company || 'Individual',
+                                country: mapped?.country || '🇹🇭 TH',
+                              } 
+                            });
+                          }
+                        }}
+                      >
+                        <option value="">-- Select Group --</option>
+                        {groups.map((g) => (
+                          <option key={g.id} value={g.group}>{g.group}</option>
+                        ))}
+                        {!isSubscribed && <option value="__CREATE_NEW__">+ Create New Group...</option>}
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        Country <span title="Locked & auto-mapped by Group"><Lock size={12} /></span>
+                      </label>
+                      <input
+                        type="text"
+                        disabled
+                        value={String(editingItem.data.country || '🇹🇭 TH')}
+                        title="Country is locked and auto-mapped by Group"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        Company <span title="Locked & auto-mapped by Group"><Lock size={12} /></span>
+                      </label>
+                      <input
+                        type="text"
+                        disabled
+                        value={String(editingItem.data.company || 'Individual')}
+                        title="Company is locked and auto-mapped by Group"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Date Added</label>
+                      <input
+                        type="date"
+                        disabled={isSubscribed}
+                        value={String(editingItem.data.date_added || new Date().toISOString().split('T')[0])}
+                        onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, date_added: e.target.value } })}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Status</label>
+                      <select
+                        value={editingItem.data.is_active !== false ? 'active' : 'inactive'}
+                        onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, is_active: e.target.value === 'active' } })}
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </div>
+
+                    <div className="form-group span-2">
+                      <label>Member Avatar Image URL</label>
+                      <input
+                        type="url"
+                        disabled={isSubscribed}
+                        value={String(editingItem.data.member_image || '')}
+                        onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, member_image: e.target.value } })}
+                        placeholder="https://..."
+                      />
+                    </div>
+
+                    <div className="form-group span-2">
+                      <label>X / Twitter Profile</label>
+                      <input
+                        type="text"
+                        disabled={isSubscribed}
+                        value={String(editingItem.data.x_profile || '')}
+                        onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, x_profile: e.target.value } })}
+                        placeholder="https://x.com/username or @username"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {editingItem.table === 'dim_group' && (
+                  <>
+                    <div className="form-group">
+                      <label>Group Name *</label>
+                      <input
+                        type="text"
+                        required
+                        disabled={isSubscribed}
+                        value={String(editingItem.data.group || '')}
+                        onChange={(e) => setEditingItem({
+                          ...editingItem,
+                          data: { ...editingItem.data, group: e.target.value }
+                        })}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Country</label>
+                      <select
+                        disabled={isSubscribed}
+                        value={String(editingItem.data.country || '')}
+                        onChange={(e) => setEditingItem({
+                          ...editingItem,
+                          data: { ...editingItem.data, country: e.target.value }
+                        })}
+                      >
+                        {countries.map((c) => (
+                          <option key={c.id} value={c.displayed_country}>{c.displayed_country}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Company</label>
+                      <select
+                        disabled={isSubscribed}
+                        value={String(editingItem.data.company || 'Individual')}
+                        onChange={(e) => setEditingItem({
+                          ...editingItem,
+                          data: { ...editingItem.data, company: e.target.value }
+                        })}
+                      >
+                        <option value="Individual">Individual</option>
+                        {companies.filter(c => c.company !== 'Individual').map((c) => (
+                          <option key={c.id} value={c.company}>{c.company}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Status</label>
+                      <select
+                        value={editingItem.data.is_active !== false ? 'active' : 'inactive'}
+                        onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, is_active: e.target.value === 'active' } })}
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+
+                {editingItem.table === 'dim_company' && (
+                  <>
+                    <div className="form-group">
+                      <label>Company Name *</label>
+                      <input
+                        type="text"
+                        required
+                        disabled={isSubscribed}
+                        value={String(editingItem.data.company || '')}
+                        onChange={(e) => setEditingItem({
+                          ...editingItem,
+                          data: { ...editingItem.data, company: e.target.value }
+                        })}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Status</label>
+                      <select
+                        value={editingItem.data.is_active !== false ? 'active' : 'inactive'}
+                        onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, is_active: e.target.value === 'active' } })}
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+
+                <div className="form-actions span-2">
+                  <button type="button" className="btn btn-secondary" onClick={() => setEditingItem(null)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary">Save Record (Confirm)</button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Inline Create New Dimension Choice Modal */}
       {inlineNewModal && (
@@ -1082,166 +1024,34 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Import Wizard Modal Overlay */}
-      {isImportModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsImportModalOpen(false)}>
-          <div className="modal-card" style={{ maxWidth: '540px' }} onClick={(e) => e.stopPropagation()}>
+      {/* Custom Delete Confirmation Modal */}
+      {deleteConfirmModal && (
+        <div className="modal-overlay" onClick={() => setDeleteConfirmModal(null)}>
+          <div className="modal-card small" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Download size={18} /> Import from Default Settings
-              </h2>
-              <button className="btn-close" onClick={() => setIsImportModalOpen(false)}><X size={18} /></button>
+              <h2 style={{ color: 'var(--color-danger)' }}>Confirm Deletion</h2>
+              <button className="btn-close" onClick={() => setDeleteConfirmModal(null)}><X size={18} /></button>
+            </div>
+            <p style={{ margin: '14px 0', fontSize: '0.9rem', color: 'var(--text-main)' }}>
+              Are you sure you want to delete this custom <strong>{deleteConfirmModal.table.replace('dim_', '')}</strong> record?
+            </p>
+
+            <div style={{ 
+              background: 'var(--bg-surface-2)', 
+              padding: '10px 12px', 
+              borderRadius: '6px', 
+              fontSize: '0.85rem',
+              marginBottom: '16px',
+              border: '1px solid var(--border-subtle)'
+            }}>
+              <div><strong>Value:</strong> {deleteConfirmModal.displayValue}</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>ID: {deleteConfirmModal.id}</div>
             </div>
 
-            {importSuccessMsg ? (
-              <div style={{ padding: '24px 0', textAlign: 'center' }}>
-                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>✨</div>
-                <h3 style={{ color: 'var(--color-success)', margin: '0 0 4px 0' }}>{importSuccessMsg}</h3>
-              </div>
-            ) : (
-              <div>
-                <div style={{ display: 'flex', gap: '4px', marginBottom: '16px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px', alignItems: 'center' }}>
-                  <span className={`badge-pill ${importStep === 1 ? 'gold-outline' : 'dark'}`}>1. Country</span>
-                  <ChevronRight size={14} style={{ opacity: 0.5 }} />
-                  <span className={`badge-pill ${importStep === 2 ? 'gold-outline' : 'dark'}`}>2. Company</span>
-                  <ChevronRight size={14} style={{ opacity: 0.5 }} />
-                  <span className={`badge-pill ${importStep === 3 ? 'gold-outline' : 'dark'}`}>3. Group & Confirm</span>
-                </div>
-
-                {/* STEP 1: SELECT COUNTRY */}
-                {importStep === 1 && (
-                  <div>
-                    <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginBottom: '14px' }}>
-                      Select a Country or choose <strong>"All Countries"</strong> to define your import scope.
-                    </p>
-                    <div className="form-group" style={{ marginBottom: '20px' }}>
-                      <label>Select Country</label>
-                      <select 
-                        className="table-select" 
-                        style={{ padding: '8px 10px', fontSize: '0.9rem' }}
-                        value={selectedCountry} 
-                        onChange={(e) => setSelectedCountry(e.target.value)}
-                      >
-                        <option value="">-- Choose Country --</option>
-                        <option value="__ALL__">🌐 All Countries (Select All)</option>
-                        {availableCountries.map(c => (
-                          <option key={c} value={c}>{c}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', marginTop: '20px' }}>
-                      <button className="btn btn-secondary" onClick={() => setIsImportModalOpen(false)}>Cancel</button>
-                      <button 
-                        className="btn btn-primary" 
-                        onClick={() => setImportStep(2)} 
-                        disabled={!selectedCountry}
-                      >
-                        Next: Select Company <ChevronRight size={14} />
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* STEP 2: SELECT COMPANY */}
-                {importStep === 2 && (
-                  <div>
-                    <div style={{ marginBottom: '14px', fontSize: '0.85rem' }}>
-                      <span className="badge-pill gold-outline">
-                        Country: {selectedCountry === '__ALL__' ? 'All Countries 🌐' : selectedCountry}
-                      </span>
-                    </div>
-                    <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginBottom: '14px' }}>
-                      Select a Company or choose <strong>"All Companies"</strong> for the selected scope.
-                    </p>
-                    <div className="form-group" style={{ marginBottom: '20px' }}>
-                      <label>Select Company</label>
-                      <select 
-                        className="table-select" 
-                        style={{ padding: '8px 10px', fontSize: '0.9rem' }}
-                        value={selectedCompany} 
-                        onChange={(e) => setSelectedCompany(e.target.value)}
-                      >
-                        <option value="">-- Choose Company --</option>
-                        <option value="__ALL__">🏢 All Companies (Select All)</option>
-                        {availableCompanies.map(comp => (
-                          <option key={comp} value={comp}>{comp}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', marginTop: '20px' }}>
-                      <button className="btn btn-secondary" onClick={() => setImportStep(1)}>← Back</button>
-                      <button 
-                        className="btn btn-primary" 
-                        onClick={() => {
-                          setSelectedGroup('__ALL__');
-                          setImportStep(3);
-                        }} 
-                        disabled={!selectedCompany}
-                      >
-                        Next: Select Group & Confirm <ChevronRight size={14} />
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* STEP 3: SELECT GROUP & CONFIRM */}
-                {importStep === 3 && (
-                  <div>
-                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '14px', fontSize: '0.82rem' }}>
-                      <span className="badge-pill dark">Country: {selectedCountry === '__ALL__' ? 'All Countries 🌐' : selectedCountry}</span>
-                      <span className="badge-pill dark">Company: {selectedCompany === '__ALL__' ? 'All Companies 🏢' : selectedCompany}</span>
-                    </div>
-
-                    <div className="form-group" style={{ marginBottom: '16px' }}>
-                      <label>Select Group</label>
-                      <select 
-                        className="table-select" 
-                        style={{ padding: '8px 10px', fontSize: '0.9rem' }}
-                        value={selectedGroup} 
-                        onChange={(e) => setSelectedGroup(e.target.value)}
-                      >
-                        <option value="">-- Choose Group --</option>
-                        <option value="__ALL__">👥 All Groups (Select All)</option>
-                        {availableGroups.map(grp => (
-                          <option key={grp.group} value={grp.group}>{grp.group}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Import Confirmation Preview Box */}
-                    <div style={{ 
-                      background: 'var(--bg-surface-2)', 
-                      border: '1px solid var(--border-subtle)', 
-                      borderRadius: '8px', 
-                      padding: '14px', 
-                      marginBottom: '20px',
-                      fontSize: '0.86rem'
-                    }}>
-                      <div style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Sparkles size={15} style={{ color: 'var(--accent-primary)' }} /> Import Summary
-                      </div>
-                      <div style={{ color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <div><strong>Target Scope:</strong> {selectedCountry === '__ALL__' ? 'All Countries' : selectedCountry} → {selectedCompany === '__ALL__' ? 'All Companies' : selectedCompany} → {selectedGroup === '__ALL__' ? 'All Groups' : selectedGroup}</div>
-                        <div><strong>Matching Records:</strong> <span style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>~{importPreviewCount} items</span> (members, groups, companies)</div>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', marginTop: '20px' }}>
-                      <button className="btn btn-secondary" onClick={() => setImportStep(2)}>← Back</button>
-                      <button 
-                        className="btn btn-primary" 
-                        onClick={handleConfirmImport} 
-                        disabled={!selectedGroup || isImporting || importPreviewCount === 0}
-                      >
-                        <Sparkles size={14} /> {isImporting ? 'Importing...' : 'Confirm & Import Data'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            <div className="form-actions">
+              <button className="btn btn-secondary" onClick={() => setDeleteConfirmModal(null)}>Cancel</button>
+              <button className="btn btn-danger" onClick={handleConfirmDelete}>Confirm Delete</button>
+            </div>
           </div>
         </div>
       )}
@@ -1251,262 +1061,94 @@ export default function AdminPage() {
         <div className="modal-overlay" onClick={() => { setTempMember(null); setTempGroup(null); setTempCompany(null); }}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>
-                {tempMember && '📸 Add New Member'}
-                {tempGroup && '📸 Add New Group'}
-                {tempCompany && '📸 Add New Company'}
-              </h2>
-              <button className="btn-close" onClick={() => { setTempMember(null); setTempGroup(null); setTempCompany(null); }}>
-                <X size={18} />
-              </button>
+              <h3>
+                {tempMember && '👤 Add New Custom Member'}
+                {tempGroup && '📸 Add New Custom Group'}
+                {tempCompany && '🏢 Add New Custom Company'}
+              </h3>
+              <button className="btn-close" onClick={() => { setTempMember(null); setTempGroup(null); setTempCompany(null); }}><X size={18} /></button>
             </div>
 
             {tempMember && (
-              <div className="form-grid">
+              <div className="modal-form">
                 <div className="form-group span-2">
                   <label>Member Name *</label>
-                  <input type="text" value={tempMember.member_name} onChange={(e) => setTempMember({ ...tempMember, member_name: e.target.value })} placeholder="Member name" autoFocus />
+                  <input type="text" className="input-control" value={tempMember.member_name} onChange={(e) => setTempMember({ ...tempMember, member_name: e.target.value })} placeholder="Member name" autoFocus />
                 </div>
                 <div className="form-group">
                   <label>Color</label>
-                  <select value={tempMember.color} onChange={(e) => setTempMember({ ...tempMember, color: e.target.value })}>
+                  <select className="input-control" value={tempMember.color} onChange={(e) => setTempMember({ ...tempMember, color: e.target.value })}>
                     {colors.map(c => <option key={c.id} value={c.color}>{c.color}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
                   <label>Group</label>
-                  <select value={tempMember.group} onChange={(e) => {
-                    const grpName = e.target.value;
-                    const matchG = groups.find(g => g.group === grpName);
+                  <select className="input-control" value={tempMember.group} onChange={(e) => {
+                    const grp = e.target.value;
+                    const mapped = groupLookup[grp];
                     setTempMember({
                       ...tempMember,
-                      group: grpName,
-                      country: matchG?.country || tempMember.country,
-                      company: matchG?.company || tempMember.company,
+                      group: grp,
+                      company: mapped?.company || 'Individual',
+                      country: mapped?.country || '🇹🇭 TH',
                     });
                   }}>
-                    <option value="">Select Group...</option>
+                    <option value="">-- Select Group --</option>
                     {groups.map(g => <option key={g.id} value={g.group}>{g.group}</option>)}
                   </select>
                 </div>
-                <div className="form-group">
-                  <label>Country (Auto)</label>
-                  <input type="text" value={tempMember.country} readOnly style={{ opacity: 0.7 }} />
-                </div>
-                <div className="form-group">
-                  <label>Company (Auto)</label>
-                  <input type="text" value={tempMember.company} readOnly style={{ opacity: 0.7 }} />
-                </div>
                 <div className="form-group span-2">
-                  <label>Member Image URL</label>
-                  <input type="text" value={tempMember.member_image} onChange={(e) => setTempMember({ ...tempMember, member_image: e.target.value })} placeholder="https://..." />
+                  <label>Image URL</label>
+                  <input type="url" className="input-control" value={tempMember.member_image} onChange={(e) => setTempMember({ ...tempMember, member_image: e.target.value })} placeholder="https://..." />
                 </div>
-                <div className="form-group span-2">
-                  <label>X Profile URL</label>
-                  <input type="text" value={tempMember.x_profile} onChange={(e) => setTempMember({ ...tempMember, x_profile: e.target.value })} placeholder="https://x.com/..." />
-                </div>
-                <div className="form-actions span-2" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+                <div className="modal-actions" style={{ marginTop: '12px' }}>
                   <button className="btn btn-secondary" onClick={() => setTempMember(null)}>Cancel</button>
-                  <button className="btn btn-primary" onClick={handleSaveTempMember} disabled={isSavingTemp}><Save size={14} /> Save Member</button>
+                  <button className="btn btn-primary" onClick={handleSaveTempMember}><Save size={14} /> Save Member</button>
                 </div>
               </div>
             )}
 
             {tempGroup && (
-              <div className="form-grid">
+              <div className="modal-form">
                 <div className="form-group span-2">
                   <label>Group Name *</label>
-                  <input type="text" value={tempGroup.group} onChange={(e) => setTempGroup({ ...tempGroup, group: e.target.value })} placeholder="Group name" autoFocus />
+                  <input type="text" className="input-control" value={tempGroup.group} onChange={(e) => setTempGroup({ ...tempGroup, group: e.target.value })} placeholder="Group name" autoFocus />
                 </div>
                 <div className="form-group">
                   <label>Country</label>
-                  <input type="text" value={tempGroup.country} onChange={(e) => setTempGroup({ ...tempGroup, country: e.target.value })} placeholder="🇹🇭 TH" />
+                  <select className="input-control" value={tempGroup.country} onChange={(e) => setTempGroup({ ...tempGroup, country: e.target.value })}>
+                    {countries.map(c => <option key={c.id} value={c.displayed_country}>{c.displayed_country}</option>)}
+                  </select>
                 </div>
                 <div className="form-group">
                   <label>Company</label>
-                  <select value={tempGroup.company} onChange={(e) => setTempGroup({ ...tempGroup, company: e.target.value })}>
+                  <select className="input-control" value={tempGroup.company} onChange={(e) => setTempGroup({ ...tempGroup, company: e.target.value })}>
                     <option value="Individual">Individual</option>
                     {companies.filter(c => c.company !== 'Individual').map(c => <option key={c.id} value={c.company}>{c.company}</option>)}
                   </select>
                 </div>
-                <div className="form-actions span-2" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+                <div className="modal-actions" style={{ marginTop: '12px' }}>
                   <button className="btn btn-secondary" onClick={() => setTempGroup(null)}>Cancel</button>
-                  <button className="btn btn-primary" onClick={async () => {
-                    if (!tempGroup || !tempGroup.group.trim()) return;
-                    await addMetadataDoc('dim_group', userId, tempGroup as unknown as Record<string, unknown>, isDemoUser);
-                    setTempGroup(null);
-                  }}><Save size={14} /> Save Group</button>
+                  <button className="btn btn-primary" onClick={handleSaveTempGroup}><Save size={14} /> Save Group</button>
                 </div>
               </div>
             )}
 
             {tempCompany && (
-              <div className="form-grid">
+              <div className="modal-form">
                 <div className="form-group span-2">
                   <label>Company Name *</label>
-                  <input type="text" value={tempCompany.company} onChange={(e) => setTempCompany({ company: e.target.value })} placeholder="Company name" autoFocus />
+                  <input type="text" className="input-control" value={tempCompany.company} onChange={(e) => setTempCompany({ ...tempCompany, company: e.target.value })} placeholder="Company name" autoFocus />
                 </div>
-                <div className="form-actions span-2" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+                <div className="modal-actions" style={{ marginTop: '12px' }}>
                   <button className="btn btn-secondary" onClick={() => setTempCompany(null)}>Cancel</button>
-                  <button className="btn btn-primary" onClick={async () => {
-                    if (!tempCompany || !tempCompany.company.trim()) return;
-                    await addMetadataDoc('dim_company', userId, tempCompany as unknown as Record<string, unknown>, isDemoUser);
-                    setTempCompany(null);
-                  }}><Save size={14} /> Save Company</button>
+                  <button className="btn btn-primary" onClick={handleSaveTempCompany}><Save size={14} /> Save Company</button>
                 </div>
               </div>
             )}
           </div>
         </div>
       )}
-
-      <style jsx>{`
-        .admin-page { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 100%; min-width: 0; }
-        .page-title { font-size: 1.6rem; }
-
-        .tabs-bar { display: flex; gap: 8px; flex-wrap: wrap; }
-        .tab-btn {
-          display: flex; align-items: center; gap: 6px; padding: 8px 14px; background: var(--bg-surface-1); border: 1px solid var(--border-subtle); color: var(--text-muted); border-radius: var(--radius-sm); font-weight: 500; font-size: 0.85rem; cursor: pointer;
-          &.active { background: var(--accent-primary-subtle); color: var(--accent-primary); border-color: rgba(212, 168, 75, 0.4); font-weight: 600; }
-        }
-
-        .table-card {
-          width: 100%;
-          max-width: 100%;
-          min-width: 0;
-          overflow: hidden;
-          box-sizing: border-box;
-          padding: 15px;
-        }
-
-        .table-wrapper {
-          overflow-x: auto;
-          width: calc(100% + 20px);
-          max-width: calc(100% + 20px);
-          margin-left: -10px;
-          margin-right: -10px;
-          -webkit-overflow-scrolling: touch;
-          display: block;
-        }
-
-        .dim-table {
-          width: 100%;
-          min-width: 500px;
-          border-collapse: collapse;
-        }
-
-        .dim-table.member-table {
-          min-width: 980px;
-        }
-
-        .tab-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; }
-
-        .sortable-th {
-          cursor: pointer;
-          user-select: none;
-          &:hover { color: var(--accent-primary); }
-        }
-
-        .temp-row {
-          background: rgba(212, 168, 75, 0.08);
-          border-left: 3px solid var(--accent-primary);
-        }
-
-        .table-input {
-          width: 100%;
-          padding: 4px 8px;
-          background: var(--bg-surface-2);
-          border: 1px solid var(--border-subtle);
-          border-radius: 4px;
-          color: var(--text-main);
-          font-size: 0.82rem;
-          &.bold { font-weight: 600; }
-          &:focus { border-color: var(--accent-primary); outline: none; }
-          &.disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            background: var(--bg-surface-3);
-          }
-        }
-
-        .table-select {
-          width: 100%;
-          padding: 4px 6px;
-          background: var(--bg-surface-2);
-          border: 1px solid var(--border-subtle);
-          border-radius: 4px;
-          color: var(--text-main);
-          font-size: 0.82rem;
-          &:focus { border-color: var(--accent-primary); outline: none; }
-        }
-
-        .btn-xs {
-          padding: 4px 8px;
-          font-size: 0.75rem;
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-        }
-
-        .status-badge { padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; background: var(--bg-surface-3); color: var(--text-subtle); &.active { background: rgba(16, 185, 129, 0.15); color: var(--color-success); } }
-        .color-swatch { width: 24px; height: 24px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); }
-        .log-badge { background: var(--bg-surface-3); padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-family: monospace; color: var(--accent-blue); }
-
-        .action-btns { display: flex; gap: 6px; align-items: center; }
-        .btn-icon { background: none; border: none; color: var(--text-muted); cursor: pointer; &:hover { color: var(--accent-primary); } &.danger:hover { color: var(--color-danger, #ef4444); } }
-
-        .modal-overlay {
-          position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(6px); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 16px;
-        }
-
-        .modal-card {
-          background: var(--bg-surface-1);
-          border: 1px solid var(--border-strong);
-          border-radius: 12px;
-          padding: 24px;
-          width: 100%;
-          max-width: 580px;
-          max-height: 90vh;
-          overflow-y: auto;
-          &.small { max-width: 400px; }
-        }
-
-        .modal-header {
-          display: flex; justify-content: space-between; align-items: center;
-          margin-bottom: 16px;
-          padding-bottom: 12px;
-          border-bottom: 1px solid var(--border-subtle);
-        }
-        .btn-close { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; border-radius: 4px; display: flex; align-items: center; &:hover { color: var(--text-main); background: var(--bg-surface-2); } }
-
-        .form-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 14px;
-        }
-        .form-group { display: flex; flex-direction: column; gap: 6px; }
-        .form-group label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
-        .form-group input, .form-group select, .form-group textarea {
-          background: var(--bg-surface-2);
-          border: 1px solid var(--border-subtle);
-          border-radius: 6px;
-          padding: 8px 12px;
-          color: var(--text-main);
-          font-size: 0.9rem;
-          outline: none;
-          width: 100%;
-          &:focus { border-color: var(--accent-primary); }
-          &:disabled { opacity: 0.5; cursor: not-allowed; }
-        }
-        .span-2 { grid-column: span 2; }
-        .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; grid-column: span 2; }
-
-        @media (max-width: 540px) {
-          .form-grid { grid-template-columns: 1fr; }
-          .span-2 { grid-column: span 1; }
-          .form-actions { grid-column: span 1; }
-        }
-      `}</style>
     </div>
   );
 }
