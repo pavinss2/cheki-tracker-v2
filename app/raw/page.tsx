@@ -455,7 +455,6 @@ export default function RawDataPage() {
           </button>
           <button 
             className="btn btn-primary btn-sm" 
-            style={{ marginLeft: '8px' }}
             onClick={handleBatchSave} 
             disabled={isSavingBatch || validDirtyCount === 0}
           >

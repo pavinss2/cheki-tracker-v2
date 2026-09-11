@@ -21,6 +21,8 @@ const ROUTE_TITLES: Record<string, string> = {
 export const Header: React.FC = () => {
   const { user, signInWithGoogle, signOutUser, isDemoUser, isSuperAdmin } = useAuth();
   const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const menuRef = React.useRef<HTMLDivElement>(null);
 
   const pageTitle = ROUTE_TITLES[pathname] || 
     (pathname.startsWith('/admin') ? 'Admin' : 
@@ -31,6 +33,17 @@ export const Header: React.FC = () => {
      pathname.startsWith('/events') ? 'Events' : 
      pathname.startsWith('/tiermaker') ? 'Tier Maker' : '');
 
+  // Close dropdown menu when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
     <header className="app-header">
       <div className="header-left">
@@ -38,25 +51,6 @@ export const Header: React.FC = () => {
       </div>
 
       <div className="header-actions">
-        <div className="header-mobile-nav">
-          <Link 
-            href="/admin" 
-            className={`header-nav-btn ${pathname.startsWith('/admin') ? 'active' : ''}`}
-            title="Admin"
-          >
-            <Settings size={18} />
-          </Link>
-          {isSuperAdmin && (
-            <Link 
-              href="/backoffice" 
-              className={`header-nav-btn ${pathname.startsWith('/backoffice') ? 'active' : ''}`}
-              title="Back Office"
-            >
-              <Shield size={18} />
-            </Link>
-          )}
-        </div>
-
         {isDemoUser && (
           <div className="demo-banner">
             <ShieldAlert size={14} />
@@ -64,26 +58,80 @@ export const Header: React.FC = () => {
           </div>
         )}
 
-        {user ? (
-          <div className="user-profile" title={user.displayName || user.email || 'Logged in User'}>
-            {user.photoURL ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={user.photoURL} alt={user.displayName || 'User'} className="user-avatar" width={28} height={28} />
-            ) : (
-              <div className="user-avatar-placeholder">
-                <UserIcon size={16} />
-              </div>
-            )}
-            <button onClick={signOutUser} className="btn-icon" title="Sign Out">
-              <LogOut size={16} />
+        {/* Desktop Header Actions */}
+        <div className="desktop-header-actions">
+          {user ? (
+            <div className="user-profile" title={user.displayName || user.email || 'Logged in User'}>
+              {user.photoURL ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={user.photoURL} alt={user.displayName || 'User'} className="user-avatar" width={28} height={28} />
+              ) : (
+                <div className="user-avatar-placeholder">
+                  <UserIcon size={16} />
+                </div>
+              )}
+              <button onClick={signOutUser} className="btn-icon" title="Sign Out">
+                <LogOut size={16} />
+              </button>
+            </div>
+          ) : (
+            <button onClick={signInWithGoogle} className="btn btn-primary btn-sm">
+              <LogIn size={16} />
+              <span>Sign in with Google</span>
             </button>
-          </div>
-        ) : (
-          <button onClick={signInWithGoogle} className="btn btn-primary btn-sm">
-            <LogIn size={16} />
-            <span>Sign in with Google</span>
+          )}
+        </div>
+
+        {/* Mobile Header Single Menu Button & Dropdown */}
+        <div className="mobile-header-nav" ref={menuRef}>
+          <button 
+            className={`header-nav-btn ${isMobileMenuOpen ? 'active' : ''}`}
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            title="Menu"
+          >
+            <Settings size={18} />
           </button>
-        )}
+
+          {isMobileMenuOpen && (
+            <div className="mobile-menu-dropdown">
+              <Link 
+                href="/admin" 
+                className={`menu-item ${pathname.startsWith('/admin') ? 'active' : ''}`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <Settings size={16} />
+                <span>Admin</span>
+              </Link>
+              {isSuperAdmin && (
+                <Link 
+                  href="/backoffice" 
+                  className={`menu-item ${pathname.startsWith('/backoffice') ? 'active' : ''}`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <Shield size={16} />
+                  <span>Back Office</span>
+                </Link>
+              )}
+              {user ? (
+                <button 
+                  className="menu-item danger" 
+                  onClick={() => { setIsMobileMenuOpen(false); signOutUser(); }}
+                >
+                  <LogOut size={16} />
+                  <span>Logout</span>
+                </button>
+              ) : (
+                <button 
+                  className="menu-item primary" 
+                  onClick={() => { setIsMobileMenuOpen(false); signInWithGoogle(); }}
+                >
+                  <LogIn size={16} />
+                  <span>Sign in with Google</span>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       <style jsx>{`
@@ -121,21 +169,77 @@ export const Header: React.FC = () => {
           text-overflow: ellipsis;
         }
 
+        .desktop-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+
+        .header-mobile-nav {
+          display: none;
+          position: relative;
+        }
+
         @media (max-width: 768px) {
           .app-header {
             margin-left: 0;
             width: 100%;
             padding: 0 16px;
           }
+          .desktop-header-actions {
+            display: none !important;
+          }
           .header-mobile-nav {
             display: flex !important;
           }
         }
 
-        .header-mobile-nav {
-          display: none;
+        .mobile-menu-dropdown {
+          position: absolute;
+          top: calc(100% + 8px);
+          right: 0;
+          background-color: var(--bg-surface-1);
+          border: 1px solid var(--border-strong);
+          border-radius: 8px;
+          padding: 6px;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          min-width: 160px;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+          z-index: 200;
+        }
+
+        .mobile-menu-dropdown :global(.menu-item) {
+          display: flex;
           align-items: center;
-          gap: 16px;
+          gap: 10px;
+          padding: 8px 12px;
+          border-radius: 6px;
+          font-size: 0.85rem;
+          font-weight: 500;
+          color: var(--text-main);
+          text-decoration: none;
+          background: none;
+          border: none;
+          width: 100%;
+          text-align: left;
+          cursor: pointer;
+          transition: background-color var(--transition-fast), color var(--transition-fast);
+        }
+
+        .mobile-menu-dropdown :global(.menu-item:hover),
+        .mobile-menu-dropdown :global(.menu-item.active) {
+          background-color: var(--bg-surface-2);
+          color: #d4a84b;
+        }
+
+        .mobile-menu-dropdown :global(.menu-item.danger) {
+          color: var(--color-danger, #ef4444);
+        }
+
+        .mobile-menu-dropdown :global(.menu-item.danger:hover) {
+          background-color: rgba(239, 68, 68, 0.15);
         }
 
         .header-nav-btn {
@@ -148,6 +252,7 @@ export const Header: React.FC = () => {
           color: var(--text-muted);
           background-color: var(--bg-surface-2);
           border: 1px solid var(--border-subtle);
+          cursor: pointer;
           transition: all var(--transition-fast);
           text-decoration: none;
         }

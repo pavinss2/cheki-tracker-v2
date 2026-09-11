@@ -329,6 +329,12 @@ export default function TierMakerPage() {
         backgroundColor: '#0d0f15',
         cacheBust: false,
         skipFonts: true,
+        filter: (node: HTMLElement) => {
+          if (node.classList && node.classList.contains('tier-row-controls')) {
+            return false;
+          }
+          return true;
+        },
         imagePlaceholder: 'data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44"><rect width="44" height="44" fill="%23202433"/></svg>',
       };
 

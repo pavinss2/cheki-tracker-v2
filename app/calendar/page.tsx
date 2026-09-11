@@ -80,12 +80,19 @@ export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const gridWrapperRef = useRef<HTMLDivElement>(null);
+  const [isGridReady, setIsGridReady] = useState(false);
 
-  // Auto-scroll calendar grid to show Wed-Sun by default on mobile screens
+  // Auto-scroll calendar grid to show Wed-Sun by default on mobile screens before hiding spinner
   useEffect(() => {
-    if (gridWrapperRef.current && window.innerWidth <= 640) {
-      gridWrapperRef.current.scrollLeft = gridWrapperRef.current.scrollWidth;
-    }
+    setIsGridReady(false);
+    const timer = setTimeout(() => {
+      if (gridWrapperRef.current && window.innerWidth <= 640) {
+        gridWrapperRef.current.scrollLeft = gridWrapperRef.current.scrollWidth;
+      }
+      setIsGridReady(true);
+    }, 80);
+
+    return () => clearTimeout(timer);
   }, [currentMonth, currentYear, loading]);
 
   const [lightboxState, setLightboxState] = useState<{ open: boolean; index: number }>({
@@ -410,7 +417,23 @@ export default function CalendarPage() {
   if (loading) return <CircularSpinner />;
 
   return (
-    <div className="calendar-page">
+    <div className="calendar-page" style={{ position: 'relative' }}>
+      {!isGridReady && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'var(--bg-main, #0d0f15)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <CircularSpinner />
+        </div>
+      )}
       <FilterBar transactions={allTransactions} />
 
       {/* Calendar Header Card */}

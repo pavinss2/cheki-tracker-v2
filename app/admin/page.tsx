@@ -324,7 +324,7 @@ export default function BackOfficePage() {
               <button className="btn btn-outline btn-sm danger-text" onClick={handleResetCustomData} title="Clear user custom data to rely purely on default_dim_*">
                 <RefreshCw size={14} /> Reset Custom Data
               </button>
-              <button className="btn btn-primary btn-sm" style={{ marginLeft: '12px' }} onClick={handleStartAddMember} disabled={Boolean(tempMember)}>
+              <button className="btn btn-primary btn-sm" onClick={handleStartAddMember} disabled={Boolean(tempMember)}>
                 <Plus size={14} /> Add
               </button>
             </div>
@@ -613,7 +613,7 @@ export default function BackOfficePage() {
               <button className="btn btn-outline btn-sm danger-text" onClick={handleResetCustomData} title="Clear user custom data to rely purely on default_dim_*">
                 <RefreshCw size={14} /> Reset Custom Data
               </button>
-              <button className="btn btn-primary btn-sm" style={{ marginLeft: '12px' }} onClick={() => setEditingItem({ table: 'dim_group', data: { group: '', country: '🇹🇭 TH', company: 'Individual' } })}>
+              <button className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_group', data: { group: '', country: '🇹🇭 TH', company: 'Individual' } })}>
                 <Plus size={14} /> Add
               </button>
             </div>
@@ -689,7 +689,7 @@ export default function BackOfficePage() {
               <button className="btn btn-outline btn-sm danger-text" onClick={handleResetCustomData} title="Clear user custom data to rely purely on default_dim_*">
                 <RefreshCw size={14} /> Reset Custom Data
               </button>
-              <button className="btn btn-primary btn-sm" style={{ marginLeft: '12px' }} onClick={() => setEditingItem({ table: 'dim_company', data: { company: '' } })}>
+              <button className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_company', data: { company: '' } })}>
                 <Plus size={14} /> Add
               </button>
             </div>
