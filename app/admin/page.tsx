@@ -2058,7 +2058,7 @@ export default function AdminPage() {
           cursor: pointer;
         }
 
-        .status-tag {
+        :global(.status-tag) {
           display: inline-flex;
           align-items: center;
           justify-content: center;
@@ -2069,25 +2069,26 @@ export default function AdminPage() {
           cursor: default;
           user-select: none;
           line-height: 1.2;
+          white-space: nowrap;
           border: 1px solid transparent;
         }
 
-        .status-tag.active {
-          background: rgba(34, 197, 94, 0.15);
-          color: #22c55e;
-          border-color: rgba(34, 197, 94, 0.4);
+        :global(.status-tag.active) {
+          background: rgba(34, 197, 94, 0.18) !important;
+          color: #22c55e !important;
+          border-color: rgba(34, 197, 94, 0.45) !important;
         }
 
-        .status-tag.sub {
-          background: rgba(59, 130, 246, 0.15);
-          color: #3b82f6;
-          border-color: rgba(59, 130, 246, 0.4);
+        :global(.status-tag.sub) {
+          background: rgba(59, 130, 246, 0.18) !important;
+          color: #3b82f6 !important;
+          border-color: rgba(59, 130, 246, 0.45) !important;
         }
 
-        .status-tag.inactive {
-          background: rgba(239, 68, 68, 0.15);
-          color: #ef4444;
-          border-color: rgba(239, 68, 68, 0.4);
+        :global(.status-tag.inactive) {
+          background: rgba(239, 68, 68, 0.18) !important;
+          color: #ef4444 !important;
+          border-color: rgba(239, 68, 68, 0.45) !important;
         }
 
         .action-btns {

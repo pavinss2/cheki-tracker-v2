@@ -2116,7 +2116,7 @@ export default function BackOfficePage() {
           border: 1px solid rgba(255,255,255,0.3);
         }
 
-        .status-tag {
+        :global(.status-tag) {
           display: inline-flex;
           align-items: center;
           justify-content: center;
@@ -2125,10 +2125,11 @@ export default function BackOfficePage() {
           font-size: 0.8rem;
           font-weight: 700;
           line-height: 1.2;
+          white-space: nowrap;
           border: 1px solid transparent;
-          &.active { background: rgba(34, 197, 94, 0.15); color: #22c55e; border-color: rgba(34, 197, 94, 0.4); }
-          &.inactive { background: rgba(239, 68, 68, 0.15); color: #ef4444; border-color: rgba(239, 68, 68, 0.4); }
         }
+        :global(.status-tag.active) { background: rgba(34, 197, 94, 0.18) !important; color: #22c55e !important; border-color: rgba(34, 197, 94, 0.45) !important; }
+        :global(.status-tag.inactive) { background: rgba(239, 68, 68, 0.18) !important; color: #ef4444 !important; border-color: rgba(239, 68, 68, 0.45) !important; }
 
         .action-btns {
           display: flex;
@@ -2320,7 +2321,7 @@ export default function BackOfficePage() {
           background-color: rgba(212, 168, 75, 0.06) !important;
         }
 
-        .badge-toggle {
+        :global(.badge-toggle) {
           display: inline-flex;
           align-items: center;
           justify-content: center;
@@ -2329,21 +2330,22 @@ export default function BackOfficePage() {
           font-size: 0.8rem;
           font-weight: 700;
           cursor: pointer;
-          border: 1px solid;
+          white-space: nowrap;
+          border: 1px solid transparent;
           transition: all 0.15s;
-          &.allowed {
-            background: rgba(34, 197, 94, 0.15);
-            color: #22c55e;
-            border-color: rgba(34, 197, 94, 0.4);
-            &:hover { background: rgba(34, 197, 94, 0.25); }
-          }
-          &.disallowed {
-            background: rgba(239, 68, 68, 0.15);
-            color: #ef4444;
-            border-color: rgba(239, 68, 68, 0.4);
-            &:hover { background: rgba(239, 68, 68, 0.25); }
-          }
         }
+        :global(.badge-toggle.allowed) {
+          background: rgba(34, 197, 94, 0.18) !important;
+          color: #22c55e !important;
+          border-color: rgba(34, 197, 94, 0.45) !important;
+        }
+        :global(.badge-toggle.allowed:hover) { background: rgba(34, 197, 94, 0.3) !important; }
+        :global(.badge-toggle.disallowed) {
+          background: rgba(239, 68, 68, 0.18) !important;
+          color: #ef4444 !important;
+          border-color: rgba(239, 68, 68, 0.45) !important;
+        }
+        :global(.badge-toggle.disallowed:hover) { background: rgba(239, 68, 68, 0.3) !important; }
       `}</style>
     </div>
   );
