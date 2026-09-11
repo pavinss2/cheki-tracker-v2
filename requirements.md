@@ -38,10 +38,10 @@ The application employs a dual-storage strategy to ensure real-time Cloud persis
 - **Firestore Security Rules Enforcement (`firestore.rules`)**:
   - Requires `request.resource.data.member != ""` OR `request.resource.data.date != ""` for `create` and `update` operations on `fact_cheki_transaction`.
 - **Timestamping & Sorting**: Every inserted or updated metadata and transaction document appends ISO `createdAt` and `updatedAt` timestamps. Metadata lists in `subscribeMetadata` are sorted by `createdAt`/`updatedAt` descending so newly added records automatically appear at the **most top row**.
-- **Boolean Normalization (`is_active`)**: `is_active` in `dim_member` must strictly be stored as boolean (`true`/`false`), never as strings `"TRUE"`/`"FALSE"`.
+- **Boolean Normalization (`is_active`, `allow_import`)**: `is_active` in `dim_member` and `allow_import` / `is_allowed_import` across metadata must strictly be evaluated as booleans (`true`/`false`), defaulting to `true` (allowed) if not explicitly set to `false`.
 
 ### 1.3 Page Authentication & Login Gating
-- **Universal Protection**: All primary page routes (`Home`, `Calendar`, `Analytics`, `Raw Data`, `Events`, `Back Office`) strictly enforce authentication gating via `useAuth()`.
+- **Universal Protection**: All primary page routes (`Home`, `Calendar`, `Analytics`, `Raw Data`, `Events`, `Back Office`, `Admin`) strictly enforce authentication gating via `useAuth()`.
 - **Unauthenticated State**: If `!user && !isDemoUser`, the page immediately renders `<LoginPrompt />` to prevent unauthenticated access to system data.
 
 ---
@@ -75,7 +75,7 @@ The application employs a dual-storage strategy to ensure real-time Cloud persis
 ### 2.4 Global App Header & Raw Data Header Actions Placement
 - **Global App Header Title Integration**:
   - Individual page title headings (`<h1 className="page-title">`) are removed from content card areas across all tab views.
-  - The current page title (e.g. `Home`, `Calendar`, `Analytics`, `Raw Data`, `Events`, `Back Office`) is dynamically displayed on the **top-left of the global application header bar (`app-header`)**.
+  - The current page title (e.g. `Home`, `Calendar`, `Analytics`, `Raw Data`, `Events`, `Back Office`, `Admin`) is dynamically displayed on the **top-left of the global application header bar (`app-header`)**.
 - **Raw Data Action Controls Placement**:
   - In the Raw Data tab, all integrated action controls (`Price Rules`, `Paste TSV`, `Add Blank Row`, `Save All`) are positioned in `.raw-actions-bar` directly **underneath the `<FilterBar>`**.
   - **Mobile Paste TSV Hiding Rule**: The `Paste TSV` button (`.btn-paste-tsv`) is **hidden on mobile viewports ($\le 768\text{px}$)** (`display: none !important`) to save horizontal layout space.
@@ -125,10 +125,7 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 - **Group Auto-Fill**: Selecting a `Group` automatically maps `company` and `country`/`nationality`.
 - **Date Auto-Derivation**: Changing `date` (`YYYY-MM-DD`) automatically extracts `month` (`YYYY-MM`) and `year` (`YYYY`).
 
-### 4.3 Image Grouping & Lightbox Gallery Logic (`groupTransactionsByImage`)
-- **URL Normalization**: Cleans and extracts canonical image links using `extractDirectImageUrl` (handling Google Photos and CDN URLs).
-## 4. Lightbox Gallery Specifications
-
+### 4.3 Lightbox Gallery Specifications
 - **Full Viewport Overlay**: Immersive dark background (`rgba(5, 6, 10, 0.94)`) with backdrop blur (`backdrop-filter: blur(10px)`).
 - **Floating Controls**:
   - Top-right fixed circular Close `(X)` button (`position: fixed; top: 20px; right: 24px; z-index: 10001`).
@@ -146,12 +143,10 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 
 - **Month & Date Format (`MMM`)**: `day-header-date` formats month as 3-character shortened month names (`Jan`, `Feb`, `Mar`, `Sep`, etc.) for both selected date view (`Sep 6, 2026`) and month view (`Sep 2026`).
 - **Control Layout**: The **"Today"** button and **"+ Add Cheki"** button are placed in the header controls of the month/year card.
-- **Transaction Creation Feature**:
-  - Includes `+ Add Cheki` button in the Calendar header and in the `day-header-banner`.
-  - Opens a quick creation modal dialog allowing users to enter transaction details (Date, Member, Group, Color, Event, Type, Quantity, Price, Photo URL, Talk Topic/Notes).
-  - Member selection auto-populates `group` and `color` from existing member metadata.
-- **Day Drilldown Modal**: Clicking on any date cell filters the gallery to that date.
-
+- **Transaction Creation Modal Alignment**:
+  - Clicking `+ Add Cheki` in the Calendar header or `day-header-banner` opens a full creation modal.
+  - **Visual Alignment**: Styled identically to the Raw Data grid entry popup modal, featuring themed input controls, clear section dividers, auto-populating Member fields (`group`, `color`, `company`, `nationality`), auto-calculated price rules, and high contrast Save/Cancel actions.
+- **Day Drilldown Modal**: Clicking on any date cell filters the transaction gallery to that specific date.
 
 ---
 
@@ -162,98 +157,71 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 - **Default Metadata Management (`default_dim_*`)**:
   - Back Office manages app-wide global default dimension tables: `default_dim_member`, `default_dim_group`, `default_dim_company`, `default_dim_color`, `default_dim_type`, `default_dim_country`, `default_dim_location`.
   - Audit logs for default metadata mutations are recorded in `fact_admin_log`.
-- **Top-Row Inline Draft Rows**: Creating new values in Back Office pins a temporary draft row (`<tr className="temp-row">`) at the very top of the table for all dimensions (`tempMember`, `tempGroup`, `tempCompany`, `tempColor`, `tempType`, `tempCountry`, `tempLocation`). The existing table remains 100% visible and interactive underneath during creation.
-- **Exclusive Dimensions**: `Location` (`default_dim_location`), `Color` (`default_dim_color`), `Type` (`default_dim_type`), and `Countries` (`default_dim_country`) are managed **exclusively** by the super admin in the Back Office tab. They are completely hidden and removed from the regular user Admin tab.
+- **Top-Row Inline Draft Rows (Desktop Viewports > 640px)**: Creating new values pins a temporary draft row (`<tr className="temp-row">`) at the very top of the table for all dimensions.
+- **Exclusive Dimensions**: `Location` (`default_dim_location`), `Color` (`default_dim_color`), `Type` (`default_dim_type`), and `Countries` (`default_dim_country`) are managed **exclusively** by the super admin in the Back Office tab. They are completely hidden from regular users.
 
 ### 6.2 Admin Tab (`/admin`), Explicit Import Rules & Inactivate/Delete Capabilities
 - **Explicit Import Rule**: Upon starting fresh or after clearing custom data, `dim_member`, `dim_group`, `dim_company` in the Admin tab start completely empty (`Members (0)`, `Groups (0)`, `Companies (0)`). Items from `default_dim_*` are **not defaultly shown** in `/admin` unless explicitly imported by the user using the **"Import from Default"** button.
-- **Full Editing, Inactivating & Deleting Capabilities**: Once an item is imported or manually created in `/admin`:
-  - It is stored as a user document in `dim_member`, `dim_group`, or `dim_company`.
-  - **Inactivating**: The user can edit the item via the Edit Modal form to set its status to `Inactive` (`is_active: false`).
-  - **Deleting**: The user can click the Trash icon to delete the item permanently from their custom `dim_*` list.
+- **Back Office `allow_import` Permission Enforcement**:
+  - The Admin tab import wizard strictly checks `is_allowed_import` / `allow_import` flags on `default_dim_*` items.
+  - Items or groups marked as `allow_import = false` in Back Office (or belonging to a disallowed parent company) are automatically hidden from the Admin tab import wizard and cannot be imported by users.
 - **Import from Default Settings Wizard**:
-  - A 3-step wizard modal (`Country` $\rightarrow$ `Company` $\rightarrow$ `Group`) allows users to import subsets of default metadata into their custom `dim_*` tables without creating duplicates.
+  - A 3-step wizard modal (`Step 1: Country` $\rightarrow$ `Step 2: Company` $\rightarrow$ `Step 3: Group`) allows users to import subsets of default metadata into their custom `dim_*` tables without creating duplicates.
+  - **Step 1 Available Countries Scan**: Step 1 strictly scans `default_dim_group` items that have the `Allow Import` option turned ON (`allow_import !== false` and allowed parent company) and populates the Country selection dropdown with available allowed countries only.
   - An **"Import All"** button is accessible at any step of the journey (`Import All Default Data`, `Import All in [Country]`, `Import All in [Company]`).
+- **Full Editing, Inactivating & Deleting Capabilities**: Once an item is imported or manually created in `/admin`, the user can edit, set status to `Inactive`, or permanently delete it.
 - **Reset Custom Data**: Provides a top bar action to clear user custom `dim_*` data (`clearUserCustomMetadata`), restoring `/admin` tables to empty states (`0` items).
 
-### 6.3 `dim_member` Table Column Sorting & `date_added` Rule
-- **`date_added` Field**: `dim_member` records include a `date_added` field (`YYYY-MM-DD`). Automatically set to today's date when creating new member records.
-- **Default Sort Order**: By default, the `dim_member` table is **arranged by `date_added` descending (`▼`)**. Newly added members remain at the top of the table.
-- **Column Order**: `Avatar & Image URL`, `Member Name`, `Color`, `Group`, `Country`, `Company`, `Start Date`, `End Date`, `Status`, `X Profile`, `Date Added` (most right-hand side before `Actions`), `Actions`.
-- **Sortable Columns**: The `dim_member` table headers are clickable and sortable for all columns:
-  1. `Member Name` (`member_name`)
-  2. `Color` (`color`)
-  3. `Group` (`group`)
-  4. `Country` (`country`)
-  5. `Company` (`company`)
-  6. `Start Date` (`start_date`)
-  7. `End Date` (`end_date`)
-  8. `Status` (`is_active`)
-  9. `Date Added` (`date_added` - positioned right before `Actions`)
-- Toggles between ascending (`▲`) and descending (`▼`) sort order.
+### 6.3 Dimension Table Sorting & `date_added` Rule
+- **Full Header Column Sorting**:
+  - In both Admin and Back Office tabs, all tables (`dim_member`, `dim_group`, `dim_company`) support full column header sorting by clicking any column title.
+  - Headers toggle between ascending (`▲`) and descending (`▼`) sort order.
+- **Default Sort Order**: By default, `dim_member` table is arranged by `date_added` descending (`▼`), placing newly added members at the top.
 
-### 6.4 Temporary Top Row Draft, Image URL & Locked Fields Rule
-- Clicking **"+ Add Member"** pins a **temporary draft row at the very top of the table** with inline input fields.
-- **Image URL Field**: Provides a direct URL text input (`member_image`) in the draft top row as well as the edit modal form.
-- **Locked Fields Rule (Country & Company)**:
-  - `country` and `company` fields are **locked (disabled / read-only)** when creating or editing a member.
-  - Selecting a `Group` automatically maps and updates `country` and `company` from `dim_group`. Manual editing of country and company is disabled to prevent data mismatch.
+### 6.4 Back Office Company & Group Cascade Disallow Prompts
+- **Company Cascade**: Disallowing a company (via single row badge toggle, batch action bar disallow button, or Edit Record modal save):
+  - Prompts `window.confirm`: `"Do you also want to disallow all {count} related group(s) under company '{company}'?"`. If accepted, disallows all related groups.
+  - Independently prompts `window.confirm`: `"Do you also want to disallow all {count} related member(s) under company '{company}'?"`. If accepted, disallows all related members.
+- **Group Cascade**: Disallowing a group (via single row badge toggle, batch action bar disallow button, or Edit Record modal save):
+  - Prompts `window.confirm`: `"Do you also want to disallow all {count} related member(s) in group '{group}'?"`. If accepted, disallows all related members.
+- **Case-Insensitive String Matching**: Matching between company names and group/member parent fields uses `.trim().toLowerCase()` to prevent string format mismatches.
+
+### 6.5 Back Office `default_dim_group` Country Dropdown
+- When adding a new group (desktop top-row draft or mobile popup modal) or editing an existing group (Edit Record modal) in `default_dim_group`, the `Country` field is rendered as a `<select>` dropdown populated from `default_dim_country` (with fallback to `DEFAULT_COUNTRIES`) instead of a blank text fill box.
+
+### 6.6 Mobile Popup Modals for Dimension Creation (Screens <= 640px)
+- On mobile viewports ($\le 640\text{px}$), clicking **"+ Add"** in Admin or Back Office opens a responsive modal dialog (`modal-overlay`) with full touch-friendly inputs, labels, and action buttons (`Save`, `Cancel`).
+- Eliminates cramped inline desktop draft rows on small screens.
+
+### 6.7 Back Office `default_dim_member` Country Filter & Header Grid Alignment
+- Adds a Country filter select (`All Countries`) to the `default_dim_member` tab header in Back Office.
+- Positioned alongside Company and Group filter selects in the same flex/grid row header on desktop viewports.
+
+### 6.8 Temporary Top Row Draft, Image URL & Locked Fields Rule
+- Clicking **"+ Add Member"** on desktop pins a temporary draft row at the top of the table.
+- **Image URL Field**: Provides a direct URL text input (`member_image`) in draft row and edit modal.
+- **Locked Fields Rule (Country & Company)**: `country` and `company` fields are **locked (disabled / read-only)** when creating or editing a member, auto-mapping from selected `Group`.
 - **Default Field Values for New Member**:
   - `date_added`: Defaults to **today's date** (`YYYY-MM-DD`).
   - `start_date`: Defaults to **`1000-12-26`**.
   - `end_date`: Defaults to **`9999-12-31`**.
   - `is_active`: Defaults to **`Active` (`true`)**.
   - `color`: Defaults to `'White'`.
-  - `country`: Auto-mapped by selected Group (defaults to `'🇹🇭 TH'`).
-  - `company`: Auto-mapped by selected Group (defaults to `'Individual'`).
-- **Explicit Save Button**: The new record is only written to Firestore when the user explicitly clicks the **Save** button in the draft row's actions column.
-- **Cancel Button**: Clicking Cancel (`X`) discards the temporary row without saving to the database.
 
-### 6.5 Events Tab Table Header Sorting
-- All headers in the Events tab table (`Date`/`Month`, `Event Name`, `Members`, `QTY`, `%`, `Total (THB)`) are clickable and sortable.
-- Default sort: `Date`/`Month` (`period`) descending.
-- Clicking any header toggles between ascending (`▲`) and descending (`▼`) sort order.
+### 6.9 Events Tab Table Header Sorting
+- All headers in the Events tab table (`Date`/`Month`, `Event Name`, `Members`, `QTY`, `%`, `Total (THB)`) are clickable and sortable (defaulting to `period` descending).
 
-### 6.6 Delete Confirmation Popup Modal
-- Deleting any dimension record (`dim_member`, `dim_group`, `dim_company`, `dim_color`, `dim_type`, `dim_country`) displays a custom, non-blocking **Confirm Delete** modal popup displaying:
-  - Record ID (e.g. `ID: h6YTWUygR5D5QZ2enZ47`)
-  - Item Display Value (e.g. `Value: Siso (22%)`)
-  - Explicit **"Confirm Delete"** (danger button) and **"Cancel"** buttons.
+### 6.10 Delete Confirmation Popup Modal
+- Deleting any dimension record displays a custom **Confirm Delete** modal displaying Record ID, Item Display Value, and explicit Confirm Delete / Cancel actions.
 
-### 6.7 `fact_admin_log` Audit Logs Value Display Rule
-- Audit log messages in `fact_admin_log` must record the display value alongside document IDs for all mutations:
-  - `Deleted ID h6YTWUygR5D5QZ2enZ47 (Siso (22%))`
-  - `Added ID 9mK10xL45z (Catsolute)`
-  - `Updated ID p80xK11m (Red)`
+### 6.11 Audit Logs Value Display (`fact_admin_log`)
+- Audit log entries record the display value alongside document IDs for all mutations (e.g., `Deleted ID h6YTWUygR5D5QZ2enZ47 (Siso)`).
 
-### 6.8 Avatar Image Fallback Rule (Capitalized Letter Icon)
-- All member avatars are rendered via `<MemberAvatar>`.
-- **Error Handling**: If a member avatar URL (`member_image`) is missing, blank, `None`, or fails to render (404, broken link, CDN error), `MemberAvatar` catches `onError` and displays a **capitalized initial letter circle icon** styled with the member's theme color.
+### 6.12 Avatar Image Fallback Rule
+- If member image URL (`member_image`) is missing, broken, or fails to load, `<MemberAvatar>` catches `onError` and renders a capitalized initial letter circle icon with the member's color code.
 
-### 6.9 Mobile Layout & Horizontal Table Sliding Specifications
-- **Viewport Width Bounding (`min-width: 0`)**: All page containers, card components, and main layout wrappers (`.main-content`, `.layout-wrapper`) enforce `width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box;` on mobile devices.
-- **Horizontal Table & Grid Sliding**:
-  - All wide data tables (Raw Data `raw-table`, Admin `dim_table`, Analytics tables) are wrapped inside `.table-wrapper` with `overflow-x: auto; -webkit-overflow-scrolling: touch;`.
-  - Tables maintain minimum column widths (e.g. `min-width: 920px` for Raw Data and `min-width: 980px` for `dim_member`) to ensure readability while allowing full horizontal swipe/slide touch interaction on mobile.
-  - The Calendar 7-column grid (`.cal-grid-card`) wraps in `.cal-grid-wrapper` with `min-width: 500px` on screens $\le 640\text{px}$, enabling smooth horizontal sliding without content cropping.
-- **Fitted Mobile Filter Bar**:
-  - Filter bars across all pages (`FilterBar`) automatically wrap into a fitted 2-column grid (`grid-template-columns: repeat(2, 1fr)`) on mobile screens ($\le 768\text{px}$).
-  - All select dropdowns in the filter bar use `width: 100%; max-width: 100%; min-width: 0; text-overflow: ellipsis;` so filters fit neatly within the mobile viewport without overflowing or getting cut off.
-
-### 6.10 Parenthetical Display Name Formatting Rule (`formatDisplayName`)
-- **Parenthesis Stripping Rule**: Any member name containing text inside parentheses (e.g. `"Zero (NOLiMIT)"`, `"Siso (22%)"`) will automatically have the parentheses and enclosed content removed for UI display (e.g. `"Zero (NOLiMIT)"` renders as `"Zero"`, `"Siso (22%)"` renders as `"Siso"`).
-- **Implementation**: Handled centrally via `formatDisplayName(name)` in [lib/imageUtils.ts](file:///Users/pavin/01%20Pavin%20Coding/cheki-tracker-v2/lib/imageUtils.ts) (`name.replace(/\s*\([^)]*\)/g, '').trim()`) and applied across Analytics Leaderboard / Bar Graph rows, Data Tables, Member Avatars, Admin `dim_member` table, and Raw Data transaction tables.
-
-### 6.11 Analytics Tab Bar Graph Styling & Leaderboard Layout Specifications
-- **Bar Graph Exclusive View**: The Analytics tab exclusively displays the Bar Graph (Leaderboard) view.
-- **Rank-Based Metallic Trophy & Avatar Borders**:
-  - Rank #1: Gold trophy icon (`#facc15`), Gold avatar border (`#facc15`).
-  - Rank #2: Silver trophy icon (`#e2e8f0`), Silver avatar border (`#e2e8f0`).
-  - Rank #3: Bronze trophy icon (`#d97706`), Bronze avatar border (`#d97706`).
-  - Rank #4+: No trophy icon displayed, Crisp white avatar border (`#ffffff`).
-- **Unbolded Dimension Names & Metric Numbers**: Both the dimension item names (`.col-name`) and values (`.col-number`) are rendered unbolded (`font-weight: 400`) for a clean visual hierarchy matching screenshot specs.
-- **Curved Pill Graph Angles**: Both `.bar-track` (`background-color: #262626`) and `.bar-fill` enforce fully rounded pill angles (`border-radius: 9999px`).
-- **Enlarged Elements & Compact Row Spacing**: MemberAvatar size set to `34px`, Trophy icon size set to `20px`, member name font size set to `0.98rem`, with row gap set to `6px` (`gap: 6px`) to ensure optimal fit on mobile screens.
+### 6.13 Parenthetical Display Name Formatting (`formatDisplayName`)
+- Any member name containing text in parentheses (e.g. `"Zero (NOLiMIT)"`) automatically strips the parentheses for display (rendering as `"Zero"`).
 
 ---
 
