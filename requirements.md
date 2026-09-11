@@ -260,7 +260,8 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 ## 8. Verification & Release Criteria
 
 Before any code deployment is finalized:
-1. **TypeScript Validation**: Must pass `npx tsc --noEmit` with 0 errors.
-2. **Production Bundle**: Static export must compile cleanly via `npm run build`.
-3. **Git Sync**: Changes committed and pushed to repository.
-4. **Firebase Deployment**: Live application deployed to Firebase Hosting (`https://cheki-tracker-39407.web.app`) & Firestore Security Rules (`firestore.rules`).
+1. **Automated Anti-Duplicate Test Suite (`npm test`)**: Must execute `node scripts/testMergedMetadata.mjs` and pass 100% of unit assertions before every `npm run build`. Verifies Back Office renaming, key binding, legacy override skipping, and prevents duplicate row creation.
+2. **TypeScript Validation**: Must pass `npx tsc --noEmit` with 0 errors.
+3. **Production Bundle**: Static export must compile cleanly via `npm run build`.
+4. **Git Sync**: Changes committed and pushed to repository.
+5. **Firebase Deployment**: Live application deployed to Firebase Hosting (`https://cheki-tracker-39407.web.app`) & Firestore Security Rules (`firestore.rules`).
