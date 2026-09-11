@@ -660,21 +660,38 @@ export function subscribeMergedMetadata<T>(
       const isAllowed = (d as any).is_allowed_import !== false && (d as any).allow_import !== false;
       if (!isAllowed) return; // Disallowed in Back Office
 
-      // Check optional user subscription filters
+      // Check optional user subscription filters (driven strictly by Group level)
       if (!userSubs.subscribeAll) {
         const itemCountry = String((d as any).country || '').trim().toLowerCase();
         const itemCompany = String((d as any).company || '').trim().toLowerCase();
         const itemGroup = String((d as any).group || '').trim().toLowerCase();
 
-        const matchCountry = userSubs.countries.some(c => {
-          const cStr = String(c).trim().toLowerCase();
-          return cStr === itemCountry || (itemCountry && itemCountry.includes(cStr));
-        });
-        const matchCompany = userSubs.companies.some(c => String(c).trim().toLowerCase() === itemCompany);
-        const matchGroup = userSubs.groups.some(g => String(g).trim().toLowerCase() === itemGroup);
+        const subscribedGroupSet = new Set(userSubs.groups.map(g => String(g).trim().toLowerCase()));
 
-        if (!matchCountry && !matchCompany && !matchGroup) {
-          return; // Skip if user chose not to subscribe
+        if (tableName === 'dim_member') {
+          // Member is subscribed ONLY if its group is in subscribedGroupSet
+          if (!subscribedGroupSet.has(itemGroup)) return;
+        } else if (tableName === 'dim_group') {
+          // Group is subscribed ONLY if it is in subscribedGroupSet
+          if (!subscribedGroupSet.has(itemGroup)) return;
+        } else if (tableName === 'dim_company') {
+          // Company is subscribed ONLY if at least one group in userSubs.groups belongs to this company
+          const hasSubscribedGroup = defaultItems.some(item => {
+            const grp = String((item as any).group || '').trim().toLowerCase();
+            const comp = String((item as any).company || '').trim().toLowerCase();
+            return comp === itemCompany && subscribedGroupSet.has(grp);
+          }) || (subscribedGroupSet.size > 0 && userSubs.companies.some(c => String(c).trim().toLowerCase() === itemCompany));
+
+          if (!hasSubscribedGroup) return;
+        } else {
+          // Fallback (e.g. dim_country): check if any group in userSubs.groups belongs to this country
+          const hasSubscribedGroupInCountry = defaultItems.some(item => {
+            const grp = String((item as any).group || '').trim().toLowerCase();
+            const cnt = String((item as any).country || '').trim().toLowerCase();
+            return cnt === itemCountry && subscribedGroupSet.has(grp);
+          }) || (subscribedGroupSet.size > 0 && userSubs.countries.some(c => String(c).trim().toLowerCase() === itemCountry));
+
+          if (!hasSubscribedGroupInCountry) return;
         }
       }
 

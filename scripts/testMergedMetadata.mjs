@@ -15,7 +15,7 @@ function getItemValueString(item) {
   ).trim();
 }
 
-function mergeMetadata(defaultItems, userItems, userSubs = { subscribeAll: true, countries: [], companies: [], groups: [] }) {
+function mergeMetadata(tableName, defaultItems, userItems, userSubs = { subscribeAll: true, countries: [], companies: [], groups: [] }) {
   const userOverridesById = new Map();
   const userOverridesByKey = new Map();
 
@@ -34,10 +34,38 @@ function mergeMetadata(defaultItems, userItems, userSubs = { subscribeAll: true,
   const processedKeys = new Set();
   const processedUserItemObjects = new Set();
 
-  // 1. Process Default items from Back Office
+  // 1. Process Default items from Back Office (driven strictly by Group level subscription)
   defaultItems.forEach((d) => {
     const isAllowed = d.is_allowed_import !== false && d.allow_import !== false;
     if (!isAllowed) return;
+
+    if (!userSubs.subscribeAll) {
+      const itemCountry = String(d.country || '').trim().toLowerCase();
+      const itemCompany = String(d.company || '').trim().toLowerCase();
+      const itemGroup = String(d.group || '').trim().toLowerCase();
+
+      const subscribedGroupSet = new Set(userSubs.groups.map(g => String(g).trim().toLowerCase()));
+
+      if (tableName === 'dim_member' || tableName === 'dim_group') {
+        if (!subscribedGroupSet.has(itemGroup)) return;
+      } else if (tableName === 'dim_company') {
+        const hasSubscribedGroup = defaultItems.some(item => {
+          const grp = String(item.group || '').trim().toLowerCase();
+          const comp = String(item.company || '').trim().toLowerCase();
+          return comp === itemCompany && subscribedGroupSet.has(grp);
+        }) || (subscribedGroupSet.size > 0 && userSubs.companies.some(c => String(c).trim().toLowerCase() === itemCompany));
+
+        if (!hasSubscribedGroup) return;
+      } else {
+        const hasSubscribedGroupInCountry = defaultItems.some(item => {
+          const grp = String(item.group || '').trim().toLowerCase();
+          const cnt = String(item.country || '').trim().toLowerCase();
+          return cnt === itemCountry && subscribedGroupSet.has(grp);
+        }) || (subscribedGroupSet.size > 0 && userSubs.countries.some(c => String(c).trim().toLowerCase() === itemCountry));
+
+        if (!hasSubscribedGroupInCountry) return;
+      }
+    }
 
     const dId = String(d.id || '');
     const val = getItemValueString(d).toLowerCase();
@@ -103,7 +131,7 @@ function mergeMetadata(defaultItems, userItems, userSubs = { subscribeAll: true,
   return merged;
 }
 
-console.log('🧪 Running Suite: Back Office Renaming & Anti-Duplicate Row Tests...\n');
+console.log('🧪 Running Suite: Back Office Renaming & Group-Level Subscription Tests...\n');
 
 // Test 1: Basic Back Office Name Adjustment (Renaming Default Item)
 {
@@ -113,7 +141,7 @@ console.log('🧪 Running Suite: Back Office Renaming & Anti-Duplicate Row Tests
   ];
   const userItems = [];
 
-  const merged = mergeMetadata(defaultItems, userItems);
+  const merged = mergeMetadata('dim_member', defaultItems, userItems);
   assert.equal(merged.length, 1, 'Should output exactly 1 row');
   assert.equal(merged[0].member_name, 'Tonliw (BNK48)', 'Merged item should have the new Back Office name');
   console.log('  ✅ PASSED: 1 row emitted with updated Back Office name\n');
@@ -125,12 +153,11 @@ console.log('🧪 Running Suite: Back Office Renaming & Anti-Duplicate Row Tests
   const defaultItems = [
     { id: 'default_dim_member_1', member_name: 'Tonliw (BNK48)', group: 'BNK48' }
   ];
-  // User had previously toggled active status to false
   const userItems = [
     { id: 'default_dim_member_1', backoffice_id: 'default_dim_member_1', is_active: false, is_custom: false }
   ];
 
-  const merged = mergeMetadata(defaultItems, userItems);
+  const merged = mergeMetadata('dim_member', defaultItems, userItems);
   assert.equal(merged.length, 1, 'Should output exactly 1 row without creating duplicates');
   assert.equal(merged[0].member_name, 'Tonliw (BNK48)', 'Merged item should display updated Back Office name');
   assert.equal(merged[0].is_active, false, 'Merged item should preserve user active status preference (false)');
@@ -143,12 +170,11 @@ console.log('🧪 Running Suite: Back Office Renaming & Anti-Duplicate Row Tests
   const defaultItems = [
     { id: 'default_dim_member_1', member_name: 'Tonliw (BNK48)', group: 'BNK48' }
   ];
-  // Old override created when name was "Tonliw"
   const userItems = [
     { id: 'dim_member_178900000', member_name: 'Tonliw', is_active: false, is_custom: false }
   ];
 
-  const merged = mergeMetadata(defaultItems, userItems);
+  const merged = mergeMetadata('dim_member', defaultItems, userItems);
   assert.equal(merged.length, 1, 'Should NOT spawn a duplicate row for the old name');
   assert.equal(merged[0].member_name, 'Tonliw (BNK48)', 'Default item takes updated Back Office name');
   console.log('  ✅ PASSED: Legacy override skipped, 0 duplicate rows spawned\n');
@@ -164,11 +190,52 @@ console.log('🧪 Running Suite: Back Office Renaming & Anti-Duplicate Row Tests
     { id: 'dim_member_custom_1', member_name: 'My Custom Idol', is_custom: true, is_active: true }
   ];
 
-  const merged = mergeMetadata(defaultItems, userItems);
+  const merged = mergeMetadata('dim_member', defaultItems, userItems);
   assert.equal(merged.length, 2, 'Should contain 2 rows (1 default item + 1 custom item)');
   assert.equal(merged[0].member_name, 'Tonliw (BNK48)');
   assert.equal(merged[1].member_name, 'My Custom Idol');
   console.log('  ✅ PASSED: Custom user item rendered alongside default item without conflicts\n');
 }
 
-console.log('🎉 ALL 4 ANTI-DUPLICATE TESTS PASSED SUCCESSFULLY!');
+// Test 5: Group-Level Subscription Filter (Ticking Country/Company without Group has NO effect)
+{
+  console.log('Test 5: Group-level subscription filter (Ticking Country/Company without ticking any Group)');
+  const defaultItems = [
+    { id: 'default_dim_member_1', member_name: 'Tonliw (BNK48)', group: 'BNK48', company: 'Independent Artist', country: '🇹🇭 TH' }
+  ];
+  const userItems = [];
+  const userSubs = {
+    subscribeAll: false,
+    countries: ['🇹🇭 TH'],
+    companies: ['Independent Artist'],
+    groups: [] // NO group selected!
+  };
+
+  const merged = mergeMetadata('dim_member', defaultItems, userItems, userSubs);
+  assert.equal(merged.length, 0, 'No member should be subscribed if no group is selected');
+  console.log('  ✅ PASSED: 0 members subscribed when Country/Company ticked without Group\n');
+}
+
+// Test 6: Unticking Group & Saving Unsubscribes Group & Members Immediately
+{
+  console.log('Test 6: Unticking Group & Saving unsubscribes group and members immediately');
+  const defaultMembers = [
+    { id: 'default_dim_member_1', member_name: 'Tonliw', group: 'BNK48' },
+    { id: 'default_dim_member_2', member_name: 'Siso', group: 'CGM48' }
+  ];
+  const userItems = [];
+  // User unticked "CGM48", so groups only contains "BNK48"
+  const userSubs = {
+    subscribeAll: false,
+    countries: ['🇹🇭 TH'],
+    companies: ['Independent Artist'],
+    groups: ['BNK48']
+  };
+
+  const merged = mergeMetadata('dim_member', defaultMembers, userItems, userSubs);
+  assert.equal(merged.length, 1, 'Should only contain member of BNK48');
+  assert.equal(merged[0].member_name, 'Tonliw');
+  console.log('  ✅ PASSED: CGM48 member unsubscribed immediately when CGM48 unticked and saved\n');
+}
+
+console.log('🎉 ALL 6 ANTI-DUPLICATE & GROUP SUBSCRIPTION TESTS PASSED SUCCESSFULLY!');
