@@ -111,31 +111,35 @@ export default function EventsPage() {
                 <th className="sortable-th" onClick={() => handleSort('event')}>
                   Event Name {sortKey === 'event' ? (sortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                 </th>
-                <th className="sortable-th" onClick={() => handleSort('memberCount')}>
-                  Members {sortKey === 'memberCount' ? (sortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                </th>
                 <th className="sortable-th" onClick={() => handleSort('qty')}>
-                  QTY {sortKey === 'qty' ? (sortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                  Quantity {sortKey === 'qty' ? (sortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                 </th>
                 <th className="sortable-th" onClick={() => handleSort('pct')}>
-                  % {sortKey === 'pct' ? (sortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                  % Qty {sortKey === 'pct' ? (sortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                 </th>
                 <th className="sortable-th" onClick={() => handleSort('price')}>
-                  Total (THB) {sortKey === 'price' ? (sortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                  Total Price (THB) {sortKey === 'price' ? (sortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                 </th>
               </tr>
             </thead>
             <tbody>
-              {eventsPivot.items.map((r, i) => (
-                <tr key={i}>
-                  <td><strong>{r.period}</strong></td>
-                  <td>{r.event}</td>
-                  <td>{r.memberCount} members ({Array.from(r.members).slice(0, 3).join(', ')}{r.members.size > 3 ? '...' : ''})</td>
-                  <td><strong>{r.qty}</strong></td>
-                  <td>{r.pct}%</td>
-                  <td>฿{r.price.toLocaleString()}</td>
-                </tr>
-              ))}
+              {eventsPivot.items.map((r, i) => {
+                const prevRow = i > 0 ? eventsPivot.items[i - 1] : null;
+                const isSamePeriod = prevRow && prevRow.period === r.period;
+                const isGroupStart = !isSamePeriod;
+
+                return (
+                  <tr key={i} className={isGroupStart && i > 0 ? 'group-start-row' : ''}>
+                    <td className="period-cell">
+                      {isGroupStart ? <strong>{r.period}</strong> : ''}
+                    </td>
+                    <td>{r.event}</td>
+                    <td>{r.qty}</td>
+                    <td><strong>{r.pct}%</strong></td>
+                    <td>{r.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -211,6 +215,10 @@ export default function EventsPage() {
           &:hover {
             color: var(--accent-primary);
           }
+        }
+
+        .group-start-row td {
+          border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
         }
       `}</style>
     </div>

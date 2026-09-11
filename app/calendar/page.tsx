@@ -299,6 +299,28 @@ export default function CalendarPage() {
     return groupTransactionsByImage(activeViewRows);
   }, [activeViewRows]);
 
+  // Group photos by date for Full Month View (Separated Days)
+  const photosByDate = useMemo(() => {
+    const dates = Array.from(new Set(activeViewRows.map(r => r.date).filter(Boolean))).sort();
+
+    return dates.map((dateStr) => {
+      const rowsForDate = activeViewRows.filter((r) => r.date === dateStr);
+      const groupedForDate = groupTransactionsByImage(rowsForDate);
+      const dObj = new Date(dateStr + 'T00:00:00');
+      const dateFormatted = dObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      const eventsStr = Array.from(new Set(rowsForDate.map((r) => r.event).filter(Boolean))).join(', ');
+      const totalQtyForDate = rowsForDate.reduce((sum, r) => sum + (r.quantity || 1), 0);
+
+      return {
+        dateStr,
+        dateFormatted,
+        eventsStr,
+        totalQtyForDate,
+        groupedPhotos: groupedForDate,
+      };
+    }).filter((d) => d.groupedPhotos.length > 0);
+  }, [activeViewRows]);
+
   // Gallery items for Lightbox navigation with rich white-gold specs
   const monthGalleryItems: LightboxItem[] = useMemo(() => {
     return groupedPhotos.map((g) => {
@@ -473,95 +495,188 @@ export default function CalendarPage() {
 
       {/* Photo Gallery Card (Month View by default or Selected Day View) */}
       <div className="gallery-section-card card">
-        <div className="day-header-banner">
-          <div className="day-header-left-bar" />
-          <div className="day-header-content">
-            <span className="day-header-icon">📅</span>
-            <span className="day-header-date">{viewHeaderInfo.title}</span>
-            {viewHeaderInfo.eventsStr && (
-              <>
-                <span className="day-header-separator"> — </span>
-                <span className="day-header-events">{viewHeaderInfo.eventsStr}</span>
-              </>
+        {selectedDate ? (
+          /* SINGLE SELECTED DAY VIEW */
+          <div>
+            <div className="day-header-banner">
+              <div className="day-header-left-bar" />
+              <div className="day-header-content">
+                <span className="day-header-icon">📅</span>
+                <span className="day-header-date">{viewHeaderInfo.title}</span>
+                {viewHeaderInfo.eventsStr && (
+                  <>
+                    <span className="day-header-separator"> — </span>
+                    <span className="day-header-events">{viewHeaderInfo.eventsStr}</span>
+                  </>
+                )}
+              </div>
+
+              <div className="day-header-actions">
+                <button
+                  className="btn btn-primary btn-sm btn-add-day-cheki"
+                  onClick={() => handleOpenAddModal(selectedDate || undefined)}
+                  title="Add new cheki transaction for this date"
+                >
+                  <Plus size={14} />
+                  <span>Add</span>
+                </button>
+                <button className="btn-close-view" onClick={() => setSelectedDate(null)} title="Show full month gallery">
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {groupedPhotos.length === 0 ? (
+              <div className="no-photos-placeholder">
+                <ImageIcon size={32} />
+                <p>No cheki photos recorded for {selectedDate}.</p>
+              </div>
+            ) : (
+              <div className="grouped-gallery-grid">
+                {groupedPhotos.map((photo, pIdx) => {
+                  const memberTitle = photo.members.length > 2
+                    ? `${photo.members.slice(0, 2).join(', ')} +${photo.members.length - 2}`
+                    : photo.members.join(', ') || 'Cheki Photo';
+
+                  return (
+                    <div 
+                      key={photo.key} 
+                      className="grouped-cheki-card"
+                      onClick={() => setLightboxState({ open: true, index: pIdx })}
+                    >
+                      {photo.members.length >= 2 ? (
+                        <div className="badge-pill gold">
+                          <Users size={12} /> {photo.members.length} members
+                        </div>
+                      ) : photo.totalQty >= 2 ? (
+                        <div className="badge-pill dark">
+                          ×{photo.totalQty}
+                        </div>
+                      ) : null}
+
+                      <div className="color-dots-group">
+                        {photo.colors.map((cName) => {
+                          const hex = colorHexMap[cName] || (cName.toLowerCase() === 'white' ? '#ffffff' : '#7f8c8d');
+                          return (
+                            <span 
+                              key={cName} 
+                              className="color-dot" 
+                              style={{ backgroundColor: hex }} 
+                              title={cName} 
+                            />
+                          );
+                        })}
+                      </div>
+
+                      <div className="grouped-img-wrap">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={photo.cleanUrl} alt={memberTitle} className="grouped-img" />
+                      </div>
+
+                      <div className="photo-card-footer">
+                        <span className="footer-member-name">{memberTitle}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
-          </div>
-
-          <div className="day-header-actions">
-            {/* Add Cheki button prefilled with selected date */}
-            <button
-              className="btn btn-primary btn-sm btn-add-day-cheki"
-              onClick={() => handleOpenAddModal(selectedDate || undefined)}
-              title="Add new cheki transaction for this date"
-            >
-              <Plus size={14} />
-              <span>Add</span>
-            </button>
-
-            {viewHeaderInfo.isDateSelected && (
-              <button className="btn-close-view" onClick={() => setSelectedDate(null)} title="Show full month gallery">
-                <X size={16} />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {groupedPhotos.length === 0 ? (
-          <div className="no-photos-placeholder">
-            <ImageIcon size={32} />
-            <p>No cheki photos recorded for {selectedDate ? selectedDate : monthNames[currentMonth].substring(0, 3) + ' ' + currentYear}.</p>
           </div>
         ) : (
-          <div className="grouped-gallery-grid">
-            {groupedPhotos.map((photo, pIdx) => {
-              const memberTitle = photo.members.length > 2
-                ? `${photo.members.slice(0, 2).join(', ')} +${photo.members.length - 2}`
-                : photo.members.join(', ') || 'Cheki Photo';
+          /* FULL MONTH VIEW: SEPARATED BY DAY */
+          <div>
+            {photosByDate.length === 0 ? (
+              <div className="no-photos-placeholder">
+                <ImageIcon size={32} />
+                <p>No cheki photos recorded for {monthNames[currentMonth].substring(0, 3)} {currentYear}.</p>
+              </div>
+            ) : (
+              <div className="full-month-gallery-container" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                {photosByDate.map((dayGroup) => (
+                  <div key={dayGroup.dateStr} className="day-gallery-block" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div className="day-header-banner">
+                      <div className="day-header-left-bar" />
+                      <div className="day-header-content">
+                        <span className="day-header-icon">📅</span>
+                        <span className="day-header-date">
+                          {dayGroup.dateFormatted} ({dayGroup.totalQtyForDate})
+                        </span>
+                        {dayGroup.eventsStr && (
+                          <>
+                            <span className="day-header-separator"> — </span>
+                            <span className="day-header-events">{dayGroup.eventsStr}</span>
+                          </>
+                        )}
+                      </div>
 
-              return (
-                <div 
-                  key={photo.key} 
-                  className="grouped-cheki-card"
-                  onClick={() => setLightboxState({ open: true, index: pIdx })}
-                >
-                  {/* Top Left Badge */}
-                  {photo.members.length >= 2 ? (
-                    <div className="badge-pill gold">
-                      <Users size={12} /> {photo.members.length} members
+                      <div className="day-header-actions">
+                        <button
+                          className="btn btn-primary btn-sm btn-add-day-cheki"
+                          onClick={() => handleOpenAddModal(dayGroup.dateStr)}
+                          title="Add new cheki transaction for this date"
+                        >
+                          <Plus size={14} />
+                          <span>Add</span>
+                        </button>
+                      </div>
                     </div>
-                  ) : photo.totalQty >= 2 ? (
-                    <div className="badge-pill dark">
-                      ×{photo.totalQty}
+
+                    <div className="grouped-gallery-grid">
+                      {dayGroup.groupedPhotos.map((photo) => {
+                        const memberTitle = photo.members.length > 2
+                          ? `${photo.members.slice(0, 2).join(', ')} +${photo.members.length - 2}`
+                          : photo.members.join(', ') || 'Cheki Photo';
+
+                        const globalIdx = monthGalleryItems.findIndex(
+                          (item) => extractDirectImageUrl(item.url) === photo.cleanUrl || item.url === photo.imgUrl
+                        );
+
+                        return (
+                          <div 
+                            key={photo.key} 
+                            className="grouped-cheki-card"
+                            onClick={() => setLightboxState({ open: true, index: globalIdx >= 0 ? globalIdx : 0 })}
+                          >
+                            {photo.members.length >= 2 ? (
+                              <div className="badge-pill gold">
+                                <Users size={12} /> {photo.members.length} members
+                              </div>
+                            ) : photo.totalQty >= 2 ? (
+                              <div className="badge-pill dark">
+                                ×{photo.totalQty}
+                              </div>
+                            ) : null}
+
+                            <div className="color-dots-group">
+                              {photo.colors.map((cName) => {
+                                const hex = colorHexMap[cName] || (cName.toLowerCase() === 'white' ? '#ffffff' : '#7f8c8d');
+                                return (
+                                  <span 
+                                    key={cName} 
+                                    className="color-dot" 
+                                    style={{ backgroundColor: hex }} 
+                                    title={cName} 
+                                  />
+                                );
+                              })}
+                            </div>
+
+                            <div className="grouped-img-wrap">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={photo.cleanUrl} alt={memberTitle} className="grouped-img" />
+                            </div>
+
+                            <div className="photo-card-footer">
+                              <span className="footer-member-name">{memberTitle}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  ) : null}
-
-                  {/* Top Right Color Dots */}
-                  <div className="color-dots-group">
-                    {photo.colors.map((cName) => {
-                      const hex = colorHexMap[cName] || (cName.toLowerCase() === 'white' ? '#ffffff' : '#7f8c8d');
-                      return (
-                        <span 
-                          key={cName} 
-                          className="color-dot" 
-                          style={{ backgroundColor: hex }} 
-                          title={cName} 
-                        />
-                      );
-                    })}
                   </div>
-
-                  {/* Photo Thumbnail */}
-                  <div className="grouped-img-wrap">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={photo.cleanUrl} alt={memberTitle} className="grouped-img" />
-                  </div>
-
-                  {/* Bottom Footer Label */}
-                  <div className="photo-card-footer">
-                    <span className="footer-member-name">{memberTitle}</span>
-                  </div>
-                </div>
-              );
-            })}
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
