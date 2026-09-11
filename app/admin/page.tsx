@@ -226,11 +226,10 @@ export default function BackOfficePage() {
     setDeleteConfirmModal(null);
   };
 
-  if (!user && !isDemoUser) return <LoginPrompt />;
-  if (loading) return <CircularSpinner />;
-
   // Filter choices for Import Wizard
-  const availableCountries = Array.from(new Set(DEFAULT_COUNTRIES.map(c => c.displayed_country || c.country)));
+  const availableCountries = useMemo(() => {
+    return Array.from(new Set(DEFAULT_COUNTRIES.map(c => c.displayed_country || c.country)));
+  }, []);
 
   const availableCompanies = useMemo(() => {
     return Array.from(new Set(
@@ -274,6 +273,9 @@ export default function BackOfficePage() {
 
     return matchingMembers.length + matchingGroups.length + matchingCompanies.length;
   }, [selectedCountry, selectedCompany, selectedGroup]);
+
+  if (!user && !isDemoUser) return <LoginPrompt />;
+  if (loading) return <CircularSpinner />;
 
   return (
     <div className="admin-page">
