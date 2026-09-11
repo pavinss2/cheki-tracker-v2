@@ -270,12 +270,56 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 
 ---
 
-## 7. Mandatory Documentation Rule
+## 7. Tier Maker Specifications (`/tiermaker`)
+
+### 7.1 Tier Board & Hierarchy Model
+- **Default Hierarchy**: Board initializes with 4 preset tiers: **S** (`#ff4757`), **A** (`#ffa502`), **B** (`#eccc68`), and **C** (`#2ed573`).
+- **Row Constraints & Customization**:
+  - Board supports a maximum of 6 tiers and enforces a minimum of 1 tier.
+  - Users can click **"+ Add Tier"** to add new tiers (cycled through `PRESET_COLORS`), move tiers up/down with chevron buttons, delete tiers (returning members back to the unassigned pool), or double-click the tier label box to customize name and color via the Tier Edit modal.
+- **Unassigned Members Pool**: Displays active members not placed in any tier, sortable/filterable by Group, Company, or live text search.
+
+### 7.2 Member Image Customization (Shape & Name Visibility Toggles)
+- **Control Bar Placement**: Toggles are positioned in the **top-right header of the Unassigned Members pane** alongside existing filters (Group, Company, Search) separated by a clean vertical divider (`.filter-divider`).
+- **Avatar Shape Toggle (`.btn-group`)**:
+  - **Square (Default)**: Crisp square tiles with subtle rounded corners (`borderRadius: '4px'`, subtle border, matching League of Legends classic tier list icon style).
+  - **Circle**: Alternative circular styling (`borderRadius: '50%'`, standard circular avatar).
+  - **Dual Pane Reflection**: Toggling between Circle and Square immediately updates member avatars across **both the Tier List board AND the Unassigned Members pool grid (`pool-grid`)**.
+  - Backed by `MemberAvatar` (`components/common/MemberAvatar.tsx`) which accepts optional `shape?: 'circle' | 'square'` and `borderRadius?: string` with 100% backward compatibility across other application pages.
+- **Name Visibility Toggle (`.btn-group`)**:
+  - **OFF (Default)**: Member names are hidden across **both the Tier List board AND the Unassigned Members pool grid**:
+    - In tier rows, the square avatar enlarges to **`74px`**, perfectly filling the **`80px` square height** of `.tier-content-area` (`padding: 3px 6px`) edge-to-edge with a compact `5px` gap (`.compact-grid`), matching the full-height square champion tiles in classic tier lists.
+    - In the unassigned pool (`.pool-grid.compact-pool`), cards switch to pure **`74px` avatar tiles (`.no-names`)** with names hidden, a compact `6px` gap, and floating shortcut buttons on selection.
+    - **Floating Shortcut Popover Stacking Elevation**: When a card is selected in `.no-names` mode, `.tier-shortcut-options.floating-shortcuts` renders as a vertical popover (`top: 50%; left: 50%; transform: translate(-50%, -50%);`, `z-index: 110`) elevated on top of `.pool-member-card.selected` / `.pool-member-card.no-names.selected` (`z-index: 100 !important`). This guarantees the shortcut buttons float completely above all adjacent cards across rows and columns without being obscured by DOM stacking order or neighbor hover states.
+  - **Names: ON**: Optional layout rendering the member display name underneath each avatar in tier rows and beside avatars in the unassigned pool.
+  - **Tooltip Accessibility**: When names are hidden, hovering over any card in tier rows or pool-grid immediately displays the member's full name in the browser tooltip (`title={mName}`).
+- **State & Preference Persistence**:
+  - Active shape and name choices persist across browser sessions in `localStorage` (`cheki_tiermaker_avatar_shape`, `cheki_tiermaker_show_names`).
+  - Saved custom setups (`SavedSetup`) store and restore active `avatarShape` and `showMemberNames` configurations.
+
+### 7.3 Freeform Drag-and-Drop Reordering & Placement
+- **Horizontal Reordering Within Same Tier**:
+  - Dragging an avatar card horizontally within its current tier dynamically calculates the cursor position relative to hovered card midpoints (`mouseX < rect.left + rect.width / 2`) to determine target insertion index.
+  - Reordering adjusts subsequent indices (`sourceIndex < targetIndex ? targetIndex - 1 : targetIndex`) to place members seamlessly into any position.
+- **Cross-Tier Freeform Placement**: Dragging members between different tiers allows inserting them before, between, or after existing members.
+- **Unassigned Pool Direct Placement**: Dragging an unassigned member from the pool onto any tier row inserts them directly into the targeted position.
+- **Visual Drop Indicator (`.drop-indicator-line`)**:
+  - A vertical glowing gold line (`#d4a84b`) dynamically appears between cards to preview the exact drop insertion point before mouse release.
+  - Automatically pulses with subtle scaling animation (`@keyframes drop-pulse`) for clear visual feedback.
+
+### 7.4 Image Export Consistency (`handleExportJpg`)
+- Board is exported to high-resolution JPEG (`quality: 0.95`, background `#0d0f15`) with automatic fallback to PNG.
+- Exports honor the active shape (Circle / Square) and name visibility (ON / OFF) settings.
+- Temporary UI controls (`.tier-row-controls`, `.remove-card-btn`, `.drop-indicator-line`) are automatically filtered out during export to generate clean images.
+
+---
+
+## 8. Mandatory Documentation Rule
 - **Continuous Spec Updates**: `requirements.md` MUST be updated immediately whenever the user requests a new feature, UI adjustment, or backend fix.
 
 ---
 
-## 8. Verification & Release Criteria
+## 9. Verification & Release Criteria
 
 Before any code deployment is finalized:
 1. **Automated Anti-Duplicate & Isolation Test Suites (`npm test`)**: Must execute both `node scripts/testMergedMetadata.mjs` and `node scripts/testUserTransactionIsolation.mjs` and pass 100% of unit assertions before every `npm run build`. Verifies Back Office renaming, key binding, multi-tenant isolation, legacy seed purging, and prevents duplicate row creation.
@@ -283,3 +327,4 @@ Before any code deployment is finalized:
 3. **Production Bundle**: Static export must compile cleanly via `npm run build`.
 4. **Git Sync**: Changes committed and pushed to repository.
 5. **Firebase Deployment**: Live application deployed to Firebase Hosting (`https://cheki-tracker-39407.web.app`) & Firestore Security Rules (`firestore.rules`).
+

@@ -1835,7 +1835,7 @@ export default function AdminPage() {
         .filter-select-wrapper {
           display: flex;
           gap: 16px;
-          flex: 1;
+          // flex: 1;
           min-width: 0;
           // align-items: center;
           // flex-wrap: nowrap;

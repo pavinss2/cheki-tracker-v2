@@ -19,7 +19,10 @@ import {
   Search, 
   X,
   Award,
-  FolderOpen
+  FolderOpen,
+  Circle,
+  Square,
+  Type
 } from 'lucide-react';
 import { toJpeg, toPng } from 'html-to-image';
 
@@ -35,6 +38,8 @@ interface SavedSetup {
   name: string;
   savedAt: string;
   tiers: Tier[];
+  avatarShape?: 'circle' | 'square';
+  showMemberNames?: boolean;
 }
 
 const PRESET_COLORS = [
@@ -54,10 +59,11 @@ const DEFAULT_TIERS: Tier[] = [
   { id: 'tier-a', label: 'A', color: '#ffa502', memberIds: [] },
   { id: 'tier-b', label: 'B', color: '#eccc68', memberIds: [] },
   { id: 'tier-c', label: 'C', color: '#2ed573', memberIds: [] },
-  { id: 'tier-d', label: 'D', color: '#1e90ff', memberIds: [] },
 ];
 
 const LOCAL_SETUPS_KEY = 'cheki_tiermaker_saved_setups_v2';
+const AVATAR_SHAPE_KEY = 'cheki_tiermaker_avatar_shape';
+const SHOW_NAMES_KEY = 'cheki_tiermaker_show_names';
 
 const renderMemberName = (name: string) => {
   let displayName = name;
@@ -91,6 +97,9 @@ export default function TierMakerPage() {
   const [selectedMemberName, setSelectedMemberName] = useState<string | null>(null);
   const [activeTierMember, setActiveTierMember] = useState<{ tierId: string; memberName: string } | null>(null);
   const [draggedMemberName, setDraggedMemberName] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ tierId: string; index: number } | null>(null);
+  const [avatarShape, setAvatarShape] = useState<'circle' | 'square'>('square');
+  const [showMemberNames, setShowMemberNames] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGroup, setSelectedGroup] = useState('');
   const [selectedCompany, setSelectedCompany] = useState('');
@@ -129,7 +138,26 @@ export default function TierMakerPage() {
     return Array.from(set).sort();
   }, [activeMembers]);
 
-  // Load saved configurations from localStorage on initial render
+  // Setters with localStorage persistence
+  const handleSetAvatarShape = (shape: 'circle' | 'square') => {
+    setAvatarShape(shape);
+    try {
+      localStorage.setItem(AVATAR_SHAPE_KEY, shape);
+    } catch (err) {
+      console.error("Failed saving avatar shape:", err);
+    }
+  };
+
+  const handleSetShowMemberNames = (show: boolean) => {
+    setShowMemberNames(show);
+    try {
+      localStorage.setItem(SHOW_NAMES_KEY, String(show));
+    } catch (err) {
+      console.error("Failed saving show member names preference:", err);
+    }
+  };
+
+  // Load saved configurations and display preferences on mount
   useEffect(() => {
     try {
       const savedStr = localStorage.getItem(LOCAL_SETUPS_KEY);
@@ -139,8 +167,16 @@ export default function TierMakerPage() {
           setSavedSetups(parsed);
         }
       }
+      const savedShape = localStorage.getItem(AVATAR_SHAPE_KEY);
+      if (savedShape === 'circle' || savedShape === 'square') {
+        setAvatarShape(savedShape);
+      }
+      const savedNames = localStorage.getItem(SHOW_NAMES_KEY);
+      if (savedNames !== null) {
+        setShowMemberNames(savedNames === 'true');
+      }
     } catch (err) {
-      console.error("Failed to load saved tier setups:", err);
+      console.error("Failed to load saved tier setups or preferences:", err);
     }
   }, []);
 
@@ -207,24 +243,73 @@ export default function TierMakerPage() {
     });
   }, [activeMembers, placedMemberNames, selectedGroup, selectedCompany, searchQuery]);
 
-  // Move member into a target tier (or remove if targetTierId is null)
-  const moveMemberToTier = (memberName: string, targetTierId: string | null) => {
+  // Move member into a target tier at a specific position (or remove if targetTierId is null)
+  const moveMemberToTierPosition = (
+    memberName: string, 
+    targetTierId: string | null, 
+    targetIndex?: number
+  ) => {
     setTiers((prevTiers) => {
+      const sourceTier = prevTiers.find((t) => t.memberIds.includes(memberName));
+      const sourceIndex = sourceTier ? sourceTier.memberIds.indexOf(memberName) : -1;
+
       return prevTiers.map((tier) => {
-        const filtered = tier.memberIds.filter((m) => m !== memberName);
-        if (tier.id === targetTierId) {
-          return { ...tier, memberIds: [...filtered, memberName] };
+        const isSource = sourceTier && sourceTier.id === tier.id;
+        const isTarget = tier.id === targetTierId;
+
+        if (!isSource && !isTarget) {
+          return tier;
         }
-        return { ...tier, memberIds: filtered };
+
+        // Target null: remove from tier (drop to pool)
+        if (targetTierId === null) {
+          if (isSource) {
+            return { ...tier, memberIds: tier.memberIds.filter((m) => m !== memberName) };
+          }
+          return tier;
+        }
+
+        // Case A: Reordering within the SAME tier
+        if (isSource && isTarget) {
+          const list = [...tier.memberIds];
+          const [removed] = list.splice(sourceIndex, 1);
+          const rawTargetIdx = typeof targetIndex === 'number' ? targetIndex : list.length;
+          const adjustedIdx = sourceIndex < rawTargetIdx ? rawTargetIdx - 1 : rawTargetIdx;
+          const insertIdx = Math.max(0, Math.min(adjustedIdx, list.length));
+          list.splice(insertIdx, 0, removed);
+          return { ...tier, memberIds: list };
+        }
+
+        // Case B: Moving FROM this tier to ANOTHER tier
+        if (isSource && !isTarget) {
+          return { ...tier, memberIds: tier.memberIds.filter((m) => m !== memberName) };
+        }
+
+        // Case C: Moving INTO this tier from ANOTHER tier or UNASSIGNED POOL
+        if (!isSource && isTarget) {
+          const list = tier.memberIds.filter((m) => m !== memberName);
+          const rawTargetIdx = typeof targetIndex === 'number' ? targetIndex : list.length;
+          const insertIdx = Math.max(0, Math.min(rawTargetIdx, list.length));
+          list.splice(insertIdx, 0, memberName);
+          return { ...tier, memberIds: list };
+        }
+
+        return tier;
       });
     });
     setSelectedMemberName(null);
+    setActiveTierMember(null);
   };
 
-  // Add a new tier (max 7 tiers)
+  // Convenience helper for backward compatibility
+  const moveMemberToTier = (memberName: string, targetTierId: string | null) => {
+    moveMemberToTierPosition(memberName, targetTierId);
+  };
+
+  // Add a new tier (max 6 tiers)
   const handleAddTier = () => {
-    if (tiers.length >= 7) {
-      alert("Maximum limit of 7 tiers reached.");
+    if (tiers.length >= 6) {
+      alert("Maximum limit of 6 tiers reached.");
       return;
     }
 
@@ -282,7 +367,7 @@ export default function TierMakerPage() {
       // Overwrite existing setup
       targetId = savedSetups[existingIndex].id;
       updatedSetups = savedSetups.map((s, idx) => 
-        idx === existingIndex ? { ...s, name, savedAt: todayDateStr, tiers } : s
+        idx === existingIndex ? { ...s, name, savedAt: todayDateStr, tiers, avatarShape, showMemberNames } : s
       );
     } else {
       // Create new saved setup
@@ -292,6 +377,8 @@ export default function TierMakerPage() {
         name,
         savedAt: todayDateStr,
         tiers,
+        avatarShape,
+        showMemberNames,
       };
       updatedSetups = [newSetup, ...savedSetups];
     }
@@ -319,6 +406,12 @@ export default function TierMakerPage() {
     if (target) {
       setTiers(target.tiers);
       setActiveSetupId(target.id);
+      if (target.avatarShape) {
+        handleSetAvatarShape(target.avatarShape);
+      }
+      if (typeof target.showMemberNames === 'boolean') {
+        handleSetShowMemberNames(target.showMemberNames);
+      }
       setSaveSuccessMsg(`Loaded setup "${target.name}"!`);
       setTimeout(() => setSaveSuccessMsg(null), 3000);
     }
@@ -341,9 +434,9 @@ export default function TierMakerPage() {
     }
   };
 
-  // Reset to default 5 tiers (S-A-B-C-D) and unassign all members
+  // Reset to default 4 tiers (S-A-B-C) and unassign all members
   const handleResetTiers = () => {
-    if (!confirm("Are you sure you want to reset all tiers to default S-A-B-C-D? This will clear current placements.")) return;
+    if (!confirm("Are you sure you want to reset all tiers to default S-A-B-C? This will clear current placements.")) return;
     setTiers(DEFAULT_TIERS);
     setSelectedMemberName(null);
     setActiveSetupId(null);
@@ -372,7 +465,11 @@ export default function TierMakerPage() {
         cacheBust: false,
         skipFonts: true,
         filter: (node: HTMLElement) => {
-          if (node.classList && node.classList.contains('tier-row-controls')) {
+          if (node.classList && (
+            node.classList.contains('tier-row-controls') || 
+            node.classList.contains('remove-card-btn') || 
+            node.classList.contains('drop-indicator-line')
+          )) {
             return false;
           }
           return true;
@@ -445,17 +542,18 @@ export default function TierMakerPage() {
           <button 
             className="btn btn-secondary btn-sm" 
             onClick={handleAddTier} 
-            disabled={tiers.length >= 7}
-            title={tiers.length >= 7 ? 'Maximum limit of 7 tiers reached' : 'Add a new tier row'}
+            disabled={tiers.length >= 6}
+            title={tiers.length >= 6 ? 'Maximum limit of 6 tiers reached' : 'Add a new tier row'}
           >
             <Plus size={14} /> Add Tier
           </button>
 
+          {/* Tier Save Button */}
           <button className="btn btn-secondary btn-sm" onClick={handleOpenSaveModal} title="Save current setup with a custom name">
-            <Save size={14} /> Save As...
+            <Save size={14} /> Save 
           </button>
 
-          <button className="btn btn-secondary btn-sm danger-text" onClick={handleResetTiers} title="Reset to default S-A-B-C-D tiers">
+          <button className="btn btn-secondary btn-sm danger-text" onClick={handleResetTiers} title="Reset to default S-A-B-C tiers">
             <RotateCcw size={14} /> Reset
           </button>
 
@@ -479,7 +577,16 @@ export default function TierMakerPage() {
 
       {/* Main Board Container (Captured for JPG export) */}
       <div className="table-card card" style={{ padding: '15px' }}>
-        <div ref={boardRef} className="tier-board-container" onClick={() => setActiveTierMember(null)}>
+        <div 
+          ref={boardRef} 
+          className="tier-board-container" 
+          onClick={() => setActiveTierMember(null)}
+          onDragLeave={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+              setDropTarget(null);
+            }
+          }}
+        >
           <div className="board-watermark">CHEKI TRACKER • TIER LIST</div>
 
           {tiers.map((tier, index) => {
@@ -493,13 +600,15 @@ export default function TierMakerPage() {
                 onDrop={(e) => {
                   e.preventDefault();
                   if (draggedMemberName) {
-                    moveMemberToTier(draggedMemberName, tier.id);
+                    const targetIdx = (dropTarget?.tierId === tier.id) ? dropTarget.index : tier.memberIds.length;
+                    moveMemberToTierPosition(draggedMemberName, tier.id, targetIdx);
                     setDraggedMemberName(null);
+                    setDropTarget(null);
                   }
                 }}
                 onClick={() => {
                   if (selectedMemberName) {
-                    moveMemberToTier(selectedMemberName, tier.id);
+                    moveMemberToTierPosition(selectedMemberName, tier.id, tier.memberIds.length);
                   }
                 }}
               >
@@ -517,49 +626,94 @@ export default function TierMakerPage() {
                 </div>
 
                 {/* Tier Content Drop Area (Clean, No Empty Text Hint) */}
-                <div className={`tier-content-area ${isTargeted ? 'clickable-target' : ''}`}>
-                  <div className="tier-members-grid">
-                    {tier.memberIds.map((mName) => {
+                <div 
+                  className={`tier-content-area ${isTargeted ? 'clickable-target' : ''}`}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    if (e.target === e.currentTarget || (e.target as HTMLElement).classList.contains('tier-members-grid')) {
+                      setDropTarget({ tierId: tier.id, index: tier.memberIds.length });
+                    }
+                  }}
+                >
+                  <div className={`tier-members-grid ${!showMemberNames ? 'compact-grid' : ''}`}>
+                    {tier.memberIds.map((mName, cardIndex) => {
                       const mObj = memberMap[mName];
                       const colorCode = mObj ? colorHexMap[mObj.color] : undefined;
                       const isSelectedInTier = activeTierMember?.tierId === tier.id && activeTierMember?.memberName === mName;
+                      const isCurrentlyDragged = draggedMemberName === mName;
+                      const showDropBefore = dropTarget?.tierId === tier.id && dropTarget.index === cardIndex;
 
                       return (
-                        <div 
-                          key={mName} 
-                          className={`tier-member-card ${isSelectedInTier ? 'selected' : ''}`}
-                          draggable
-                          onDragStart={() => setDraggedMemberName(mName)}
-                          onDragEnd={() => setDraggedMemberName(null)}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveTierMember(isSelectedInTier ? null : { tierId: tier.id, memberName: mName });
-                          }}
-                          title={isSelectedInTier ? `Tap X to remove ${mName}` : `Click to select ${mName}`}
-                        >
-                          <MemberAvatar 
-                            src={mObj?.member_image} 
-                            name={mName} 
-                            size={44} 
-                            colorHex={colorCode}
-                          />
-                          {renderMemberName(mName)}
-                          {isSelectedInTier && (
-                            <button 
-                              className="remove-card-btn" 
-                              title={`Remove ${mName} from tier`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                moveMemberToTier(mName, null);
-                                setActiveTierMember(null);
-                              }}
-                            >
-                              <X size={11} />
-                            </button>
-                          )}
-                        </div>
+                        <React.Fragment key={mName}>
+                          {showDropBefore && <div className="drop-indicator-line" />}
+                          <div 
+                            className={`tier-member-card ${isSelectedInTier ? 'selected' : ''} ${!showMemberNames ? 'no-names' : ''} ${isCurrentlyDragged ? 'is-dragging' : ''}`}
+                            draggable
+                            onDragStart={(e) => {
+                              setDraggedMemberName(mName);
+                              e.dataTransfer.setData('text/plain', mName);
+                              e.dataTransfer.effectAllowed = 'move';
+                            }}
+                            onDragEnd={() => {
+                              setDraggedMemberName(null);
+                              setDropTarget(null);
+                            }}
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              const mouseX = e.clientX;
+                              const isLeftHalf = mouseX < rect.left + rect.width / 2;
+                              const targetIndex = isLeftHalf ? cardIndex : cardIndex + 1;
+                              setDropTarget({ tierId: tier.id, index: targetIndex });
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              if (draggedMemberName) {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const mouseX = e.clientX;
+                                const isLeftHalf = mouseX < rect.left + rect.width / 2;
+                                const targetIndex = isLeftHalf ? cardIndex : cardIndex + 1;
+                                moveMemberToTierPosition(draggedMemberName, tier.id, targetIndex);
+                                setDraggedMemberName(null);
+                                setDropTarget(null);
+                              }
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveTierMember(isSelectedInTier ? null : { tierId: tier.id, memberName: mName });
+                            }}
+                            title={isSelectedInTier ? `Tap X to remove ${mName}` : mName}
+                          >
+                            <MemberAvatar 
+                              src={mObj?.member_image} 
+                              name={mName} 
+                              size={showMemberNames ? 44 : 74} 
+                              colorHex={colorCode}
+                              shape={avatarShape}
+                            />
+                            {showMemberNames && renderMemberName(mName)}
+                            {isSelectedInTier && (
+                              <button 
+                                className="remove-card-btn" 
+                                title={`Remove ${mName} from tier`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  moveMemberToTierPosition(mName, null);
+                                  setActiveTierMember(null);
+                                }}
+                              >
+                                <X size={11} />
+                              </button>
+                            )}
+                          </div>
+                        </React.Fragment>
                       );
                     })}
+                    {dropTarget?.tierId === tier.id && dropTarget.index >= tier.memberIds.length && (
+                      <div className="drop-indicator-line" />
+                    )}
                   </div>
                 </div>
 
@@ -610,16 +764,64 @@ export default function TierMakerPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <h3 style={{ fontSize: '1rem', margin: 0 }}>
-              Unassigned Members ({unassignedMembers.length})
+              Members ({unassignedMembers.length})
             </h3>
             {selectedMemberName && (
               <span className="badge-pill gold-outline" style={{ fontSize: '0.78rem' }}>
-                Selected: <strong>{selectedMemberName}</strong> (Click any tier above to place)
+                Selected: <strong>{selectedMemberName}</strong> (Click or drag above)
               </span>
             )}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            {/* Tier Image Adjust Toggles */}
+            <div className="tierlist-image-toggles">
+              {/* Shape Toggle */}
+              <div className="btn-group" title="Avatar shape in tier list">
+                <button 
+                  type="button" 
+                  className={`btn-toggle ${avatarShape === 'circle' ? 'active' : ''}`}
+                  onClick={() => handleSetAvatarShape('circle')}
+                  title="Circle avatar shape"
+                >
+                  <Circle size={13} />
+                  <span>Circle</span>
+                </button>
+                <button 
+                  type="button" 
+                  className={`btn-toggle ${avatarShape === 'square' ? 'active' : ''}`}
+                  onClick={() => handleSetAvatarShape('square')}
+                  title="Square avatar shape (League style)"
+                >
+                  <Square size={13} />
+                  <span>Square</span>
+                </button>
+              </div>
+
+              {/* Names Toggle */}
+              <div className="btn-group" title="Display member names in tier list">
+                <button 
+                  type="button" 
+                  className={`btn-toggle ${showMemberNames ? 'active' : ''}`}
+                  onClick={() => handleSetShowMemberNames(true)}
+                  title="Show member names below avatars"
+                >
+                  <Type size={13} />
+                  <span>Name: ON</span>
+                </button>
+                <button 
+                  type="button" 
+                  className={`btn-toggle ${!showMemberNames ? 'active' : ''}`}
+                  onClick={() => handleSetShowMemberNames(false)}
+                  title="Hide member names"
+                >
+                  <span>OFF</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="filter-divider" />
+
             {/* Group Filter */}
             <select 
               className="table-select" 
@@ -664,12 +866,16 @@ export default function TierMakerPage() {
         {/* Pool Grid */}
         <div 
           className="pool-container"
-          onDragOver={(e) => e.preventDefault()}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDropTarget(null);
+          }}
           onDrop={(e) => {
             e.preventDefault();
             if (draggedMemberName) {
-              moveMemberToTier(draggedMemberName, null);
+              moveMemberToTierPosition(draggedMemberName, null);
               setDraggedMemberName(null);
+              setDropTarget(null);
             }
           }}
         >
@@ -678,7 +884,7 @@ export default function TierMakerPage() {
               {searchQuery ? 'No members found matching search query.' : '✨ All members have been assigned to tiers!'}
             </div>
           ) : (
-            <div className="pool-grid">
+            <div className={`pool-grid ${!showMemberNames ? 'compact-pool' : ''}`}>
               {unassignedMembers.map((m) => {
                 const colorCode = colorHexMap[m.color];
                 const isSelected = selectedMemberName === m.member_name;
@@ -686,30 +892,40 @@ export default function TierMakerPage() {
                 return (
                   <div 
                     key={m.id}
-                    className={`pool-member-card ${isSelected ? 'selected' : ''}`}
+                    className={`pool-member-card ${isSelected ? 'selected' : ''} ${!showMemberNames ? 'no-names' : ''}`}
                     draggable
-                    onDragStart={() => setDraggedMemberName(m.member_name)}
-                    onDragEnd={() => setDraggedMemberName(null)}
+                    onDragStart={(e) => {
+                      setDraggedMemberName(m.member_name);
+                      e.dataTransfer.setData('text/plain', m.member_name);
+                      e.dataTransfer.effectAllowed = 'move';
+                    }}
+                    onDragEnd={() => {
+                      setDraggedMemberName(null);
+                      setDropTarget(null);
+                    }}
                     onClick={() => {
                       setSelectedMemberName(isSelected ? null : m.member_name);
                     }}
-                    title="Drag into tier or tap to select & assign tier"
+                    title={m.group ? `${m.member_name} (${m.group})` : m.member_name}
                   >
                     <MemberAvatar 
                       src={m.member_image} 
                       name={m.member_name} 
-                      size={44} 
+                      size={showMemberNames ? 44 : 74} 
                       colorHex={colorCode}
+                      shape={avatarShape}
                     />
-                    <div className="pool-member-info">
-                      <span className="pool-member-name">{m.member_name}</span>
-                      <span className="pool-member-group">{m.group || m.company}</span>
-                    </div>
+                    {showMemberNames && (
+                      <div className="pool-member-info">
+                        <span className="pool-member-name">{m.member_name}</span>
+                        <span className="pool-member-group">{m.group || m.company}</span>
+                      </div>
+                    )}
 
                     {/* Mobile & Shortcut Tier Assignment Option */}
                     {isSelected && (
-                      <div className="tier-shortcut-options" onClick={(e) => e.stopPropagation()}>
-                        <span className="shortcut-hint">Assign to:</span>
+                      <div className={`tier-shortcut-options ${!showMemberNames ? 'floating-shortcuts' : ''}`} onClick={(e) => e.stopPropagation()}>
+                        <span className="shortcut-hint">Assign:</span>
                         {tiers.map((t) => (
                           <button
                             key={t.id}
@@ -721,7 +937,7 @@ export default function TierMakerPage() {
                             }}
                             onClick={(e) => {
                               e.stopPropagation();
-                              moveMemberToTier(m.member_name, t.id);
+                              moveMemberToTierPosition(m.member_name, t.id);
                             }}
                             title={`Assign ${m.member_name} to Tier ${t.label}`}
                           >
@@ -880,7 +1096,7 @@ export default function TierMakerPage() {
           background: #161922;
           border: 1px solid rgba(255,255,255,0.06);
           border-radius: 6px;
-          min-height: 72px;
+          min-height: 80px;
           overflow: hidden;
           transition: border-color 0.15s;
         }
@@ -890,8 +1106,8 @@ export default function TierMakerPage() {
         }
 
         .tier-label-box {
-          width: 85px;
-          min-width: 85px;
+          width: 80px;
+          min-width: 80px;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -913,11 +1129,11 @@ export default function TierMakerPage() {
 
         .tier-content-area {
           flex: 1;
-          padding: 8px 10px;
+          padding: 3px 6px;
           display: flex;
           align-items: center;
           background: rgba(0,0,0,0.2);
-          min-height: 72px;
+          min-height: 80px;
           overflow-x: auto;
         }
 
@@ -928,13 +1144,45 @@ export default function TierMakerPage() {
           background: rgba(212, 168, 75, 0.08);
         }
 
+        .drop-indicator-line {
+          width: 3px;
+          height: 74px;
+          background: var(--accent-primary, #d4a84b);
+          border-radius: 2px;
+          box-shadow: 0 0 8px rgba(212, 168, 75, 0.85);
+          margin: 0 1px;
+          align-self: center;
+          flex-shrink: 0;
+          pointer-events: none;
+          animation: drop-pulse 0.9s infinite alternate ease-in-out;
+        }
+
+        .tier-members-grid:not(.compact-grid) .drop-indicator-line {
+          height: 50px;
+        }
+
+        @keyframes drop-pulse {
+          0% {
+            opacity: 0.7;
+            transform: scaleY(0.92);
+          }
+          100% {
+            opacity: 1;
+            transform: scaleY(1.04);
+          }
+        }
+
         .tier-members-grid {
           display: flex;
           flex-wrap: wrap;
           gap: 8px;
           align-items: center;
           width: 100%;
-          min-height: 52px;
+          min-height: 74px;
+        }
+
+        .tier-members-grid.compact-grid {
+          gap: 5px;
         }
 
         .tier-member-card {
@@ -954,8 +1202,22 @@ export default function TierMakerPage() {
           box-sizing: border-box;
         }
 
+        .tier-member-card.no-names {
+          min-width: unset;
+          width: auto;
+        }
+
+        .tier-member-card.is-dragging {
+          opacity: 0.4;
+          transform: scale(0.95);
+        }
+
         .tier-member-card:hover {
           transform: translateY(-2px);
+        }
+
+        .tier-member-card.selected {
+          filter: drop-shadow(0 0 8px rgba(212, 168, 75, 0.9));
         }
 
         .tier-member-name {
@@ -1044,6 +1306,10 @@ export default function TierMakerPage() {
           gap: 10px;
         }
 
+        .pool-grid.compact-pool {
+          gap: 6px;
+        }
+
         .pool-member-card {
           display: flex;
           align-items: center;
@@ -1054,17 +1320,48 @@ export default function TierMakerPage() {
           padding: 6px 10px;
           cursor: grab;
           user-select: none;
-          transition: border-color 0.15s, background-color 0.15s;
+          transition: border-color 0.15s, background-color 0.15s, transform 0.12s;
+          position: relative;
         }
 
         .pool-member-card:hover {
           border-color: var(--accent-primary);
           background: var(--bg-surface-3);
+          z-index: 5;
         }
 
         .pool-member-card.selected {
           border-color: var(--accent-primary);
           background: var(--accent-primary-subtle);
+          z-index: 100 !important;
+        }
+
+        .pool-member-card.no-names {
+          padding: 0;
+          background: transparent !important;
+          border: none !important;
+          border-radius: 0;
+          width: auto;
+          min-width: unset;
+          transition: transform 0.12s;
+        }
+
+        .pool-member-card.no-names:hover {
+          transform: translateY(-2px);
+          background: transparent !important;
+          border: none !important;
+          z-index: 5;
+        }
+
+        .pool-member-card.no-names.selected {
+          background: transparent !important;
+          filter: drop-shadow(0 0 8px rgba(212, 168, 75, 0.9));
+          z-index: 100 !important;
+        }
+
+        .pool-member-card.is-dragging {
+          opacity: 0.4;
+          transform: scale(0.95);
         }
 
         .pool-member-info {
@@ -1090,6 +1387,26 @@ export default function TierMakerPage() {
           margin-left: auto;
           padding-left: 8px;
           flex-wrap: wrap;
+        }
+
+        .tier-shortcut-options.floating-shortcuts {
+          position: absolute;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: #161922;
+          padding: 6px 6px 8px 6px;
+          border-radius: 8px;
+          border: 1px solid rgba(212, 168, 75, 0.45);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85), 0 0 14px rgba(212, 168, 75, 0.35);
+          z-index: 110;
+          white-space: nowrap;
+          margin-left: 0;
+          pointer-events: auto;
         }
 
         .shortcut-hint {
@@ -1123,7 +1440,72 @@ export default function TierMakerPage() {
           transform: scale(0.92);
         }
 
+        .tierlist-image-toggles {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-shrink: 0;
+        }
+
+        .btn-group {
+          display: flex;
+          background-color: var(--bg-surface-2, #1c202d);
+          padding: 3px;
+          border-radius: var(--radius-sm, 6px);
+          border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+          height: 34px;
+          box-sizing: border-box;
+          align-items: center;
+        }
+
+        .btn-toggle {
+          background: none;
+          border: none;
+          color: var(--text-muted, #8b949e);
+          padding: 4px 10px;
+          font-size: 0.78rem;
+          font-weight: 500;
+          border-radius: 4px;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          height: 26px;
+          transition: all 0.15s ease;
+          white-space: nowrap;
+          user-select: none;
+        }
+
+        .btn-toggle:hover {
+          color: var(--text-main, #f0f6fc);
+          background-color: rgba(255, 255, 255, 0.04);
+        }
+
+        .btn-toggle.active {
+          background-color: var(--bg-surface-3, #252a38);
+          color: var(--accent-primary, #d4a84b);
+          font-weight: 600;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+        }
+
+        .filter-divider {
+          width: 1px;
+          height: 22px;
+          background-color: var(--border-subtle, rgba(255, 255, 255, 0.12));
+          margin: 0 2px;
+          flex-shrink: 0;
+        }
+
         @media (max-width: 768px) {
+          .filter-divider {
+            display: none;
+          }
+
+          .tierlist-image-toggles {
+            width: 100%;
+            justify-content: flex-start;
+          }
+
           .tier-label-box {
             width: 60px !important;
             min-width: 60px !important;
@@ -1134,18 +1516,18 @@ export default function TierMakerPage() {
             font-size: 1.1rem !important;
           }
 
-          .pool-member-card {
+          .pool-member-card:not(.no-names) {
             width: 100%;
             justify-content: flex-start;
             padding: 10px 12px !important;
           }
 
-          .pool-member-card.selected {
+          .pool-member-card.selected:not(.no-names) {
             flex-wrap: wrap;
             padding-bottom: 10px !important;
           }
 
-          .tier-shortcut-options {
+          .tier-shortcut-options:not(.floating-shortcuts) {
             width: 100%;
             margin-top: 8px;
             padding-top: 8px;

@@ -9,6 +9,8 @@ interface MemberAvatarProps {
   size?: number;
   colorHex?: string;
   className?: string;
+  shape?: 'circle' | 'square';
+  borderRadius?: string;
 }
 
 export const MemberAvatar: React.FC<MemberAvatarProps> = ({
@@ -17,6 +19,8 @@ export const MemberAvatar: React.FC<MemberAvatarProps> = ({
   size = 32,
   colorHex = '#58a6ff',
   className = '',
+  shape = 'circle',
+  borderRadius,
 }) => {
   const [hasError, setHasError] = useState(false);
   const cleanUrl = extractDirectImageUrl(src);
@@ -24,6 +28,7 @@ export const MemberAvatar: React.FC<MemberAvatarProps> = ({
   const initial = (displayName || name || '?').trim().charAt(0).toUpperCase();
 
   const showFallback = !cleanUrl || hasError;
+  const computedBorderRadius = borderRadius ?? (shape === 'square' ? '4px' : '50%');
 
   return (
     <div 
@@ -33,7 +38,7 @@ export const MemberAvatar: React.FC<MemberAvatarProps> = ({
         height: `${size}px`,
         minWidth: `${size}px`,
         minHeight: `${size}px`,
-        borderRadius: '50%',
+        borderRadius: computedBorderRadius,
         overflow: 'hidden',
         display: 'inline-flex',
         alignItems: 'center',
