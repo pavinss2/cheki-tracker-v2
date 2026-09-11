@@ -314,21 +314,19 @@ export default function BackOfficePage() {
         {/* MEMBERS TAB */}
         {activeTab === 'members' && (
           <div>
-            <div className="tab-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-              <button className="btn btn-primary btn-sm" onClick={handleStartAddMember} disabled={Boolean(tempMember)}>
+            <div className="tab-header" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+              <button 
+                className="btn btn-secondary btn-sm" 
+                onClick={handleOpenImportModal}
+              >
+                <Download size={14} /> Import from Default
+              </button>
+              <button className="btn btn-outline btn-sm danger-text" onClick={handleResetCustomData} title="Clear user custom data to rely purely on default_dim_*">
+                <RefreshCw size={14} /> Reset Custom Data
+              </button>
+              <button className="btn btn-primary btn-sm" style={{ marginLeft: '12px' }} onClick={handleStartAddMember} disabled={Boolean(tempMember)}>
                 <Plus size={14} /> Add
               </button>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <button 
-                  className="btn btn-secondary btn-sm" 
-                  onClick={handleOpenImportModal}
-                >
-                  <Download size={14} /> Import from Default
-                </button>
-                <button className="btn btn-outline btn-sm danger-text" onClick={handleResetCustomData} title="Clear user custom data to rely purely on default_dim_*">
-                  <RefreshCw size={14} /> Reset Custom Data
-                </button>
-              </div>
             </div>
             <div className="table-wrapper">
               <table className="dim-table member-table">
@@ -605,21 +603,19 @@ export default function BackOfficePage() {
         {/* GROUPS TAB */}
         {activeTab === 'groups' && (
           <div>
-            <div className="tab-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-              <button className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_group', data: { group: '', country: '🇹🇭 TH', company: 'Individual' } })}>
+            <div className="tab-header" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+              <button 
+                className="btn btn-secondary btn-sm" 
+                onClick={handleOpenImportModal}
+              >
+                <Download size={14} /> Import from Default
+              </button>
+              <button className="btn btn-outline btn-sm danger-text" onClick={handleResetCustomData} title="Clear user custom data to rely purely on default_dim_*">
+                <RefreshCw size={14} /> Reset Custom Data
+              </button>
+              <button className="btn btn-primary btn-sm" style={{ marginLeft: '12px' }} onClick={() => setEditingItem({ table: 'dim_group', data: { group: '', country: '🇹🇭 TH', company: 'Individual' } })}>
                 <Plus size={14} /> Add
               </button>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <button 
-                  className="btn btn-secondary btn-sm" 
-                  onClick={handleOpenImportModal}
-                >
-                  <Download size={14} /> Import from Default
-                </button>
-                <button className="btn btn-outline btn-sm danger-text" onClick={handleResetCustomData} title="Clear user custom data to rely purely on default_dim_*">
-                  <RefreshCw size={14} /> Reset Custom Data
-                </button>
-              </div>
             </div>
             <div className="table-wrapper">
               <table className="dim-table">
@@ -683,21 +679,19 @@ export default function BackOfficePage() {
         {/* COMPANIES TAB */}
         {activeTab === 'companies' && (
           <div>
-            <div className="tab-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-              <button className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_company', data: { company: '' } })}>
+            <div className="tab-header" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+              <button 
+                className="btn btn-secondary btn-sm" 
+                onClick={handleOpenImportModal}
+              >
+                <Download size={14} /> Import from Default
+              </button>
+              <button className="btn btn-outline btn-sm danger-text" onClick={handleResetCustomData} title="Clear user custom data to rely purely on default_dim_*">
+                <RefreshCw size={14} /> Reset Custom Data
+              </button>
+              <button className="btn btn-primary btn-sm" style={{ marginLeft: '12px' }} onClick={() => setEditingItem({ table: 'dim_company', data: { company: '' } })}>
                 <Plus size={14} /> Add
               </button>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <button 
-                  className="btn btn-secondary btn-sm" 
-                  onClick={handleOpenImportModal}
-                >
-                  <Download size={14} /> Import from Default
-                </button>
-                <button className="btn btn-outline btn-sm danger-text" onClick={handleResetCustomData} title="Clear user custom data to rely purely on default_dim_*">
-                  <RefreshCw size={14} /> Reset Custom Data
-                </button>
-              </div>
             </div>
             <div className="table-wrapper">
               <table className="dim-table">
@@ -1348,6 +1342,7 @@ export default function BackOfficePage() {
         .form-group label { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); }
         .span-2 { grid-column: span 2; }
         .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
+ 
       `}</style>
     </div>
   );
