@@ -43,6 +43,8 @@ export interface DimMember {
   is_imported?: boolean;
   is_allowed_import?: boolean;
   allow_import?: boolean;
+  backoffice_id?: string;
+  is_custom?: boolean;
 }
 
 export interface DimGroup {
@@ -57,6 +59,8 @@ export interface DimGroup {
   is_imported?: boolean;
   is_allowed_import?: boolean;
   allow_import?: boolean;
+  backoffice_id?: string;
+  is_custom?: boolean;
   date_added?: string;
   date_modified?: string;
   createdAt?: string;
@@ -73,6 +77,8 @@ export interface DimCompany {
   is_imported?: boolean;
   is_allowed_import?: boolean;
   allow_import?: boolean;
+  backoffice_id?: string;
+  is_custom?: boolean;
   date_added?: string;
   date_modified?: string;
   createdAt?: string;

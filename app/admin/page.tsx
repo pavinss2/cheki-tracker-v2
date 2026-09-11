@@ -499,14 +499,17 @@ export default function AdminPage() {
     );
   };
 
-  const handleToggleSelectAllVisible = (visibleItems: any[]) => {
-    const visibleIds = visibleItems.map(item => item.id);
-    const allSelected = visibleIds.length > 0 && visibleIds.every(id => selectedItemIds.includes(id));
+  const handleToggleSelectAllCustom = (visibleItems: any[]) => {
+    const customIds = visibleItems
+      .filter(item => !item.isDefault && !item.id?.startsWith('default_') && !item.backoffice_id)
+      .map(item => item.id);
 
-    if (allSelected) {
-      setSelectedItemIds(prev => prev.filter(id => !visibleIds.includes(id)));
+    const allCustomSelected = customIds.length > 0 && customIds.every(id => selectedItemIds.includes(id));
+
+    if (allCustomSelected) {
+      setSelectedItemIds(prev => prev.filter(id => !customIds.includes(id)));
     } else {
-      setSelectedItemIds(prev => Array.from(new Set([...prev, ...visibleIds])));
+      setSelectedItemIds(prev => Array.from(new Set([...prev, ...customIds])));
     }
   };
 
@@ -745,12 +748,20 @@ export default function AdminPage() {
                 <thead>
                   <tr>
                     <th style={{ width: '38px', textAlign: 'center' }}>
-                      <input 
-                        type="checkbox" 
-                        checked={sortedMembers.length > 0 && sortedMembers.every(m => selectedItemIds.includes(m.id))}
-                        onChange={() => handleToggleSelectAllVisible(sortedMembers)}
-                        style={{ cursor: 'pointer', width: '16px', height: '16px' }}
-                      />
+                      {(() => {
+                        const customMembers = sortedMembers.filter(m => !m.isDefault && !m.id?.startsWith('default_') && !m.backoffice_id);
+                        const allCustomSelected = customMembers.length > 0 && customMembers.every(m => selectedItemIds.includes(m.id));
+                        return (
+                          <input 
+                            type="checkbox" 
+                            checked={allCustomSelected}
+                            onChange={() => handleToggleSelectAllCustom(sortedMembers)}
+                            style={{ cursor: customMembers.length > 0 ? 'pointer' : 'not-allowed', width: '16px', height: '16px' }}
+                            disabled={customMembers.length === 0}
+                            title="Select / deselect all custom items"
+                          />
+                        );
+                      })()}
                     </th>
                     <th>Action</th>
                     <th className="sortable-th" onClick={() => handleSortMembers('is_active')}>
@@ -897,12 +908,14 @@ export default function AdminPage() {
                     return (
                       <tr key={m.id} style={{ background: isRowSelected ? 'rgba(212, 168, 75, 0.1)' : undefined }}>
                         <td style={{ textAlign: 'center' }}>
-                          <input 
-                            type="checkbox" 
-                            checked={isRowSelected}
-                            onChange={() => handleToggleSelectRow(m.id)}
-                            style={{ cursor: 'pointer', width: '16px', height: '16px' }}
-                          />
+                          {!isSubscribed ? (
+                            <input 
+                              type="checkbox" 
+                              checked={isRowSelected}
+                              onChange={() => handleToggleSelectRow(m.id)}
+                              style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                            />
+                          ) : null}
                         </td>
                         <td>
                           <button 
@@ -1025,12 +1038,20 @@ export default function AdminPage() {
                 <thead>
                   <tr>
                     <th style={{ width: '38px', textAlign: 'center' }}>
-                      <input 
-                        type="checkbox" 
-                        checked={sortedGroups.length > 0 && sortedGroups.every(g => selectedItemIds.includes(g.id))}
-                        onChange={() => handleToggleSelectAllVisible(sortedGroups)}
-                        style={{ cursor: 'pointer', width: '16px', height: '16px' }}
-                      />
+                      {(() => {
+                        const customGroups = sortedGroups.filter(g => !g.isDefault && !g.id?.startsWith('default_') && !g.backoffice_id);
+                        const allCustomSelected = customGroups.length > 0 && customGroups.every(g => selectedItemIds.includes(g.id));
+                        return (
+                          <input 
+                            type="checkbox" 
+                            checked={allCustomSelected}
+                            onChange={() => handleToggleSelectAllCustom(sortedGroups)}
+                            style={{ cursor: customGroups.length > 0 ? 'pointer' : 'not-allowed', width: '16px', height: '16px' }}
+                            disabled={customGroups.length === 0}
+                            title="Select / deselect all custom items"
+                          />
+                        );
+                      })()}
                     </th>
                     <th>Action</th>
                     <th className="sortable-th" onClick={() => handleSortGroups('is_active')}>
@@ -1055,12 +1076,14 @@ export default function AdminPage() {
                     return (
                       <tr key={g.id} style={{ background: isRowSelected ? 'rgba(212, 168, 75, 0.1)' : undefined }}>
                         <td style={{ textAlign: 'center' }}>
-                          <input 
-                            type="checkbox" 
-                            checked={isRowSelected}
-                            onChange={() => handleToggleSelectRow(g.id)}
-                            style={{ cursor: 'pointer', width: '16px', height: '16px' }}
-                          />
+                          {!isSubscribed ? (
+                            <input 
+                              type="checkbox" 
+                              checked={isRowSelected}
+                              onChange={() => handleToggleSelectRow(g.id)}
+                              style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                            />
+                          ) : null}
                         </td>
                         <td>
                           <button 
@@ -1153,12 +1176,20 @@ export default function AdminPage() {
                 <thead>
                   <tr>
                     <th style={{ width: '38px', textAlign: 'center' }}>
-                      <input 
-                        type="checkbox" 
-                        checked={sortedCompanies.length > 0 && sortedCompanies.every(c => selectedItemIds.includes(c.id))}
-                        onChange={() => handleToggleSelectAllVisible(sortedCompanies)}
-                        style={{ cursor: 'pointer', width: '16px', height: '16px' }}
-                      />
+                      {(() => {
+                        const customCompanies = sortedCompanies.filter(c => !c.isDefault && !c.id?.startsWith('default_') && !c.backoffice_id);
+                        const allCustomSelected = customCompanies.length > 0 && customCompanies.every(c => selectedItemIds.includes(c.id));
+                        return (
+                          <input 
+                            type="checkbox" 
+                            checked={allCustomSelected}
+                            onChange={() => handleToggleSelectAllCustom(sortedCompanies)}
+                            style={{ cursor: customCompanies.length > 0 ? 'pointer' : 'not-allowed', width: '16px', height: '16px' }}
+                            disabled={customCompanies.length === 0}
+                            title="Select / deselect all custom items"
+                          />
+                        );
+                      })()}
                     </th>
                     <th>Action</th>
                     <th className="sortable-th" onClick={() => handleSortCompanies('is_active')}>
@@ -1177,12 +1208,14 @@ export default function AdminPage() {
                     return (
                       <tr key={c.id} style={{ background: isRowSelected ? 'rgba(212, 168, 75, 0.1)' : undefined }}>
                         <td style={{ textAlign: 'center' }}>
-                          <input 
-                            type="checkbox" 
-                            checked={isRowSelected}
-                            onChange={() => handleToggleSelectRow(c.id)}
-                            style={{ cursor: 'pointer', width: '16px', height: '16px' }}
-                          />
+                          {!isSubscribed ? (
+                            <input 
+                              type="checkbox" 
+                              checked={isRowSelected}
+                              onChange={() => handleToggleSelectRow(c.id)}
+                              style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                            />
+                          ) : null}
                         </td>
                         <td>
                           <button 
@@ -1970,13 +2003,27 @@ export default function AdminPage() {
           border: 1px solid var(--border-subtle);
         }
 
+        .dim-table th {
+          color: var(--text-muted);
+          font-weight: 600;
+          background-color: var(--bg-surface-2);
+          white-space: nowrap;
+          transition: color 0.15s ease;
+        }
+
+        .dim-table th:hover,
+        .dim-table th.sortable-th:hover {
+          color: var(--accent-primary) !important;
+          cursor: pointer;
+        }
+
         .status-tag {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          padding: 4px 14px;
-          border-radius: 9999px;
-          font-size: 0.78rem;
+          padding: 2px 8px;
+          border-radius: 10px;
+          font-size: 0.75rem;
           font-weight: 700;
           cursor: default;
           user-select: none;
@@ -1984,21 +2031,18 @@ export default function AdminPage() {
         }
 
         .status-tag.active {
-          background: rgba(46, 204, 113, 0.18);
+          background: rgba(46, 204, 113, 0.2);
           color: #2ecc71;
-          border: 1px solid rgba(46, 204, 113, 0.4);
         }
 
         .status-tag.sub {
-          background: rgba(59, 130, 246, 0.18);
+          background: rgba(59, 130, 246, 0.2);
           color: #60a5fa;
-          border: 1px solid rgba(96, 165, 250, 0.4);
         }
 
         .status-tag.inactive {
-          background: rgba(231, 76, 60, 0.18);
+          background: rgba(231, 76, 60, 0.2);
           color: #e74c3c;
-          border: 1px solid rgba(231, 76, 60, 0.4);
         }
 
         .action-btns {
