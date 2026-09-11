@@ -229,14 +229,19 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 - **Optional Subscription Modal Popup**: Admin tab features a centered **"Manage Subscriptions"** modal popup (`position: fixed`, translucent backdrop blur, z-index overlay) allowing users to:
   - Toggle **"Subscribe All Default Data"** (auto-subscribing to all Back Office countries, companies, and groups).
   - Selectively subscribe/unsubscribe by individual **Country**, **Company**, or **Group**.
-  - **Unsubscribe All** with a single click.
 - **Option Visibility & Subscribe All Behavior**: When "Subscribe All Default Data" is checked, the options list remains visible with all badge-pills highlighted as checked (`✓`). Un-ticking any individual badge automatically expands all items into explicit selections and deselects the chosen item.
 - **Unique Country Filtering**: Subscribe by Country only lists countries derived from unique values present in `default_dim_group`.
 - **Group Select All Tag**: Subscribe by Group features a **"Select All Groups"** / **"Deselect All Groups"** badge tag to toggle all currently visible groups at once.
 
-### 6.15 Admin Tab Visual Design & Clickable Status Badges
-- **Exact Backoffice CSS Alignment**: Admin table card padding (`15px`), table wrappers, table cell padding (`12px`), tab headers, and button styles (`.btn`, `.btn-primary`, `.btn-secondary`, `.btn-outline`, `.btn-danger`, `.btn-icon`) match the Backoffice tab 1-to-1.
-- **Clickable Status Tags**: Clicking on any `Active` or `Inactive` status badge in the Admin tables directly toggles the user's status override for that item.
+### 6.15 Admin Tab Table Layout, Combined Status & Filter Controls
+- **Action Column as 1st Column (Edit Pencil Only)**: The Action column is positioned as the very first column in all Admin tables (`dim_member`, `dim_group`, `dim_company`) and contains ONLY the Edit pencil button.
+- **Delete Button inside Edit Modal**: Custom (editable) records display a red **"Delete Record"** button at the bottom-left of the Edit Record modal dialog.
+- **Combined "Status" Column as 2nd Column**:
+  - Replaced separate Origin and Active Status columns with a single **"Status"** column positioned as Column 2.
+  - Displays **`Sub`** (gold pill) for active subscribed items, **`Active`** (green pill) for active custom items, and **`Inactive`** (red pill) for inactive items.
+  - Clicking the Status tag directly toggles active/inactive state (`Sub`/`Active` $\leftrightarrow$ `Inactive`).
+- **Group & Company Filters**: Admin tab headers feature filter drop-down selectors for **Group** and **Company** for instant table filtering.
+- **Exact Backoffice CSS Alignment**: Admin table card padding (`15px`), table wrappers, table cell padding (`12px`), tab headers, and button styles match Backoffice 1-to-1.
 
 ---
 
