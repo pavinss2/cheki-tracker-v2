@@ -10,6 +10,7 @@ import {
   getItemValueString,
   getUserSubscriptions,
   saveUserSubscriptions,
+  hasUserConfiguredSubscriptions,
   subscribeDefaultMetadata,
   UserSubscriptionConfig
 } from '@/lib/dataStore';
@@ -78,11 +79,14 @@ export default function AdminPage() {
     }
   }, [userId]);
 
-  // Auto-open Manage Subscriptions modal if real user has no metadata available (exempt Demo Mode)
+  // Auto-open Manage Subscriptions modal ONLY if explicitly requested via autoSubscribe=true query param or for brand-new users
   useEffect(() => {
     if (!loading && userId && !isDemoUser) {
+      const isExplicitAutoSub = typeof window !== 'undefined' && window.location.search.includes('autoSubscribe=true');
+      const hasConfigured = hasUserConfiguredSubscriptions(userId);
       const hasNoMetadata = members.length === 0 && groups.length === 0 && companies.length === 0;
-      if (hasNoMetadata) {
+
+      if (isExplicitAutoSub || (!hasConfigured && hasNoMetadata)) {
         setIsSubscribeModalOpen(true);
       }
     }

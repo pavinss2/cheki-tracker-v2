@@ -82,14 +82,41 @@ export function ChekiDataProvider({ children }: { children: React.ReactNode }) {
       seedUserDataToFirestore(userId, userEmail).catch(console.warn);
     }
 
+    let transLoaded = false;
+    let memLoaded = false;
+    let cmpLoaded = false;
+    let grpLoaded = false;
+
+    const checkAllLoaded = () => {
+      if (transLoaded && memLoaded && cmpLoaded && grpLoaded) {
+        setLoading(false);
+      }
+    };
+
     const unsubTrans = subscribeTransactions(userId, userEmail, (items) => {
       setAllTransactions(items);
-      setLoading(false);
+      transLoaded = true;
+      checkAllLoaded();
     }, isDemoUser);
 
-    const unsubMem = subscribeMergedMetadata<DimMember>('dim_member', userId, DEFAULT_MEMBERS, setMembers, isDemoUser);
-    const unsubCmp = subscribeMergedMetadata<DimCompany>('dim_company', userId, DEFAULT_COMPANIES, setCompanies, isDemoUser);
-    const unsubGrp = subscribeMergedMetadata<DimGroup>('dim_group', userId, DEFAULT_GROUPS, setGroups, isDemoUser);
+    const unsubMem = subscribeMergedMetadata<DimMember>('dim_member', userId, DEFAULT_MEMBERS, (items) => {
+      setMembers(items);
+      memLoaded = true;
+      checkAllLoaded();
+    }, isDemoUser);
+
+    const unsubCmp = subscribeMergedMetadata<DimCompany>('dim_company', userId, DEFAULT_COMPANIES, (items) => {
+      setCompanies(items);
+      cmpLoaded = true;
+      checkAllLoaded();
+    }, isDemoUser);
+
+    const unsubGrp = subscribeMergedMetadata<DimGroup>('dim_group', userId, DEFAULT_GROUPS, (items) => {
+      setGroups(items);
+      grpLoaded = true;
+      checkAllLoaded();
+    }, isDemoUser);
+
     const unsubClr = subscribeMergedMetadata<DimColor>('dim_color', userId, DEFAULT_COLORS, setColors, isDemoUser);
     const unsubTyp = subscribeMergedMetadata<DimType>('dim_type', userId, DEFAULT_TYPES, setTypes, isDemoUser);
     const unsubCnt = subscribeMergedMetadata<DimCountry>('dim_country', userId, DEFAULT_COUNTRIES, setCountries, isDemoUser);

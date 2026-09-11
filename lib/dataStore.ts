@@ -689,6 +689,12 @@ export function saveUserSubscriptions(userId: string, config: UserSubscriptionCo
   }
 }
 
+export function hasUserConfiguredSubscriptions(userId: string): boolean {
+  if (typeof window === "undefined" || !userId) return false;
+  const key = `subscriptions_${userId || 'demo'}`;
+  return localStorage.getItem(STORAGE_PREFIX + key) !== null;
+}
+
 export function subscribeMergedMetadata<T>(
   tableName: string,
   userId: string,

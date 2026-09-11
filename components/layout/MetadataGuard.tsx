@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useChekiData } from '@/hooks/useChekiData';
 import { useAuth } from '@/context/AuthContext';
+import { hasUserConfiguredSubscriptions } from '@/lib/dataStore';
 
 export function MetadataGuard({ children }: { children: React.ReactNode }) {
   const { user, isDemoUser } = useAuth();
@@ -13,10 +14,11 @@ export function MetadataGuard({ children }: { children: React.ReactNode }) {
   const userId = user?.uid || (isDemoUser ? 'demo-user-id' : '');
 
   useEffect(() => {
-    // Demo Mode users are exempt from auto-redirection to /admin
+    // Only brand new users who have zero configured subscriptions and zero metadata get prompted
     if (!loading && userId && !isDemoUser) {
+      const hasConfigured = hasUserConfiguredSubscriptions(userId);
       const hasNoMetadata = members.length === 0 && groups.length === 0 && companies.length === 0;
-      if (hasNoMetadata && pathname !== '/admin') {
+      if (!hasConfigured && hasNoMetadata && pathname !== '/admin') {
         router.push('/admin?autoSubscribe=true');
       }
     }
