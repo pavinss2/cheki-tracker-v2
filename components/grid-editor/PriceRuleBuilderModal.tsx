@@ -75,7 +75,7 @@ export const PriceRuleBuilderModal: React.FC<PriceRuleBuilderModalProps> = ({
       <div className="modal-card" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <div>
-            <h2>Price Rule Builder (UI-driven IFS Logic)</h2>
+            <h2>Price Rule Config</h2>
             <p className="modal-sub">Rules evaluate from top to bottom. The first matching rule sets Total Price.</p>
           </div>
           <button className="btn-close" onClick={onClose}><X size={18} /></button>

@@ -921,6 +921,10 @@ export default function RawDataPage() {
           align-items: center;
         }
 
+        .raw-actions-bar > .btn-primary {
+          margin-left: auto;
+        }
+
         @media (max-width: 768px) {
           .btn-paste-tsv {
             display: none !important;

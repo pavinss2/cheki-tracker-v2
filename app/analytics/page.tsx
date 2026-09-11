@@ -254,7 +254,7 @@ export default function AnalyticsPage() {
           font-size: 0.98rem;
           color: var(--text-main);
           max-width: 95px;
-          min-width: 60px;
+          min-width: 52px;
           flex-shrink: 0;
           white-space: nowrap;
           overflow: hidden;
