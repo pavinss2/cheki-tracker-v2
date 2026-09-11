@@ -1301,6 +1301,10 @@ export default function BackOfficePage() {
 
         .table-wrapper {
           overflow-x: auto;
+          width: calc(100% + 30px);
+          max-width: calc(100% + 30px);
+          margin-left: -15px;
+          margin-right: -15px;
         }
 
         .dim-table {
