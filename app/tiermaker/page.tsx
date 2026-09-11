@@ -59,6 +59,30 @@ const DEFAULT_TIERS: Tier[] = [
 
 const LOCAL_SETUPS_KEY = 'cheki_tiermaker_saved_setups_v2';
 
+const renderMemberName = (name: string) => {
+  let displayName = name;
+  const parenIdx = displayName.indexOf('(');
+  if (parenIdx >= 0) {
+    displayName = displayName.slice(0, parenIdx).trim();
+  }
+  return (
+    <span 
+      className="tier-member-name" 
+      style={{ 
+        whiteSpace: 'nowrap', 
+        wordBreak: 'keep-all', 
+        overflowWrap: 'normal', 
+        display: 'inline-block',
+        maxWidth: '100%',
+        textOverflow: 'ellipsis',
+        overflow: 'hidden'
+      }}
+    >
+      {displayName}
+    </span>
+  );
+};
+
 export default function TierMakerPage() {
   const { user, isDemoUser } = useAuth();
   const { members, colors, loading } = useChekiData();
@@ -511,7 +535,7 @@ export default function TierMakerPage() {
                             size={44} 
                             colorHex={colorCode}
                           />
-                          <span className="tier-member-name">{mName}</span>
+                          {renderMemberName(mName)}
                           {isSelectedInTier && (
                             <button 
                               className="remove-card-btn" 
@@ -909,20 +933,21 @@ export default function TierMakerPage() {
           display: flex;
           flex-direction: column;
           align-items: center;
-          background: #1c202b;
-          border: 1px solid rgba(255,255,255,0.1);
-          border-radius: 6px;
-          padding: 6px 8px 4px 8px;
+          background: transparent;
+          border: none;
+          padding: 0px;
           position: relative;
           cursor: grab;
-          transition: transform 0.12s, border-color 0.12s;
+          transition: transform 0.12s;
           user-select: none;
           min-width: 60px;
+          max-width: 100%;
+          width: max-content;
+          box-sizing: border-box;
         }
 
         .tier-member-card:hover {
           transform: translateY(-2px);
-          border-color: var(--accent-primary);
         }
 
         .tier-member-name {
@@ -931,10 +956,17 @@ export default function TierMakerPage() {
           color: var(--text-main);
           margin-top: 4px;
           text-align: center;
-          max-width: 64px;
-          white-space: nowrap;
+          width: 100%;
+          max-width: 100%;
+          white-space: nowrap !important;
+          word-break: keep-all !important;
+          overflow-wrap: normal !important;
+          display: inline-block !important;
           overflow: hidden;
           text-overflow: ellipsis;
+          box-sizing: border-box;
+          line-height: 1.15;
+          font-size-adjust: ch-width 0.5;
         }
 
         .remove-card-btn {

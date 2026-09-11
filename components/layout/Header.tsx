@@ -175,9 +175,24 @@ export const Header: React.FC = () => {
           gap: 16px;
         }
 
-        .header-mobile-nav {
+        .mobile-header-nav {
           display: none;
           position: relative;
+        }
+
+        .header-nav-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          color: var(--text-muted);
+          background-color: var(--bg-surface-2);
+          border: 1px solid var(--border-subtle);
+          cursor: pointer;
+          transition: all var(--transition-fast);
+          text-decoration: none;
         }
 
         @media (max-width: 768px) {
@@ -189,9 +204,20 @@ export const Header: React.FC = () => {
           .desktop-header-actions {
             display: none !important;
           }
-          .header-mobile-nav {
+          .mobile-header-nav {
             display: flex !important;
           }
+        }
+
+        .header-nav-btn:hover {
+          color: var(--text-main);
+          border-color: var(--border-strong);
+        }
+
+        .header-nav-btn.active {
+          color: #d4a84b;
+          border-color: rgba(212, 168, 75, 0.4);
+          background-color: rgba(212, 168, 75, 0.15);
         }
 
         .mobile-menu-dropdown {
@@ -240,32 +266,6 @@ export const Header: React.FC = () => {
 
         .mobile-menu-dropdown :global(.menu-item.danger:hover) {
           background-color: rgba(239, 68, 68, 0.15);
-        }
-
-        .header-nav-btn {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 32px;
-          height: 32px;
-          border-radius: 8px;
-          color: var(--text-muted);
-          background-color: var(--bg-surface-2);
-          border: 1px solid var(--border-subtle);
-          cursor: pointer;
-          transition: all var(--transition-fast);
-          text-decoration: none;
-        }
-
-        .header-nav-btn:hover {
-          color: var(--text-main);
-          border-color: var(--border-strong);
-        }
-
-        .header-nav-btn.active {
-          color: #d4a84b;
-          border-color: rgba(212, 168, 75, 0.4);
-          background-color: rgba(212, 168, 75, 0.15);
         }
 
         .header-actions {

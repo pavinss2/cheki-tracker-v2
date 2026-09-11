@@ -443,16 +443,18 @@ export default function RawDataPage() {
 
       {/* Transactions Table Card */}
       <div className="table-card card">
-        <div className="tab-header raw-actions-bar" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
-          <button className="btn btn-secondary btn-sm" onClick={() => setShowRuleModal(true)}>
-            <Settings size={14} /> Price Rules
-          </button>
-          <button className="btn btn-secondary btn-sm btn-paste-tsv" onClick={() => setShowPasteModal(true)}>
-            <Clipboard size={14} /> Paste TSV
-          </button>
-          <button className="btn btn-secondary btn-sm" onClick={handleAddRow}>
-            <Plus size={14} /> Add Row
-          </button>
+        <div className="tab-header raw-actions-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <button className="btn btn-secondary btn-sm" onClick={() => setShowRuleModal(true)}>
+              <Settings size={14} /> Price Rules
+            </button>
+            <button className="btn btn-secondary btn-sm btn-paste-tsv" onClick={() => setShowPasteModal(true)}>
+              <Clipboard size={14} /> Paste TSV
+            </button>
+            <button className="btn btn-secondary btn-sm" onClick={handleAddRow}>
+              <Plus size={14} /> Add Row
+            </button>
+          </div>
           <button 
             className="btn btn-primary btn-sm" 
             onClick={handleBatchSave} 
@@ -915,15 +917,11 @@ export default function RawDataPage() {
 
         .raw-actions-bar {
           display: flex;
-          justify-content: flex-end;
+          justify-content: space-between;
           gap: 8px;
           flex-wrap: wrap;
           align-items: center;
           margin-bottom: 10px;
-        }
-
-        .raw-actions-bar > button {
-          margin-left: 4px;
         }
 
         @media (max-width: 768px) {

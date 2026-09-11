@@ -314,16 +314,18 @@ export default function BackOfficePage() {
         {/* MEMBERS TAB */}
         {activeTab === 'members' && (
           <div>
-            <div className="tab-header" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-              <button 
-                className="btn btn-secondary btn-sm" 
-                onClick={handleOpenImportModal}
-              >
-                <Download size={14} /> Import from Default
-              </button>
-              <button className="btn btn-outline btn-sm danger-text" onClick={handleResetCustomData} title="Clear user custom data to rely purely on default_dim_*">
-                <RefreshCw size={14} /> Reset Custom Data
-              </button>
+            <div className="tab-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <button 
+                  className="btn btn-secondary btn-sm" 
+                  onClick={handleOpenImportModal}
+                >
+                  <Download size={14} /> Import from Default
+                </button>
+                <button className="btn btn-outline btn-sm danger-text" onClick={handleResetCustomData} title="Clear user custom data to rely purely on default_dim_*">
+                  <RefreshCw size={14} /> Reset Custom Data
+                </button>
+              </div>
               <button className="btn btn-primary btn-sm" onClick={handleStartAddMember} disabled={Boolean(tempMember)}>
                 <Plus size={14} /> Add
               </button>
@@ -603,16 +605,18 @@ export default function BackOfficePage() {
         {/* GROUPS TAB */}
         {activeTab === 'groups' && (
           <div>
-            <div className="tab-header" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-              <button 
-                className="btn btn-secondary btn-sm" 
-                onClick={handleOpenImportModal}
-              >
-                <Download size={14} /> Import from Default
-              </button>
-              <button className="btn btn-outline btn-sm danger-text" onClick={handleResetCustomData} title="Clear user custom data to rely purely on default_dim_*">
-                <RefreshCw size={14} /> Reset Custom Data
-              </button>
+            <div className="tab-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <button 
+                  className="btn btn-secondary btn-sm" 
+                  onClick={handleOpenImportModal}
+                >
+                  <Download size={14} /> Import from Default
+                </button>
+                <button className="btn btn-outline btn-sm danger-text" onClick={handleResetCustomData} title="Clear user custom data to rely purely on default_dim_*">
+                  <RefreshCw size={14} /> Reset Custom Data
+                </button>
+              </div>
               <button className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_group', data: { group: '', country: '🇹🇭 TH', company: 'Individual' } })}>
                 <Plus size={14} /> Add
               </button>
@@ -679,16 +683,18 @@ export default function BackOfficePage() {
         {/* COMPANIES TAB */}
         {activeTab === 'companies' && (
           <div>
-            <div className="tab-header" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-              <button 
-                className="btn btn-secondary btn-sm" 
-                onClick={handleOpenImportModal}
-              >
-                <Download size={14} /> Import from Default
-              </button>
-              <button className="btn btn-outline btn-sm danger-text" onClick={handleResetCustomData} title="Clear user custom data to rely purely on default_dim_*">
-                <RefreshCw size={14} /> Reset Custom Data
-              </button>
+            <div className="tab-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <button 
+                  className="btn btn-secondary btn-sm" 
+                  onClick={handleOpenImportModal}
+                >
+                  <Download size={14} /> Import from Default
+                </button>
+                <button className="btn btn-outline btn-sm danger-text" onClick={handleResetCustomData} title="Clear user custom data to rely purely on default_dim_*">
+                  <RefreshCw size={14} /> Reset Custom Data
+                </button>
+              </div>
               <button className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_company', data: { company: '' } })}>
                 <Plus size={14} /> Add
               </button>
