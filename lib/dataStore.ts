@@ -30,7 +30,11 @@ import {
   setDoc,
   updateDoc, 
   where, 
-  writeBatch 
+  writeBatch,
+  getCountFromServer,
+  getAggregateFromServer,
+  sum,
+  average
 } from "firebase/firestore";
 
 // Local storage keys for fallback demo mode
@@ -290,6 +294,55 @@ export async function batchUpsertTransactions(userId: string, rows: Omit<Transac
   });
   await batch.commit();
   logAdminAction(userId, "BATCH_UPSERT_TRANSACTIONS", `Saved ${validRows.length} rows from grid editor`);
+}
+
+// ----------------------------------------------------
+// FIRESTORE SERVER AGGREGATIONS (1 READ PER SUMMARY)
+// ----------------------------------------------------
+export async function fetchTransactionCount(userId: string, isDemo = false): Promise<number> {
+  if (isDemo || !userId || process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes("Demo")) {
+    const items = getLocalData<Transaction>(`transactions_${userId || 'demo'}`, []);
+    return items.length;
+  }
+  try {
+    const q = query(collection(db, "fact_cheki_transaction"), where("userId", "==", userId));
+    const snap = await getCountFromServer(q);
+    return snap.data().count;
+  } catch (err) {
+    console.warn("fetchTransactionCount fallback to local:", err);
+    return getLocalData<Transaction>(`transactions_${userId}`, []).length;
+  }
+}
+
+export async function fetchTransactionAggregates(userId: string, isDemo = false): Promise<{ totalSpent: number; totalQty: number; avgPrice: number }> {
+  if (isDemo || !userId || process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes("Demo")) {
+    const items = getLocalData<Transaction>(`transactions_${userId || 'demo'}`, []);
+    const totalSpent = items.reduce((acc, t) => acc + (t.totalPrice || 0), 0);
+    const totalQty = items.reduce((acc, t) => acc + (t.quantity || 0), 0);
+    const avgPrice = items.length > 0 ? totalSpent / items.length : 0;
+    return { totalSpent, totalQty, avgPrice };
+  }
+  try {
+    const q = query(collection(db, "fact_cheki_transaction"), where("userId", "==", userId));
+    const snap = await getAggregateFromServer(q, {
+      totalSpent: sum("totalPrice"),
+      totalQty: sum("quantity"),
+      avgPrice: average("totalPrice"),
+    });
+    const data = snap.data();
+    return {
+      totalSpent: data.totalSpent || 0,
+      totalQty: data.totalQty || 0,
+      avgPrice: data.avgPrice || 0,
+    };
+  } catch (err) {
+    console.warn("fetchTransactionAggregates fallback to local:", err);
+    const items = getLocalData<Transaction>(`transactions_${userId}`, []);
+    const totalSpent = items.reduce((acc, t) => acc + (t.totalPrice || 0), 0);
+    const totalQty = items.reduce((acc, t) => acc + (t.quantity || 0), 0);
+    const avgPrice = items.length > 0 ? totalSpent / items.length : 0;
+    return { totalSpent, totalQty, avgPrice };
+  }
 }
 
 // ----------------------------------------------------
