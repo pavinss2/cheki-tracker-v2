@@ -41,6 +41,8 @@ export interface DimMember {
   is_default?: boolean;
   isDefault?: boolean;
   is_imported?: boolean;
+  is_allowed_import?: boolean;
+  allow_import?: boolean;
 }
 
 export interface DimGroup {
@@ -53,6 +55,8 @@ export interface DimGroup {
   is_default?: boolean;
   isDefault?: boolean;
   is_imported?: boolean;
+  is_allowed_import?: boolean;
+  allow_import?: boolean;
   date_added?: string;
   date_modified?: string;
   createdAt?: string;
@@ -67,6 +71,8 @@ export interface DimCompany {
   is_default?: boolean;
   isDefault?: boolean;
   is_imported?: boolean;
+  is_allowed_import?: boolean;
+  allow_import?: boolean;
   date_added?: string;
   date_modified?: string;
   createdAt?: string;
@@ -81,6 +87,8 @@ export interface DimColor {
   is_active?: boolean;
   is_default?: boolean;
   isDefault?: boolean;
+  is_allowed_import?: boolean;
+  allow_import?: boolean;
   date_added?: string;
   date_modified?: string;
   createdAt?: string;
@@ -94,6 +102,8 @@ export interface DimType {
   is_active?: boolean;
   is_default?: boolean;
   isDefault?: boolean;
+  is_allowed_import?: boolean;
+  allow_import?: boolean;
   date_added?: string;
   date_modified?: string;
   createdAt?: string;
@@ -108,6 +118,8 @@ export interface DimCountry {
   is_active?: boolean;
   is_default?: boolean;
   isDefault?: boolean;
+  is_allowed_import?: boolean;
+  allow_import?: boolean;
   date_added?: string;
   date_modified?: string;
   createdAt?: string;
@@ -121,6 +133,8 @@ export interface DimLocation {
   is_active?: boolean;
   is_default?: boolean;
   isDefault?: boolean;
+  is_allowed_import?: boolean;
+  allow_import?: boolean;
   date_added?: string;
   date_modified?: string;
   createdAt?: string;

@@ -796,8 +796,14 @@ export async function importFromDefaultMetadata(
   const existingCompanyNames = new Set<string>(existingCompaniesSnap.map(d => String(d.company || '').toLowerCase().trim()));
   const existingMemberNames = new Set<string>(existingMembersSnap.map(d => String(d.member_name || '').toLowerCase().trim()));
 
+  const isImportAllowed = (item: any) => {
+    if (item.is_allowed_import === false || item.allow_import === false) return false;
+    return true;
+  };
+
   // 1. Determine matching groups
   const matchingGroups = defaultGroups.filter((g) => {
+    if (!isImportAllowed(g)) return false;
     if (selection.country && g.country !== selection.country) return false;
     if (selection.company && g.company !== selection.company) return false;
     if (selection.group && g.group !== selection.group) return false;
@@ -808,12 +814,14 @@ export async function importFromDefaultMetadata(
 
   // 2. Determine matching companies
   const matchingCompanies = defaultCompanies.filter((c) => {
+    if (!isImportAllowed(c)) return false;
     if (selection.company) return c.company === selection.company;
     return matchingGroups.some(g => g.company === c.company);
   });
 
   // 3. Determine matching members
   const matchingMembers = defaultMembers.filter((m) => {
+    if (!isImportAllowed(m)) return false;
     if (selection.group) return m.group === selection.group;
     return matchingGroupNames.has(m.group);
   });

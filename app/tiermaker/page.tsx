@@ -171,9 +171,9 @@ export default function TierMakerPage() {
     return set;
   }, [tiers]);
 
-  // Unassigned pool of active members with group/company/search filters
+  // Unassigned pool of active members sorted by company, group, and member name (ascending)
   const unassignedMembers = useMemo(() => {
-    return activeMembers.filter((m) => {
+    const filtered = activeMembers.filter((m) => {
       if (placedMemberNames.has(m.member_name)) return false;
       if (selectedGroup && m.group !== selectedGroup) return false;
       if (selectedCompany && m.company !== selectedCompany) return false;
@@ -186,6 +186,24 @@ export default function TierMakerPage() {
         );
       }
       return true;
+    });
+
+    return filtered.sort((a, b) => {
+      const compA = (a.company || '').toLowerCase();
+      const compB = (b.company || '').toLowerCase();
+      if (compA !== compB) {
+        return compA.localeCompare(compB);
+      }
+
+      const groupA = (a.group || '').toLowerCase();
+      const groupB = (b.group || '').toLowerCase();
+      if (groupA !== groupB) {
+        return groupA.localeCompare(groupB);
+      }
+
+      const nameA = (a.member_name || '').toLowerCase();
+      const nameB = (b.member_name || '').toLowerCase();
+      return nameA.localeCompare(nameB);
     });
   }, [activeMembers, placedMemberNames, selectedGroup, selectedCompany, searchQuery]);
 

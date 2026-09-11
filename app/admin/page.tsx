@@ -11,7 +11,7 @@ import { CircularSpinner } from '@/components/common/CircularSpinner';
 import { MemberAvatar } from '@/components/common/MemberAvatar';
 import { formatDisplayName, formatBrowserTimestamp } from '@/lib/imageUtils';
 
-type MemberSortKey = 'date_added' | 'member_name' | 'color' | 'group' | 'country' | 'company' | 'start_date' | 'end_date' | 'is_active';
+type MemberSortKey = 'date_added' | 'member_name' | 'color' | 'group' | 'country' | 'company' | 'is_active';
 
 interface TempMemberRow {
   member_name: string;
@@ -19,8 +19,6 @@ interface TempMemberRow {
   group: string;
   country: string;
   company: string;
-  start_date: string;
-  end_date: string;
   is_active: boolean;
   x_profile: string;
   member_image: string;
@@ -172,8 +170,6 @@ export default function BackOfficePage() {
       group: '',
       country: '🇹🇭 TH',
       company: 'Individual',
-      start_date: '1000-12-26',
-      end_date: '9999-12-31',
       is_active: true,
       x_profile: '',
       member_image: '',
@@ -351,12 +347,6 @@ export default function BackOfficePage() {
                     <th className="sortable-th" onClick={() => handleSortMembers('company')}>
                       Company <span title="Locked & auto-mapped by Group"><Lock size={11} /></span> {memberSortKey === 'company' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                     </th>
-                    <th className="sortable-th" onClick={() => handleSortMembers('start_date')}>
-                      Start Date {memberSortKey === 'start_date' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                    </th>
-                    <th className="sortable-th" onClick={() => handleSortMembers('end_date')}>
-                      End Date {memberSortKey === 'end_date' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                    </th>
                     <th className="sortable-th" onClick={() => handleSortMembers('is_active')}>
                       Active Status {memberSortKey === 'is_active' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                     </th>
@@ -463,22 +453,6 @@ export default function BackOfficePage() {
                         />
                       </td>
                       <td>
-                        <input 
-                          type="date" 
-                          className="table-input" 
-                          value={tempMember.start_date} 
-                          onChange={(e) => setTempMember({ ...tempMember, start_date: e.target.value })}
-                        />
-                      </td>
-                      <td>
-                        <input 
-                          type="date" 
-                          className="table-input" 
-                          value={tempMember.end_date} 
-                          onChange={(e) => setTempMember({ ...tempMember, end_date: e.target.value })}
-                        />
-                      </td>
-                      <td>
                         <select 
                           className="table-select"
                           value={tempMember.is_active ? 'active' : 'inactive'}
@@ -531,7 +505,7 @@ export default function BackOfficePage() {
                   {/* Empty state message */}
                   {sortedMembers.length === 0 && !tempMember && (
                     <tr>
-                      <td colSpan={13} style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                      <td colSpan={11} style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
                         No members in your list yet. Click <strong>Import from Default</strong> above to copy choices, or click <strong>+ Add</strong> to create a new custom member.
                       </td>
                     </tr>
@@ -567,8 +541,6 @@ export default function BackOfficePage() {
                         <td>{m.group}</td>
                         <td>{m.country}</td>
                         <td>{m.company}</td>
-                        <td>{m.start_date || '-'}</td>
-                        <td>{m.end_date || '-'}</td>
                         <td>
                           <span className={`status-badge ${m.is_active !== false ? 'active' : ''}`}>
                             {m.is_active !== false ? 'Active' : 'Inactive'}
@@ -836,16 +808,6 @@ export default function BackOfficePage() {
                     />
                   </div>
 
-                  <div className="form-group span-2">
-                    <label>Member Avatar Image URL</label>
-                    <input
-                      type="url"
-                      value={String(editingItem.data.member_image || '')}
-                      onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, member_image: e.target.value } })}
-                      placeholder="https://..."
-                    />
-                  </div>
-
                   <div className="form-group">
                     <label>Color</label>
                     <select
@@ -902,7 +864,6 @@ export default function BackOfficePage() {
                     <input
                       type="text"
                       disabled
-                      className="table-input disabled"
                       value={String(editingItem.data.country || '🇹🇭 TH')}
                       title="Country is locked and auto-mapped by Group"
                     />
@@ -915,7 +876,6 @@ export default function BackOfficePage() {
                     <input
                       type="text"
                       disabled
-                      className="table-input disabled"
                       value={String(editingItem.data.company || 'Individual')}
                       title="Company is locked and auto-mapped by Group"
                     />
@@ -931,26 +891,6 @@ export default function BackOfficePage() {
                   </div>
 
                   <div className="form-group">
-                    <label>Start Date *</label>
-                    <input
-                      type="date"
-                      required
-                      value={String(editingItem.data.start_date || '1000-12-26')}
-                      onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, start_date: e.target.value } })}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label>End Date *</label>
-                    <input
-                      type="date"
-                      required
-                      value={String(editingItem.data.end_date || '9999-12-31')}
-                      onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, end_date: e.target.value } })}
-                    />
-                  </div>
-
-                  <div className="form-group">
                     <label>Status</label>
                     <select
                       value={editingItem.data.is_active !== false ? 'active' : 'inactive'}
@@ -959,6 +899,16 @@ export default function BackOfficePage() {
                       <option value="active">Active</option>
                       <option value="inactive">Inactive</option>
                     </select>
+                  </div>
+
+                  <div className="form-group span-2">
+                    <label>Member Avatar Image URL</label>
+                    <input
+                      type="url"
+                      value={String(editingItem.data.member_image || '')}
+                      onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, member_image: e.target.value } })}
+                      placeholder="https://..."
+                    />
                   </div>
 
                   <div className="form-group span-2">
@@ -1335,23 +1285,56 @@ export default function BackOfficePage() {
         .btn-icon { background: none; border: none; color: var(--text-muted); cursor: pointer; &:hover { color: var(--accent-primary); } &.danger:hover { color: var(--color-danger, #ef4444); } }
 
         .modal-overlay {
-          position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px;
+          position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(6px); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 16px;
         }
 
         .modal-card {
-          background: var(--bg-surface-1); border: 1px solid var(--border-strong); border-radius: var(--radius-md); padding: 24px; width: 100%; max-width: 580px;
+          background: var(--bg-surface-1);
+          border: 1px solid var(--border-strong);
+          border-radius: 12px;
+          padding: 24px;
+          width: 100%;
+          max-width: 580px;
+          max-height: 90vh;
+          overflow-y: auto;
           &.small { max-width: 400px; }
         }
 
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-        .btn-close { background: none; border: none; color: var(--text-muted); cursor: pointer; }
+        .modal-header {
+          display: flex; justify-content: space-between; align-items: center;
+          margin-bottom: 16px;
+          padding-bottom: 12px;
+          border-bottom: 1px solid var(--border-subtle);
+        }
+        .btn-close { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; border-radius: 4px; display: flex; align-items: center; &:hover { color: var(--text-main); background: var(--bg-surface-2); } }
 
-        .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-        .form-group { display: flex; flex-direction: column; gap: 4px; }
-        .form-group label { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); }
+        .form-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 14px;
+        }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
+        .form-group input, .form-group select, .form-group textarea {
+          background: var(--bg-surface-2);
+          border: 1px solid var(--border-subtle);
+          border-radius: 6px;
+          padding: 8px 12px;
+          color: var(--text-main);
+          font-size: 0.9rem;
+          outline: none;
+          width: 100%;
+          &:focus { border-color: var(--accent-primary); }
+          &:disabled { opacity: 0.5; cursor: not-allowed; }
+        }
         .span-2 { grid-column: span 2; }
-        .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
- 
+        .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; grid-column: span 2; }
+
+        @media (max-width: 540px) {
+          .form-grid { grid-template-columns: 1fr; }
+          .span-2 { grid-column: span 1; }
+          .form-actions { grid-column: span 1; }
+        }
       `}</style>
     </div>
   );

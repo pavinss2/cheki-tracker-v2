@@ -1300,18 +1300,18 @@ export default function CalendarPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 16px;
+          padding: 12px;
         }
 
         .modal-dialog {
           width: 100%;
           max-width: 600px;
-          max-height: 90vh;
+          max-height: calc(100vh - 24px);
           overflow-y: auto;
           background-color: var(--bg-surface-1);
           border: 1px solid var(--border-strong);
           border-radius: 12px;
-          padding: 24px;
+          padding: 20px;
           box-shadow: 0 20px 50px rgba(0,0,0,0.6);
         }
 
@@ -1319,12 +1319,12 @@ export default function CalendarPage() {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 20px;
+          margin-bottom: 16px;
           padding-bottom: 12px;
           border-bottom: 1px solid var(--border-subtle);
           h3 {
             margin: 0;
-            font-size: 1.15rem;
+            font-size: 1.05rem;
             font-weight: 700;
             color: var(--text-main);
           }
@@ -1345,13 +1345,13 @@ export default function CalendarPage() {
         .modal-form {
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 16px;
         }
 
         .form-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
-          gap: 16px;
+          gap: 14px;
         }
 
         .form-group {
@@ -1359,7 +1359,7 @@ export default function CalendarPage() {
           flex-direction: column;
           gap: 6px;
           label {
-            font-size: 0.82rem;
+            font-size: 0.8rem;
             font-weight: 600;
             color: var(--text-muted);
           }
@@ -1377,6 +1377,7 @@ export default function CalendarPage() {
           color: var(--text-main);
           font-size: 0.9rem;
           outline: none;
+          width: 100%;
           transition: border-color 0.2s;
 
           &:focus {
@@ -1398,6 +1399,7 @@ export default function CalendarPage() {
         }
 
         @media (max-width: 600px) {
+          .modal-dialog { padding: 16px; }
           .form-grid {
             grid-template-columns: 1fr;
           }

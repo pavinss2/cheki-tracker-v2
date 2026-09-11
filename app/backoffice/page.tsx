@@ -44,13 +44,15 @@ import {
   Save, 
   ArrowUpDown, 
   ShieldAlert, 
-  Lock 
+  Lock,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
 import { CircularSpinner } from '@/components/common/CircularSpinner';
 import { MemberAvatar } from '@/components/common/MemberAvatar';
 import { formatBrowserTimestamp } from '@/lib/imageUtils';
 
-type MemberSortKey = 'date_added' | 'member_name' | 'color' | 'group' | 'country' | 'company' | 'start_date' | 'end_date' | 'is_active';
+type MemberSortKey = 'date_added' | 'member_name' | 'color' | 'group' | 'country' | 'company' | 'is_active';
 
 interface TempMemberRow {
   member_name: string;
@@ -58,8 +60,6 @@ interface TempMemberRow {
   group: string;
   country: string;
   company: string;
-  start_date: string;
-  end_date: string;
   is_active: boolean;
   x_profile: string;
   member_image: string;
@@ -80,6 +80,14 @@ export default function BackOfficePage() {
 
   const [activeTab, setActiveTab] = useState<'members' | 'groups' | 'companies' | 'colors' | 'types' | 'countries' | 'locations' | 'logs'>('members');
   const [editingItem, setEditingItem] = useState<{ table: string; data: Record<string, unknown> } | null>(null);
+
+  // Filters state for default_dim_member and default_dim_group
+  const [memberCompanyFilter, setMemberCompanyFilter] = useState<string>('');
+  const [memberGroupFilter, setMemberGroupFilter] = useState<string>('');
+  const [groupCompanyFilter, setGroupCompanyFilter] = useState<string>('');
+
+  // Multiselect state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Sorting state for dim_member
   const [memberSortKey, setMemberSortKey] = useState<MemberSortKey>('date_added');
@@ -102,6 +110,11 @@ export default function BackOfficePage() {
   } | null>(null);
 
   const logs = getAdminLogs('global');
+
+  // Reset selected items when active tab or filters change
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [activeTab, memberCompanyFilter, memberGroupFilter, groupCompanyFilter]);
 
   // Subscribe to default metadata collections
   useEffect(() => {
@@ -173,6 +186,104 @@ export default function BackOfficePage() {
     });
   }, [members, memberSortKey, memberSortAsc]);
 
+  // Filtered members list based on company and group filter
+  const filteredMembers = useMemo(() => {
+    return sortedMembers.filter((m) => {
+      if (memberCompanyFilter && m.company !== memberCompanyFilter) return false;
+      if (memberGroupFilter && m.group !== memberGroupFilter) return false;
+      return true;
+    });
+  }, [sortedMembers, memberCompanyFilter, memberGroupFilter]);
+
+  // Filtered groups list based on company filter
+  const filteredGroups = useMemo(() => {
+    return groups.filter((g) => {
+      if (groupCompanyFilter && g.company !== groupCompanyFilter) return false;
+      return true;
+    });
+  }, [groups, groupCompanyFilter]);
+
+  // Resolve active dataset and table name for multiselect batch operations
+  const activeItems = useMemo(() => {
+    if (activeTab === 'members') return filteredMembers;
+    if (activeTab === 'groups') return filteredGroups;
+    if (activeTab === 'companies') return companies;
+    if (activeTab === 'colors') return colors;
+    if (activeTab === 'types') return types;
+    if (activeTab === 'countries') return countries;
+    if (activeTab === 'locations') return locations;
+    return [];
+  }, [activeTab, filteredMembers, filteredGroups, companies, colors, types, countries, locations]);
+
+  const activeTableName = useMemo(() => {
+    if (activeTab === 'members') return 'dim_member';
+    if (activeTab === 'groups') return 'dim_group';
+    if (activeTab === 'companies') return 'dim_company';
+    if (activeTab === 'colors') return 'dim_color';
+    if (activeTab === 'types') return 'dim_type';
+    if (activeTab === 'countries') return 'dim_country';
+    if (activeTab === 'locations') return 'dim_location';
+    return '';
+  }, [activeTab]);
+
+  const isAllSelected = activeItems.length > 0 && activeItems.every(item => selectedIds.has(item.id));
+
+  const handleToggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(activeItems.map(item => item.id)));
+    }
+  };
+
+  const handleToggleSelect = (id: string) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setSelectedIds(next);
+  };
+
+  const handleBatchSetAllowImport = async (allowed: boolean) => {
+    if (!activeTableName || selectedIds.size === 0) return;
+    const items = activeItems.filter(item => selectedIds.has(item.id));
+    try {
+      for (const item of items) {
+        await updateDefaultMetadataDoc(activeTableName, item.id, { ...item, is_allowed_import: allowed, allow_import: allowed }, isDemoUser);
+      }
+      setSelectedIds(new Set());
+    } catch (err) {
+      alert("Error updating import permission: " + (err instanceof Error ? err.message : String(err)));
+    }
+  };
+
+  const handleBatchDelete = async () => {
+    if (!activeTableName || selectedIds.size === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selectedIds.size} selected item(s) from ${activeTableName}?`)) return;
+    const items = activeItems.filter(item => selectedIds.has(item.id));
+    try {
+      for (const item of items) {
+        const displayVal = getItemValueString(item as unknown as Record<string, unknown>);
+        await deleteDefaultMetadataDoc(activeTableName, item.id, displayVal, isDemoUser);
+      }
+      setSelectedIds(new Set());
+    } catch (err) {
+      alert("Error deleting items: " + (err instanceof Error ? err.message : String(err)));
+    }
+  };
+
+  const handleToggleSingleAllowImport = async (table: string, item: any) => {
+    const currentAllowed = item.is_allowed_import !== false && item.allow_import !== false;
+    const nextAllowed = !currentAllowed;
+    try {
+      await updateDefaultMetadataDoc(table, item.id, { ...item, is_allowed_import: nextAllowed, allow_import: nextAllowed }, isDemoUser);
+    } catch (err) {
+      alert("Error updating import permission: " + (err instanceof Error ? err.message : String(err)));
+    }
+  };
+
   // Init temporary member draft row
   const handleStartAddMember = () => {
     const todayStr = new Date().toISOString().split('T')[0];
@@ -182,8 +293,6 @@ export default function BackOfficePage() {
       group: '',
       country: '🇹🇭 TH',
       company: 'Individual',
-      start_date: '1000-12-26',
-      end_date: '9999-12-31',
       is_active: true,
       x_profile: '',
       member_image: '',
@@ -340,11 +449,64 @@ export default function BackOfficePage() {
 
       {/* Content Card */}
       <div className="table-card card">
+        {/* Batch Action Bar */}
+        {selectedIds.size > 0 && activeTab !== 'logs' && (
+          <div className="batch-action-bar">
+            <div className="batch-info">
+              <span className="badge-pill primary" style={{ fontWeight: 600 }}>{selectedIds.size} item(s) selected</span>
+            </div>
+            <div className="batch-buttons">
+              <button type="button" className="btn btn-secondary btn-xs" onClick={() => handleBatchSetAllowImport(true)}>
+                <CheckCircle size={13} /> Allow Import
+              </button>
+              <button type="button" className="btn btn-secondary btn-xs" onClick={() => handleBatchSetAllowImport(false)}>
+                <XCircle size={13} /> Disallow Import
+              </button>
+              <button type="button" className="btn btn-danger btn-xs" onClick={handleBatchDelete}>
+                <Trash2 size={13} /> Delete Selected ({selectedIds.size})
+              </button>
+              <button type="button" className="btn btn-secondary btn-xs icon-only" onClick={() => setSelectedIds(new Set())} title="Clear selection">
+                <X size={13} />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* DEFAULT MEMBERS TAB */}
         {activeTab === 'members' && (
           <div>
             <div className="tab-header">
-              <h2>default_dim_member</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                <h2>default_dim_member</h2>
+                <div className="table-filter-group">
+                  <select
+                    className="filter-select"
+                    value={memberCompanyFilter}
+                    onChange={(e) => {
+                      setMemberCompanyFilter(e.target.value);
+                      setMemberGroupFilter('');
+                    }}
+                  >
+                    <option value="">All Companies ({companies.length})</option>
+                    {companies.map(c => (
+                      <option key={c.id} value={c.company}>{c.company}</option>
+                    ))}
+                  </select>
+
+                  <select
+                    className="filter-select"
+                    value={memberGroupFilter}
+                    onChange={(e) => setMemberGroupFilter(e.target.value)}
+                  >
+                    <option value="">All Groups ({groups.length})</option>
+                    {groups
+                      .filter(g => !memberCompanyFilter || g.company === memberCompanyFilter)
+                      .map(g => (
+                        <option key={g.id} value={g.group}>{g.group}</option>
+                      ))}
+                  </select>
+                </div>
+              </div>
               <button className="btn btn-primary btn-sm" onClick={handleStartAddMember} disabled={Boolean(tempMember)}>
                 <Plus size={14} /> Add
               </button>
@@ -354,6 +516,9 @@ export default function BackOfficePage() {
               <table className="dim-table member-table">
                 <thead>
                   <tr>
+                    <th style={{ width: '38px', textAlign: 'center' }}>
+                      <input type="checkbox" checked={isAllSelected} onChange={handleToggleSelectAll} />
+                    </th>
                     <th>Avatar</th>
                     <th className="sortable-th" onClick={() => handleSortMembers('member_name')}>
                       Member Name {memberSortKey === 'member_name' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
@@ -370,15 +535,10 @@ export default function BackOfficePage() {
                     <th className="sortable-th" onClick={() => handleSortMembers('company')}>
                       Company <span title="Locked & auto-mapped by Group"><Lock size={11} /></span> {memberSortKey === 'company' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                     </th>
-                    <th className="sortable-th" onClick={() => handleSortMembers('start_date')}>
-                      Start Date {memberSortKey === 'start_date' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                    </th>
-                    <th className="sortable-th" onClick={() => handleSortMembers('end_date')}>
-                      End Date {memberSortKey === 'end_date' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                    </th>
                     <th className="sortable-th" onClick={() => handleSortMembers('is_active')}>
                       Status {memberSortKey === 'is_active' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                     </th>
+                    <th>Allow Import</th>
                     <th>X Profile</th>
                     <th className="sortable-th" onClick={() => handleSortMembers('date_added')}>
                       Date Added {memberSortKey === 'date_added' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
@@ -390,6 +550,7 @@ export default function BackOfficePage() {
                 <tbody>
                   {tempMember && (
                     <tr className="temp-row">
+                      <td style={{ textAlign: 'center' }}>-</td>
                       <td style={{ minWidth: '160px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <MemberAvatar 
@@ -452,22 +613,6 @@ export default function BackOfficePage() {
                       <td><span className="locked-cell">{tempMember.country}</span></td>
                       <td><span className="locked-cell">{tempMember.company}</span></td>
                       <td>
-                        <input 
-                          type="date" 
-                          className="table-input"
-                          value={tempMember.start_date} 
-                          onChange={(e) => setTempMember({ ...tempMember, start_date: e.target.value })}
-                        />
-                      </td>
-                      <td>
-                        <input 
-                          type="date" 
-                          className="table-input"
-                          value={tempMember.end_date} 
-                          onChange={(e) => setTempMember({ ...tempMember, end_date: e.target.value })}
-                        />
-                      </td>
-                      <td>
                         <select 
                           className="table-select"
                           value={tempMember.is_active ? 'true' : 'false'}
@@ -476,6 +621,9 @@ export default function BackOfficePage() {
                           <option value="true">Active</option>
                           <option value="false">Inactive</option>
                         </select>
+                      </td>
+                      <td>
+                        <span className="badge-toggle allowed" style={{ cursor: 'default' }}>Allowed</span>
                       </td>
                       <td>
                         <input 
@@ -501,10 +649,16 @@ export default function BackOfficePage() {
                     </tr>
                   )}
 
-                  {sortedMembers.map((m) => {
+                  {filteredMembers.map((m) => {
                     const colorHex = colors.find(c => c.color === m.color)?.color_code;
+                    const isSelected = selectedIds.has(m.id);
+                    const isAllowed = m.is_allowed_import !== false && m.allow_import !== false;
+
                     return (
-                      <tr key={m.id}>
+                      <tr key={m.id} className={isSelected ? 'selected-row' : ''}>
+                        <td style={{ textAlign: 'center' }}>
+                          <input type="checkbox" checked={isSelected} onChange={() => handleToggleSelect(m.id)} />
+                        </td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <MemberAvatar src={m.member_image} name={m.member_name} size={28} colorHex={colorHex} />
@@ -519,12 +673,20 @@ export default function BackOfficePage() {
                         <td>{m.group || '-'}</td>
                         <td>{m.country || '-'}</td>
                         <td>{m.company || '-'}</td>
-                        <td className="mono">{m.start_date || '-'}</td>
-                        <td className="mono">{m.end_date || '-'}</td>
                         <td>
                           <span className={`status-tag ${m.is_active ? 'active' : 'inactive'}`}>
                             {m.is_active ? 'Active' : 'Inactive'}
                           </span>
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className={`badge-toggle ${isAllowed ? 'allowed' : 'disallowed'}`}
+                            onClick={() => handleToggleSingleAllowImport('dim_member', m)}
+                            title="Click to toggle import permission for user import wizard"
+                          >
+                            {isAllowed ? 'Allowed' : 'Disabled'}
+                          </button>
                         </td>
                         <td>{m.x_profile || '-'}</td>
                         <td className="mono">{formatBrowserTimestamp(m.date_added, m.createdAt)}</td>
@@ -552,7 +714,21 @@ export default function BackOfficePage() {
         {activeTab === 'groups' && (
           <div>
             <div className="tab-header">
-              <h2>default_dim_group</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                <h2>default_dim_group</h2>
+                <div className="table-filter-group">
+                  <select
+                    className="filter-select"
+                    value={groupCompanyFilter}
+                    onChange={(e) => setGroupCompanyFilter(e.target.value)}
+                  >
+                    <option value="">All Companies ({companies.length})</option>
+                    {companies.map(c => (
+                      <option key={c.id} value={c.company}>{c.company}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
               <button className="btn btn-primary btn-sm" onClick={() => setTempGroup({ group: '', country: '🇹🇭 TH', company: 'Individual' })} disabled={Boolean(tempGroup)}>
                 <Plus size={14} /> Add
               </button>
@@ -561,9 +737,13 @@ export default function BackOfficePage() {
               <table className="dim-table">
                 <thead>
                   <tr>
+                    <th style={{ width: '38px', textAlign: 'center' }}>
+                      <input type="checkbox" checked={isAllSelected} onChange={handleToggleSelectAll} />
+                    </th>
                     <th>Group</th>
                     <th>Country</th>
                     <th>Company</th>
+                    <th>Allow Import</th>
                     <th>Date Added</th>
                     <th>Date Modified</th>
                     <th>Actions</th>
@@ -572,6 +752,7 @@ export default function BackOfficePage() {
                 <tbody>
                   {tempGroup && (
                     <tr className="temp-row">
+                      <td style={{ textAlign: 'center' }}>-</td>
                       <td>
                         <input 
                           type="text" 
@@ -603,6 +784,9 @@ export default function BackOfficePage() {
                           ))}
                         </select>
                       </td>
+                      <td>
+                        <span className="badge-toggle allowed" style={{ cursor: 'default' }}>Allowed</span>
+                      </td>
                       <td className="mono">{new Date().toISOString().split('T')[0]}</td>
                       <td className="mono">{new Date().toISOString().split('T')[0]}</td>
                       <td>
@@ -614,25 +798,43 @@ export default function BackOfficePage() {
                     </tr>
                   )}
 
-                  {groups.map((g) => (
-                    <tr key={g.id}>
-                      <td className="bold">{g.group}</td>
-                      <td>{g.country}</td>
-                      <td>{g.company}</td>
-                      <td className="mono">{formatBrowserTimestamp(g.date_added, g.createdAt)}</td>
-                      <td className="mono">{formatBrowserTimestamp(g.date_modified, g.updatedAt)}</td>
-                      <td>
-                        <div className="action-btns">
-                          <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_group', data: { ...g } })}>
-                            <Edit2 size={14} />
+                  {filteredGroups.map((g) => {
+                    const isSelected = selectedIds.has(g.id);
+                    const isAllowed = g.is_allowed_import !== false && g.allow_import !== false;
+
+                    return (
+                      <tr key={g.id} className={isSelected ? 'selected-row' : ''}>
+                        <td style={{ textAlign: 'center' }}>
+                          <input type="checkbox" checked={isSelected} onChange={() => handleToggleSelect(g.id)} />
+                        </td>
+                        <td className="bold">{g.group}</td>
+                        <td>{g.country}</td>
+                        <td>{g.company}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className={`badge-toggle ${isAllowed ? 'allowed' : 'disallowed'}`}
+                            onClick={() => handleToggleSingleAllowImport('dim_group', g)}
+                            title="Click to toggle import permission for user import wizard"
+                          >
+                            {isAllowed ? 'Allowed' : 'Disabled'}
                           </button>
-                          <button className="btn-icon danger" onClick={() => setDeleteConfirmModal({ table: 'dim_group', id: g.id, displayValue: getItemValueString(g as unknown as Record<string, unknown>) })}>
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="mono">{formatBrowserTimestamp(g.date_added, g.createdAt)}</td>
+                        <td className="mono">{formatBrowserTimestamp(g.date_modified, g.updatedAt)}</td>
+                        <td>
+                          <div className="action-btns">
+                            <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_group', data: { ...g } })}>
+                              <Edit2 size={14} />
+                            </button>
+                            <button className="btn-icon danger" onClick={() => setDeleteConfirmModal({ table: 'dim_group', id: g.id, displayValue: getItemValueString(g as unknown as Record<string, unknown>) })}>
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1049,6 +1251,127 @@ export default function BackOfficePage() {
             </div>
 
             <form onSubmit={handleSaveEdit} className="modal-form">
+              {editingItem.table === 'dim_member' && (
+                <>
+                  <div className="form-group span-2">
+                    <label>Member Name *</label>
+                    <input
+                      type="text"
+                      required
+                      className="input-control"
+                      value={String(editingItem.data.member_name || '')}
+                      onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, member_name: e.target.value } })}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Color</label>
+                    <select
+                      className="input-control"
+                      value={String(editingItem.data.color || '')}
+                      onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, color: e.target.value } })}
+                    >
+                      <option value="">-- Select Color --</option>
+                      {colors.map((c) => (
+                        <option key={c.id} value={c.color}>{c.color}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Group</label>
+                    <select
+                      className="input-control"
+                      value={String(editingItem.data.group || '')}
+                      onChange={(e) => {
+                        const grpVal = e.target.value;
+                        const mapped = groupLookup[grpVal];
+                        setEditingItem({
+                          ...editingItem,
+                          data: {
+                            ...editingItem.data,
+                            group: grpVal,
+                            company: mapped?.company || 'Individual',
+                            country: mapped?.country || '🇹🇭 TH',
+                          }
+                        });
+                      }}
+                    >
+                      <option value="">-- Select Group --</option>
+                      {groups.map((g) => (
+                        <option key={g.id} value={g.group}>{g.group}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Country 🔒</label>
+                    <input
+                      type="text"
+                      className="input-control"
+                      disabled
+                      value={String(editingItem.data.country || '')}
+                      title="Auto-mapped from Group"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Company 🔒</label>
+                    <input
+                      type="text"
+                      className="input-control"
+                      disabled
+                      value={String(editingItem.data.company || '')}
+                      title="Auto-mapped from Group"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Status</label>
+                    <select
+                      className="input-control"
+                      value={editingItem.data.is_active ? 'true' : 'false'}
+                      onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, is_active: e.target.value === 'true' } })}
+                    >
+                      <option value="true">Active</option>
+                      <option value="false">Inactive</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Date Added</label>
+                    <input
+                      type="date"
+                      className="input-control"
+                      value={String(editingItem.data.date_added || '')}
+                      onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, date_added: e.target.value } })}
+                    />
+                  </div>
+
+                  <div className="form-group span-2">
+                    <label>Member Image URL</label>
+                    <input
+                      type="url"
+                      className="input-control"
+                      value={String(editingItem.data.member_image || '')}
+                      onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, member_image: e.target.value } })}
+                      placeholder="https://..."
+                    />
+                  </div>
+
+                  <div className="form-group span-2">
+                    <label>X Profile</label>
+                    <input
+                      type="text"
+                      className="input-control"
+                      value={String(editingItem.data.x_profile || '')}
+                      onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, x_profile: e.target.value } })}
+                      placeholder="@username"
+                    />
+                  </div>
+                </>
+              )}
+
               {editingItem.table === 'dim_group' && (
                 <>
                   <div className="form-group">
@@ -1111,7 +1434,7 @@ export default function BackOfficePage() {
                     />
                   </div>
                   <div className="form-group">
-                    <label>Hex Code & Color Picker</label>
+                    <label>Hex Code &amp; Color Picker</label>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <input
                         type="color"
@@ -1136,11 +1459,11 @@ export default function BackOfficePage() {
                 </>
               )}
 
-              {editingItem.table !== 'dim_group' && editingItem.table !== 'dim_color' && (
+              {editingItem.table !== 'dim_group' && editingItem.table !== 'dim_color' && editingItem.table !== 'dim_member' && (
                 Object.keys(editingItem.data)
                   .filter(k => k !== 'id' && k !== 'userId' && k !== 'createdAt' && k !== 'updatedAt' && k !== 'date_added' && k !== 'date_modified')
                   .map(key => (
-                    <div key={key} className="form-group">
+                    <div key={key} className={`form-group ${key === 'member_image' || key === 'x_profile' ? 'span-2' : ''}`}>
                       <label>{key}</label>
                       {typeof editingItem.data[key] === 'boolean' ? (
                         <select
@@ -1466,37 +1789,64 @@ export default function BackOfficePage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 16px;
+          padding: 12px;
         }
 
         .modal-dialog {
           width: 100%;
-          max-width: 500px;
+          max-width: 620px;
           background-color: var(--bg-surface-1);
           border: 1px solid var(--border-strong);
           border-radius: 12px;
-          padding: 24px;
+          padding: 20px;
+          max-height: calc(100vh - 24px);
+          overflow-y: auto;
+        }
+
+        .modal-dialog.modal-confirm-dialog {
+          max-width: 450px;
         }
 
         .modal-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 20px;
+          margin-bottom: 16px;
           padding-bottom: 12px;
           border-bottom: 1px solid var(--border-subtle);
-          h3 { margin: 0; font-size: 1.1rem; color: var(--text-main); }
+          h3 { margin: 0; font-size: 1.05rem; color: var(--text-main); }
         }
 
         .btn-close-modal {
-          background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px;
+          background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; border-radius: 4px; display: flex; align-items: center;
+          &:hover { color: var(--text-main); background: var(--bg-surface-2); }
         }
 
-        .modal-form { display: flex; flex-direction: column; gap: 16px; }
+        .modal-form {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 14px;
+        }
 
         .form-group {
           display: flex; flex-direction: column; gap: 6px;
-          label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); }
+          label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
+        }
+
+        .form-group.span-2,
+        .modal-actions {
+          grid-column: span 2;
+        }
+
+        @media (max-width: 540px) {
+          .modal-dialog { padding: 16px; }
+          .modal-form {
+            grid-template-columns: 1fr;
+          }
+          .form-group.span-2,
+          .modal-actions {
+            grid-column: span 1;
+          }
         }
 
         .input-control {
@@ -1507,11 +1857,17 @@ export default function BackOfficePage() {
           color: var(--text-main);
           font-size: 0.9rem;
           outline: none;
+          width: 100%;
           &:focus { border-color: var(--accent-primary); }
+          &:disabled { opacity: 0.5; cursor: not-allowed; background: var(--bg-surface-3); }
         }
 
         .modal-actions {
           display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px;
+        }
+
+        .modal-body {
+          padding: 8px 0;
         }
 
         .delete-info-box {
@@ -1535,6 +1891,86 @@ export default function BackOfficePage() {
           font-weight: 600;
           cursor: pointer;
           &:hover { opacity: 0.9; }
+        }
+
+        .batch-action-bar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          background: rgba(212, 168, 75, 0.08);
+          border: 1px solid rgba(212, 168, 75, 0.3);
+          border-radius: 8px;
+          padding: 8px 14px;
+          margin-bottom: 10px;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+
+        .batch-buttons {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          flex-wrap: wrap;
+        }
+
+        .btn-xs {
+          padding: 5px 10px;
+          font-size: 0.78rem;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          border-radius: 6px;
+          font-weight: 600;
+          cursor: pointer;
+          border: 1px solid var(--border-subtle);
+          background: var(--bg-surface-2);
+          color: var(--text-main);
+          &:hover { border-color: var(--border-strong); }
+          &.icon-only { padding: 5px; }
+        }
+
+        .filter-select {
+          background: var(--bg-surface-1);
+          border: 1px solid var(--border-subtle);
+          border-radius: 6px;
+          padding: 5px 10px;
+          color: var(--text-main);
+          font-size: 0.82rem;
+          outline: none;
+          &:focus { border-color: var(--accent-primary); }
+        }
+
+        .table-filter-group {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          flex-wrap: wrap;
+        }
+
+        .selected-row td {
+          background-color: rgba(212, 168, 75, 0.06) !important;
+        }
+
+        .badge-toggle {
+          padding: 3px 10px;
+          border-radius: 12px;
+          font-size: 0.75rem;
+          font-weight: 700;
+          cursor: pointer;
+          border: 1px solid;
+          transition: all 0.15s;
+          &.allowed {
+            background: rgba(46, 204, 113, 0.15);
+            color: #2ecc71;
+            border-color: rgba(46, 204, 113, 0.4);
+            &:hover { background: rgba(46, 204, 113, 0.25); }
+          }
+          &.disallowed {
+            background: rgba(231, 76, 60, 0.12);
+            color: #e74c3c;
+            border-color: rgba(231, 76, 60, 0.35);
+            &:hover { background: rgba(231, 76, 60, 0.2); }
+          }
         }
       `}</style>
     </div>

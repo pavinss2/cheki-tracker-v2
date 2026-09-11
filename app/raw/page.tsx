@@ -96,7 +96,8 @@ export default function RawDataPage() {
 
   // Group Select Modal for Edge Cases (Member in multiple groups)
   const [groupSelectModal, setGroupSelectModal] = useState<{
-    rowIdx: number;
+    rowIdx?: number;
+    isModal?: boolean;
     memberName: string;
     matchingMembers: DimMember[];
   } | null>(null);
@@ -164,7 +165,7 @@ export default function RawDataPage() {
     const newRow: GridRow = {
       localId: 'blank_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
       member: '',
-      color: 'White',
+      color: '',
       group: '',
       nationality: '🇹🇭 TH',
       date: today,
@@ -191,7 +192,7 @@ export default function RawDataPage() {
       setModalTransaction({
         date: today,
         member: '',
-        color: 'White',
+        color: '',
         group: '',
         nationality: '🇹🇭 TH',
         event: '',
@@ -244,24 +245,39 @@ export default function RawDataPage() {
   const applyGroupSelection = (selectedMember: DimMember) => {
     if (!groupSelectModal) return;
 
-    const rowIdx = groupSelectModal.rowIdx;
     const mappedGroup = groupLookup[selectedMember.group] || { company: selectedMember.company, country: selectedMember.country };
 
-    setBlankRows((prev) => {
-      const copy = [...prev];
-      const row = {
-        ...copy[rowIdx],
-        member: selectedMember.member_name,
-        group: selectedMember.group,
-        color: selectedMember.color || copy[rowIdx].color,
-        company: mappedGroup.company || selectedMember.company,
-        nationality: mappedGroup.country || selectedMember.country,
-        isDirty: true,
-      };
-      row.totalPrice = calculateRowPrice(row, priceRules);
-      copy[rowIdx] = row;
-      return copy;
-    });
+    if (groupSelectModal.isModal) {
+      setModalTransaction((prev) => {
+        const updated = {
+          ...prev,
+          member: selectedMember.member_name,
+          group: selectedMember.group,
+          color: selectedMember.color || prev?.color || '',
+          company: mappedGroup.company || selectedMember.company,
+          nationality: mappedGroup.country || selectedMember.country,
+        };
+        updated.totalPrice = calculateRowPrice(updated as GridRow, priceRules);
+        return updated;
+      });
+    } else if (groupSelectModal.rowIdx !== undefined && groupSelectModal.rowIdx >= 0) {
+      const rowIdx = groupSelectModal.rowIdx;
+      setBlankRows((prev) => {
+        const copy = [...prev];
+        const row = {
+          ...copy[rowIdx],
+          member: selectedMember.member_name,
+          group: selectedMember.group,
+          color: selectedMember.color || copy[rowIdx].color,
+          company: mappedGroup.company || selectedMember.company,
+          nationality: mappedGroup.country || selectedMember.country,
+          isDirty: true,
+        };
+        row.totalPrice = calculateRowPrice(row, priceRules);
+        copy[rowIdx] = row;
+        return copy;
+      });
+    }
 
     setGroupSelectModal(null);
   };
@@ -299,64 +315,73 @@ export default function RawDataPage() {
     if (!pasteRawText.trim()) return;
 
     const lines = pasteRawText.trim().split('\n');
-    const parsedRows: GridRow[] = lines.map((line, idx) => {
-      const parts = line.split('\t');
-      const dateVal = parts[4] || new Date().toISOString().split('T')[0];
-      const memberVal = parts[0] || '';
-      const groupVal = parts[2] || '';
-      const mapped = groupLookup[groupVal] || { company: parts[16] || '', country: parts[3] || '' };
+    const parsedRows: GridRow[] = [];
 
-      const rowObj: GridRow = {
-        localId: 'paste_' + Date.now() + '_' + idx,
-        member: memberVal,
-        color: parts[1] || 'White',
-        group: groupVal,
-        nationality: mapped.country || parts[3] || '🇹🇭 TH',
+    lines.forEach((line) => {
+      const parts = line.split('\t').map((p) => p.trim());
+      if (parts.length < 2) return;
+
+      const dateVal = parts[0] || new Date().toISOString().split('T')[0];
+      const memberVal = parts[1] || '';
+      const groupVal = parts[2] || '';
+      const colorVal = parts[3] || '';
+      const eventVal = parts[4] || '';
+      const typeVal = parts[5] || 'Cheki';
+      const locationVal = parts[6] || 'Bangkok';
+      const qtyVal = Number(parts[7]) || 1;
+      const totalVal = Number(parts[8]) || 0;
+
+      const mapped = groupLookup[groupVal];
+
+      const r: GridRow = {
+        localId: 'paste_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
         date: dateVal,
-        month: dateVal.substring(0, 7),
-        year: dateVal.substring(0, 4),
-        event: parts[7] || '',
-        description: parts[8] || '',
-        type: parts[9] || 'Cheki',
-        location: parts[10] || 'Bangkok',
-        quantity: Number(parts[11]) || 1,
-        totalPrice: Number(parts[12]) || 300,
-        img: parts[13] || '',
-        talkTopic: parts[14] || '',
-        company: mapped.company || parts[16] || '',
+        month: dateVal ? dateVal.substring(0, 7) : '',
+        year: dateVal ? dateVal.substring(0, 4) : '',
+        member: memberVal,
+        group: groupVal,
+        color: colorVal,
+        company: mapped?.company || '',
+        nationality: mapped?.country || '🇹🇭 TH',
+        event: eventVal,
+        description: '',
+        type: typeVal,
+        location: locationVal,
+        quantity: qtyVal,
+        totalPrice: totalVal,
+        img: '',
+        talkTopic: '',
         isDirty: true,
       };
 
-      rowObj.totalPrice = calculateRowPrice(rowObj, priceRules);
-      return rowObj;
+      if (!totalVal) {
+        r.totalPrice = calculateRowPrice(r, priceRules);
+      }
+
+      parsedRows.push(r);
     });
 
-    setBlankRows([...parsedRows, ...blankRows]);
-    setShowPasteModal(false);
-    setPasteRawText('');
+    if (parsedRows.length > 0) {
+      setBlankRows([...parsedRows, ...blankRows]);
+      setPasteRawText('');
+      setShowPasteModal(false);
+    }
   };
 
-  // Save All dirty blank/pasted rows
   const handleBatchSave = async () => {
-    const dirtyRows = blankRows.filter((r) => r.isDirty && r.member.trim() !== '');
-    if (dirtyRows.length === 0) {
-      alert("No valid modified rows to save. Make sure 'Member' is filled in your added rows.");
-      return;
-    }
+    const dirtyRows = blankRows.filter((r) => r.isDirty && r.member && r.date);
+    if (dirtyRows.length === 0) return;
 
     setIsSavingBatch(true);
     try {
       const payload = dirtyRows.map(({ localId: _l, isDirty: _d, ...rest }) => rest as Omit<Transaction, 'id' | 'userId'>);
       await batchUpsertTransactions(userId, payload, isDemoUser);
-
-      setSaveSuccessMsg(`Successfully saved ${dirtyRows.length} transactions to database!`);
+      setBlankRows((prev) => prev.filter((r) => !r.isDirty || !r.member || !r.date));
+      setSaveSuccessMsg(`Saved ${dirtyRows.length} transactions successfully!`);
       setTimeout(() => setSaveSuccessMsg(''), 4000);
-
-      // Remove saved blank rows as they are now in subscription
-      setBlankRows(blankRows.filter(r => !r.isDirty || r.member.trim() === ''));
     } catch (err) {
-      console.error("Batch save error:", err);
-      alert("Failed saving data: " + (err instanceof Error ? err.message : String(err)));
+      console.error('Batch save error:', err);
+      alert('Failed to save transactions. Please try again.');
     } finally {
       setIsSavingBatch(false);
     }
@@ -364,16 +389,29 @@ export default function RawDataPage() {
 
   // Auto-populate group/color/country/company when a member is selected in single edit modal
   const handleMemberSelectInModal = (selectedMemberName: string) => {
-    const match = members.find((m) => m.member_name === selectedMemberName);
-    if (match) {
-      setModalTransaction((prev) => ({
-        ...prev,
-        member: selectedMemberName,
-        group: match.group || prev?.group || '',
-        color: match.color || prev?.color || 'White',
-        company: match.company || prev?.company || '',
-        nationality: match.country || prev?.nationality || '🇹🇭 TH',
-      }));
+    const matches = members.filter((m) => m.member_name.toLowerCase() === selectedMemberName.toLowerCase());
+
+    if (matches.length > 1) {
+      setGroupSelectModal({
+        isModal: true,
+        memberName: selectedMemberName,
+        matchingMembers: matches,
+      });
+    } else if (matches.length === 1) {
+      const match = matches[0];
+      const mappedGroup = groupLookup[match.group] || { company: match.company, country: match.country };
+      setModalTransaction((prev) => {
+        const updated = {
+          ...prev,
+          member: match.member_name,
+          group: match.group || prev?.group || '',
+          color: match.color || prev?.color || '',
+          company: mappedGroup.company || match.company || prev?.company || '',
+          nationality: mappedGroup.country || match.country || prev?.nationality || '🇹🇭 TH',
+        };
+        updated.totalPrice = calculateRowPrice(updated as GridRow, priceRules);
+        return updated;
+      });
     } else {
       setModalTransaction((prev) => ({ ...prev, member: selectedMemberName }));
     }
@@ -730,12 +768,7 @@ export default function RawDataPage() {
                   required
                   placeholder="Select or enter member..."
                   value={modalTransaction.member || ''}
-                  onChange={(e) => {
-                    handleMemberSelectInModal(e.target.value);
-                    const updated = { ...modalTransaction, member: e.target.value };
-                    updated.totalPrice = calculateRowPrice(updated as GridRow, priceRules);
-                    setModalTransaction(updated);
-                  }}
+                  onChange={(e) => handleMemberSelectInModal(e.target.value)}
                 />
                 <datalist id="modal_members_list">
                   {Array.from(new Set(members.map((m) => m.member_name))).map((name) => (
@@ -743,6 +776,43 @@ export default function RawDataPage() {
                   ))}
                 </datalist>
               </div>
+
+              <div className="form-group">
+                <label>Cheki Type *</label>
+                <select 
+                  value={modalTransaction.type || 'Cheki'} 
+                  onChange={(e) => {
+                    const updated = { ...modalTransaction, type: e.target.value };
+                    updated.totalPrice = calculateRowPrice(updated as GridRow, priceRules);
+                    setModalTransaction(updated);
+                  }}
+                >
+                  {types.map((t) => (
+                    <option key={t.id} value={t.type}>{t.type}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Quantity *</label>
+                <input 
+                  type="number" 
+                  min="1" 
+                  value={modalTransaction.quantity ?? 1} 
+                  onChange={(e) => {
+                    const qty = Number(e.target.value) || 1;
+                    const updated = { ...modalTransaction, quantity: qty };
+                    updated.totalPrice = calculateRowPrice(updated as GridRow, priceRules);
+                    setModalTransaction(updated);
+                  }} 
+                />
+              </div>
+
+              {/* Thin Divider 1 */}
+              <hr className="form-divider" />
+
+              {/* Group 2: Auto-Mapped Fields */}
+              <div className="form-group-title">Auto-Mapped Details</div>
 
               <div className="form-group">
                 <label>Group</label>
@@ -774,18 +844,25 @@ export default function RawDataPage() {
               <div className="form-group">
                 <label>Color</label>
                 <select 
-                  value={modalTransaction.color || 'White'} 
+                  value={modalTransaction.color || ''} 
                   onChange={(e) => {
                     const updated = { ...modalTransaction, color: e.target.value };
                     updated.totalPrice = calculateRowPrice(updated as GridRow, priceRules);
                     setModalTransaction(updated);
                   }}
                 >
+                  <option value="">Select Color...</option>
                   {colors.map((c) => (
                     <option key={c.id} value={c.color}>{c.color}</option>
                   ))}
                 </select>
               </div>
+
+              {/* Thin Divider 2 */}
+              <hr className="form-divider" />
+
+              {/* Group 3: Optional Details */}
+              <div className="form-group-title">Optional Details</div>
 
               <div className="form-group">
                 <label>Event Name</label>
@@ -798,47 +875,6 @@ export default function RawDataPage() {
               </div>
 
               <div className="form-group">
-                <label>Cheki Type</label>
-                <select 
-                  value={modalTransaction.type || 'Cheki'} 
-                  onChange={(e) => {
-                    const updated = { ...modalTransaction, type: e.target.value };
-                    updated.totalPrice = calculateRowPrice(updated as GridRow, priceRules);
-                    setModalTransaction(updated);
-                  }}
-                >
-                  {types.map((t) => (
-                    <option key={t.id} value={t.type}>{t.type}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>Quantity</label>
-                <input 
-                  type="number" 
-                  min="1" 
-                  value={modalTransaction.quantity ?? 1} 
-                  onChange={(e) => {
-                    const qty = Number(e.target.value) || 1;
-                    const updated = { ...modalTransaction, quantity: qty };
-                    updated.totalPrice = calculateRowPrice(updated as GridRow, priceRules);
-                    setModalTransaction(updated);
-                  }} 
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Total Price (THB)</label>
-                <input 
-                  type="number" 
-                  min="0" 
-                  value={modalTransaction.totalPrice ?? 300} 
-                  onChange={(e) => setModalTransaction({ ...modalTransaction, totalPrice: Number(e.target.value) })} 
-                />
-              </div>
-
-              <div className="form-group span-2">
                 <label>Photo URL (Google Drive / Direct Image)</label>
                 <input 
                   type="url" 
@@ -851,7 +887,7 @@ export default function RawDataPage() {
               <div className="form-group span-2">
                 <label>Talk Topic / Notes</label>
                 <textarea 
-                  rows={3} 
+                  rows={2} 
                   value={modalTransaction.talkTopic || ''} 
                   onChange={(e) => setModalTransaction({ ...modalTransaction, talkTopic: e.target.value })} 
                   placeholder="Memorable talk topic or event notes..."
@@ -922,6 +958,73 @@ export default function RawDataPage() {
           flex-wrap: wrap;
           align-items: center;
           margin-bottom: 10px;
+        }
+
+        .modal-form-sections {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+        }
+
+        .form-section {
+          background: rgba(255, 255, 255, 0.02);
+          border: 1px solid var(--border-subtle);
+          border-radius: var(--radius-md, 8px);
+          padding: 12px 14px;
+        }
+
+        .form-section.section-required {
+          border-left: 3px solid #ef4444;
+        }
+
+        .form-section.section-automapped {
+          border-left: 3px solid #d4a84b;
+        }
+
+        .form-section.section-optional {
+          border-left: 3px solid #64748b;
+        }
+
+        .section-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 12px;
+          padding-bottom: 6px;
+          border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .section-badge {
+          font-size: 0.68rem;
+          font-weight: 700;
+          padding: 3px 8px;
+          border-radius: 4px;
+          text-transform: uppercase;
+          letter-spacing: 0.03em;
+        }
+
+        .badge-required {
+          background: rgba(239, 68, 68, 0.15);
+          color: #ef4444;
+          border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .badge-auto {
+          background: rgba(212, 168, 75, 0.15);
+          color: #d4a84b;
+          border: 1px solid rgba(212, 168, 75, 0.3);
+        }
+
+        .badge-optional {
+          background: rgba(100, 116, 139, 0.15);
+          color: #94a3b8;
+          border: 1px solid rgba(100, 116, 139, 0.3);
+        }
+
+        .section-hint {
+          font-size: 0.72rem;
+          color: var(--text-subtle, #94a3b8);
+          margin-left: auto;
         }
 
         @media (max-width: 768px) {
@@ -1046,9 +1149,11 @@ export default function RawDataPage() {
           background: var(--bg-surface-1);
           border: 1px solid var(--border-strong);
           border-radius: var(--radius-md);
-          padding: 24px;
+          padding: 18px 20px;
           width: 100%;
-          max-width: 640px;
+          max-width: 520px;
+          max-height: 85vh;
+          overflow-y: auto;
           box-shadow: var(--shadow-card);
         }
 
@@ -1098,7 +1203,26 @@ export default function RawDataPage() {
         .form-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
-          gap: 14px;
+          gap: 10px 12px;
+        }
+
+        .form-divider {
+          grid-column: 1 / -1;
+          border: none;
+          border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+          margin: 4px 0;
+          width: 100%;
+        }
+
+        .form-group-title {
+          grid-column: 1 / -1;
+          font-size: 0.72rem;
+          font-weight: 700;
+          color: #d4a84b;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          margin-top: 2px;
+          margin-bottom: -2px;
         }
 
         .form-group {
