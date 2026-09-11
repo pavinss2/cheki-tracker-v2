@@ -12,6 +12,7 @@ import {
   Grid, 
   Settings, 
   CalendarDays,
+  Trophy,
   Shield
 } from 'lucide-react';
 
@@ -21,6 +22,7 @@ const BASE_NAV_ITEMS = [
   { label: 'Analytics', href: '/analytics', icon: BarChart2 },
   { label: 'Raw Data', href: '/raw', icon: Table },
   { label: 'Events', href: '/events', icon: CalendarDays },
+  { label: 'Tier Maker', href: '/tiermaker', icon: Trophy },
   { label: 'Admin', href: '/admin', icon: Settings },
 ];
 

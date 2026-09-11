@@ -11,6 +11,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/raw': 'Raw Data',
   '/analytics': 'Analytics',
   '/events': 'Events',
+  '/tiermaker': 'Tier Maker',
   '/admin': 'Admin',
   '/backoffice': 'Back Office',
   '/grid-entry': 'Grid Entry',
@@ -26,7 +27,8 @@ export const Header: React.FC = () => {
      pathname.startsWith('/raw') ? 'Raw Data' : 
      pathname.startsWith('/analytics') ? 'Analytics' : 
      pathname.startsWith('/calendar') ? 'Calendar' : 
-     pathname.startsWith('/events') ? 'Events' : '');
+     pathname.startsWith('/events') ? 'Events' : 
+     pathname.startsWith('/tiermaker') ? 'Tier Maker' : '');
 
   return (
     <header className="app-header">
