@@ -233,15 +233,18 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 - **Unique Country Filtering**: Subscribe by Country only lists countries derived from unique values present in `default_dim_group`.
 - **Group Select All Tag**: Subscribe by Group features a **"Select All Groups"** / **"Deselect All Groups"** badge tag to toggle all currently visible groups at once.
 
-### 6.15 Admin Tab Table Layout, Combined Status & Filter Controls
+### 6.15 Admin Tab Table Layout, Combined Status & Entity Key Linking
 - **Action Column & Checkbox Multiselect (1st & 2nd Column)**:
   - Column 1 contains a checkbox selector for multiselect batch operations (with a Select All checkbox in the table header).
   - Column 2 contains the Edit pencil icon button (`<Edit2 size={15} />`).
 - **Batch Action Bar**: Selecting one or more rows triggers a floating batch bar with actions to **Set Active**, **Set Inactive**, or **Unsubscribe Selected**.
 - **Delete Button inside Edit Modal**: Custom (editable) records display a red **"Delete Record"** button at the bottom-left of the Edit Record modal dialog.
-- **Combined "Status" Column as 3rd Column**:
+- **Static "Status" Pill Tag (3rd Column)**:
   - Displays **`Sub`** (gold pill) for active subscribed items, **`Active`** (green pill) for active custom items, and **`Inactive`** (red pill) for inactive items.
-  - Clicking the Status tag directly toggles active/inactive state (`Sub`/`Active` $\leftrightarrow$ `Inactive`).
+  - Rendered as static, non-toggleable `<span>` pill tags (`border-radius: 9999px`, `cursor: default`, `user-select: none`). Hover translation/clicks are disabled to prevent accidental status changes during cell selection. Active/Inactive adjustments are made via batch action bar or edit modal.
+- **Back Office Entity Key Connection (`backoffice_id`)**:
+  - User overrides on default items directly preserve and bind to the Back Office primary key (`id` / `backoffice_id`).
+  - When an item's name or metadata is modified in Back Office (e.g. `"Tonliw"` $\rightarrow$ `"Tonliw (BNK48)"`), the live updates flow through to the Admin tab row in real time while preserving user active preferences, avoiding duplicate row creation.
 - **Group & Company Filters**: Admin tab headers feature filter drop-down selectors for **Group** and **Company** for instant table filtering.
 - **1-to-1 Backoffice CSS Alignment & Layout**:
   - Set `.admin-page` container padding to `0px`.
