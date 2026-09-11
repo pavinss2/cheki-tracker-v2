@@ -627,7 +627,7 @@ export default function TierMakerPage() {
                     onClick={() => {
                       setSelectedMemberName(isSelected ? null : m.member_name);
                     }}
-                    title="Drag into tier or click to select, then click target tier"
+                    title="Drag into tier or tap to select & assign tier"
                   >
                     <MemberAvatar 
                       src={m.member_image} 
@@ -639,6 +639,31 @@ export default function TierMakerPage() {
                       <span className="pool-member-name">{m.member_name}</span>
                       <span className="pool-member-group">{m.group || m.company}</span>
                     </div>
+
+                    {/* Mobile & Shortcut Tier Assignment Option */}
+                    {isSelected && (
+                      <div className="tier-shortcut-options" onClick={(e) => e.stopPropagation()}>
+                        <span className="shortcut-hint">Assign to:</span>
+                        {tiers.map((t) => (
+                          <button
+                            key={t.id}
+                            type="button"
+                            className="tier-shortcut-btn"
+                            style={{
+                              backgroundColor: t.color,
+                              color: '#0d0f15',
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              moveMemberToTier(m.member_name, t.id);
+                            }}
+                            title={`Assign ${m.member_name} to Tier ${t.label}`}
+                          >
+                            {t.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -979,6 +1004,79 @@ export default function TierMakerPage() {
         .pool-member-group {
           font-size: 0.72rem;
           color: var(--text-subtle);
+        }
+
+        .tier-shortcut-options {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-left: auto;
+          padding-left: 8px;
+          flex-wrap: wrap;
+        }
+
+        .shortcut-hint {
+          font-size: 0.7rem;
+          font-weight: 700;
+          color: var(--text-subtle);
+          margin-right: 2px;
+        }
+
+        .tier-shortcut-btn {
+          border: none;
+          border-radius: 5px;
+          font-weight: 800;
+          font-size: 0.78rem;
+          padding: 4px 8px;
+          min-width: 28px;
+          height: 28px;
+          cursor: pointer;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+          transition: transform 0.1s, filter 0.1s;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .tier-shortcut-btn:hover {
+          filter: brightness(1.18);
+        }
+
+        .tier-shortcut-btn:active {
+          transform: scale(0.92);
+        }
+
+        @media (max-width: 768px) {
+          .tier-label-box {
+            width: 60px !important;
+            min-width: 60px !important;
+            padding: 4px 2px !important;
+          }
+
+          .tier-name-text {
+            font-size: 1.1rem !important;
+          }
+
+          .pool-member-card {
+            width: 100%;
+            justify-content: flex-start;
+            padding: 10px 12px !important;
+          }
+
+          .pool-member-card.selected {
+            flex-wrap: wrap;
+            padding-bottom: 10px !important;
+          }
+
+          .tier-shortcut-options {
+            width: 100%;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            justify-content: flex-start;
+            margin-left: 0;
+            padding-left: 0;
+          }
         }
 
         .modal-overlay {

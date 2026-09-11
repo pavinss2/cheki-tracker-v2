@@ -135,7 +135,7 @@ export const Header: React.FC = () => {
         .header-mobile-nav {
           display: none;
           align-items: center;
-          gap: 8px;
+          gap: 16px;
         }
 
         .header-nav-btn {

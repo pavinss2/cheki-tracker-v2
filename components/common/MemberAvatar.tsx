@@ -49,12 +49,16 @@ export const MemberAvatar: React.FC<MemberAvatarProps> = ({
         <img
           src={cleanUrl}
           alt={name}
+          draggable={false}
           onError={() => setHasError(true)}
           style={{
             width: '100%',
             height: '100%',
             objectFit: 'cover',
-          }}
+            pointerEvents: 'none',
+            userSelect: 'none',
+            WebkitUserDrag: 'none',
+          } as React.CSSProperties}
         />
       ) : (
         <span 
