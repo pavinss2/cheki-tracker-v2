@@ -117,20 +117,54 @@ export default function AdminPage() {
   }, [groups]);
 
   // Options for subscribe modal
-  const availableSubCountries = useMemo(() => {
+  // Raw default lists filtered by allow_import !== false
+  const rawDefaultCountries = useMemo(() => {
     const list = defaultCountries.length > 0 ? defaultCountries : DEFAULT_COUNTRIES;
-    return list.map(c => c.displayed_country || c.country).filter(Boolean);
+    return list.filter(c => c.allow_import !== false);
   }, [defaultCountries]);
 
-  const availableSubCompanies = useMemo(() => {
+  const rawDefaultCompanies = useMemo(() => {
     const list = defaultCompanies.length > 0 ? defaultCompanies : DEFAULT_COMPANIES;
-    return list.map(c => c.company).filter(Boolean);
+    return list.filter(c => c.allow_import !== false);
   }, [defaultCompanies]);
 
-  const availableSubGroups = useMemo(() => {
+  const rawDefaultGroups = useMemo(() => {
     const list = defaultGroups.length > 0 ? defaultGroups : DEFAULT_GROUPS;
-    return list.map(g => g.group).filter(Boolean);
+    return list.filter(g => g.allow_import !== false);
   }, [defaultGroups]);
+
+  // Options for subscribe modal (with cascading filter across Country, Company, Group)
+  const availableSubCountries = useMemo(() => {
+    const countryNames = rawDefaultCountries.map(c => c.displayed_country || c.country).filter(Boolean);
+    rawDefaultGroups.forEach(g => { if (g.country && !countryNames.includes(g.country)) countryNames.push(g.country); });
+    rawDefaultCompanies.forEach(c => { if (c.country && !countryNames.includes(c.country)) countryNames.push(c.country); });
+    return Array.from(new Set(countryNames)).sort();
+  }, [rawDefaultCountries, rawDefaultGroups, rawDefaultCompanies]);
+
+  const availableSubCompanies = useMemo(() => {
+    let list = rawDefaultCompanies;
+    if (subConfig.countries.length > 0) {
+      list = list.filter(comp => {
+        const compCountry = comp.country;
+        if (compCountry && subConfig.countries.includes(compCountry)) return true;
+        return rawDefaultGroups.some(g => g.company === comp.company && subConfig.countries.includes(g.country));
+      });
+    }
+    const names = list.map(c => c.company).filter(Boolean);
+    return Array.from(new Set(names)).sort();
+  }, [rawDefaultCompanies, rawDefaultGroups, subConfig.countries]);
+
+  const availableSubGroups = useMemo(() => {
+    let list = rawDefaultGroups;
+    if (subConfig.countries.length > 0) {
+      list = list.filter(g => subConfig.countries.includes(g.country));
+    }
+    if (subConfig.companies.length > 0) {
+      list = list.filter(g => subConfig.companies.includes(g.company));
+    }
+    const names = list.map(g => g.group).filter(Boolean);
+    return Array.from(new Set(names)).sort();
+  }, [rawDefaultGroups, subConfig.countries, subConfig.companies]);
 
   // Sort handlers
   const handleSortMembers = (key: MemberSortKey) => {
@@ -177,24 +211,94 @@ export default function AdminPage() {
   };
 
   const handleToggleSubCountry = (cnt: string) => {
-    const set = new Set(subConfig.countries);
-    if (set.has(cnt)) set.delete(cnt);
-    else set.add(cnt);
-    setSubConfig({ ...subConfig, subscribeAll: false, countries: Array.from(set) });
+    const isSelected = subConfig.countries.includes(cnt);
+    let nextCountries = isSelected
+      ? subConfig.countries.filter(c => c !== cnt)
+      : [...subConfig.countries, cnt];
+
+    let nextCompanies = subConfig.companies;
+    let nextGroups = subConfig.groups;
+
+    if (isSelected && nextCountries.length > 0) {
+      nextCompanies = nextCompanies.filter(compName => {
+        const compObj = rawDefaultCompanies.find(c => c.company === compName);
+        if (compObj && compObj.country && nextCountries.includes(compObj.country)) return true;
+        return rawDefaultGroups.some(g => g.company === compName && nextCountries.includes(g.country));
+      });
+      nextGroups = nextGroups.filter(grpName => {
+        const grpObj = rawDefaultGroups.find(g => g.group === grpName);
+        return grpObj ? nextCountries.includes(grpObj.country) : true;
+      });
+    }
+
+    setSubConfig({
+      ...subConfig,
+      subscribeAll: false,
+      countries: nextCountries,
+      companies: nextCompanies,
+      groups: nextGroups
+    });
   };
 
   const handleToggleSubCompany = (comp: string) => {
-    const set = new Set(subConfig.companies);
-    if (set.has(comp)) set.delete(comp);
-    else set.add(comp);
-    setSubConfig({ ...subConfig, subscribeAll: false, companies: Array.from(set) });
+    const isSelected = subConfig.companies.includes(comp);
+    let nextCompanies = isSelected
+      ? subConfig.companies.filter(c => c !== comp)
+      : [...subConfig.companies, comp];
+
+    let nextCountries = [...subConfig.countries];
+    let nextGroups = subConfig.groups;
+
+    if (!isSelected) {
+      const compObj = rawDefaultCompanies.find(c => c.company === comp);
+      const parentCountry = compObj?.country || rawDefaultGroups.find(g => g.company === comp)?.country;
+      if (parentCountry && !nextCountries.includes(parentCountry)) {
+        nextCountries.push(parentCountry);
+      }
+    } else if (nextCompanies.length > 0) {
+      nextGroups = nextGroups.filter(grpName => {
+        const grpObj = rawDefaultGroups.find(g => g.group === grpName);
+        return grpObj ? nextCompanies.includes(grpObj.company) : true;
+      });
+    }
+
+    setSubConfig({
+      ...subConfig,
+      subscribeAll: false,
+      countries: nextCountries,
+      companies: nextCompanies,
+      groups: nextGroups
+    });
   };
 
   const handleToggleSubGroup = (grp: string) => {
-    const set = new Set(subConfig.groups);
-    if (set.has(grp)) set.delete(grp);
-    else set.add(grp);
-    setSubConfig({ ...subConfig, subscribeAll: false, groups: Array.from(set) });
+    const isSelected = subConfig.groups.includes(grp);
+    let nextGroups = isSelected
+      ? subConfig.groups.filter(g => g !== grp)
+      : [...subConfig.groups, grp];
+
+    let nextCompanies = [...subConfig.companies];
+    let nextCountries = [...subConfig.countries];
+
+    if (!isSelected) {
+      const grpObj = rawDefaultGroups.find(g => g.group === grp);
+      if (grpObj) {
+        if (grpObj.company && !nextCompanies.includes(grpObj.company)) {
+          nextCompanies.push(grpObj.company);
+        }
+        if (grpObj.country && !nextCountries.includes(grpObj.country)) {
+          nextCountries.push(grpObj.country);
+        }
+      }
+    }
+
+    setSubConfig({
+      ...subConfig,
+      subscribeAll: false,
+      countries: nextCountries,
+      companies: nextCompanies,
+      groups: nextGroups
+    });
   };
 
   const sortedMembers = useMemo(() => {
@@ -1231,6 +1335,72 @@ export default function AdminPage() {
 
       {/* Embedded CSS for complete theme alignment */}
       <style jsx>{`
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(0, 0, 0, 0.75);
+          backdrop-filter: blur(6px);
+          -webkit-backdrop-filter: blur(6px);
+          z-index: 9999;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 16px;
+        }
+
+        .modal-card {
+          width: 100%;
+          max-width: 620px;
+          background-color: var(--bg-surface-1);
+          border: 1px solid var(--border-subtle);
+          border-radius: var(--radius-md);
+          padding: 24px;
+          max-height: calc(100vh - 32px);
+          overflow-y: auto;
+          box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+
+        .modal-card.small {
+          max-width: 450px;
+        }
+
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 16px;
+          padding-bottom: 12px;
+          border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .btn-close {
+          background: transparent;
+          border: none;
+          color: var(--text-muted);
+          cursor: pointer;
+          padding: 4px;
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.15s ease;
+        }
+
+        .btn-close:hover {
+          color: var(--text-main);
+          background: var(--bg-surface-2);
+        }
+
+        .form-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          margin-top: 20px;
+        }
+
         .admin-page {
           padding: 24px;
           min-height: 100vh;

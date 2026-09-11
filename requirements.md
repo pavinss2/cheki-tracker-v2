@@ -226,11 +226,14 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 
 ### 6.14 Subscription Refactoring & Optional Selection Model in Admin Tab
 - **Subscription Architecture**: Replaced manual import with real-time live subscriptions from Back Office (`default_dim_*`). Subscribed default items are read-only for default properties while allowing personal `Active`/`Inactive` status toggling.
-- **Optional Subscription Modal**: Admin tab features a **"Manage Subscriptions"** modal allowing users to:
+- **Optional Subscription Modal Popup**: Admin tab features a centered **"Manage Subscriptions"** modal popup (`position: fixed`, translucent backdrop blur, z-index overlay) allowing users to:
   - Toggle **"Subscribe All Default Data"** (auto-subscribing to all Back Office countries, companies, and groups).
   - Selectively subscribe/unsubscribe by individual **Country**, **Company**, or **Group**.
   - **Unsubscribe All** with a single click.
-- **Cascading Subscription Logic**: Subscribing to a group automatically includes its parent company and country; subscribing to a company automatically includes its country.
+- **Cascading Badge-Pill Filters & Auto-Inclusion**:
+  - Selecting a **Country** dynamically filters available **Company** badge-pills to only show companies belonging to the selected country (derived from `default_dim_group` / `default_dim_company`).
+  - Selecting a **Company** dynamically filters available **Group** badge-pills to only show groups under the selected company.
+  - Selecting a **Group** automatically includes its parent company and country in the subscription configuration.
 
 ### 6.15 Admin Tab Visual Design & Clickable Status Badges
 - **Consistent Styling**: Styled with the dark gold design system (`#d4a84b`), custom rounded tab buttons, glowing green/red pill badges for status tags, and action buttons.
