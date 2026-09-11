@@ -308,8 +308,8 @@ export default function CalendarPage() {
         ? new Date(rawDateStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) 
         : '';
 
-      const memberLabel = g.members.length > 3
-        ? `${g.members.slice(0, 3).join(', ')} +${g.members.length - 3}`
+      const memberLabel = g.members.length > 9
+        ? `${g.members.slice(0, 9).join(', ')} +${g.members.length - 9}`
         : g.members.join(', ');
 
       return {

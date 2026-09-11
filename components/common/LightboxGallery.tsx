@@ -61,7 +61,7 @@ export const LightboxGallery: React.FC<LightboxGalleryProps> = ({
 
   // Extract caption labels
   const membersText = currentItem.members && currentItem.members.length > 0
-    ? (currentItem.members.length > 3 ? `${currentItem.members.slice(0, 3).join(', ')} +${currentItem.members.length - 3}` : currentItem.members.join(', '))
+    ? (currentItem.members.length > 9 ? `${currentItem.members.slice(0, 9).join(', ')} +${currentItem.members.length - 9}` : currentItem.members.join(', '))
     : (currentItem.title || '');
 
   const eventText = currentItem.event || currentItem.subtitle || '';
