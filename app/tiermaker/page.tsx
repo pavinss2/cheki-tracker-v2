@@ -453,10 +453,15 @@ export default function TierMakerPage() {
                   }
                 }}
               >
-                {/* Clean Tier Label Box (Label Only) */}
+                {/* Clean Tier Label Box (Double click to edit label/color) */}
                 <div 
                   className="tier-label-box" 
-                  style={{ backgroundColor: tier.color, color: '#0d0f15' }}
+                  style={{ backgroundColor: tier.color, color: '#0d0f15', cursor: 'pointer' }}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    setEditingTier({ id: tier.id, label: tier.label, color: tier.color });
+                  }}
+                  title="Double-click to edit tier label & color"
                 >
                   <span className="tier-name-text">{tier.label}</span>
                 </div>
