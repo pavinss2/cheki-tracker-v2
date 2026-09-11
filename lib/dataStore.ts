@@ -389,6 +389,7 @@ export async function addMetadataDoc<T extends { id: string; userId: string }>(
   const todayDateStr = now.split('T')[0];
   const payload = { 
     ...data, 
+    is_custom: data.is_custom !== undefined ? data.is_custom : true,
     userId, 
     createdAt: data.createdAt || now, 
     updatedAt: now,
@@ -464,6 +465,7 @@ export async function updateMetadataDoc(
       ...overrideData,
       id: targetId,
       backoffice_id: targetId,
+      is_custom: false,
       userId,
       updatedAt: now,
       date_modified: todayDateStr,
@@ -541,6 +543,7 @@ export async function deleteMetadataDoc(
       id: targetId,
       backoffice_id: targetId,
       originalId: targetId,
+      is_custom: false,
       userId,
       is_deleted: true,
       is_active: false,
@@ -650,6 +653,7 @@ export function subscribeMergedMetadata<T>(
 
     const merged: T[] = [];
     const processedKeys = new Set<string>();
+    const processedUserItemObjects = new Set<any>();
 
     // 1. Process Default items from Back Office (filter out disallowed & unsubscribed items)
     defaultItems.forEach((d) => {
@@ -684,6 +688,7 @@ export function subscribeMergedMetadata<T>(
       if (val) processedKeys.add(val);
 
       if (override) {
+        processedUserItemObjects.add(override);
         const oId = String((override as any).id || '');
         const oBoId = String((override as any).backoffice_id || (override as any).originalId || '');
         const oVal = getItemValueString(override as Record<string, unknown>).toLowerCase();
@@ -707,18 +712,24 @@ export function subscribeMergedMetadata<T>(
       });
     });
 
-    // 2. Process Custom User-Created items
+    // 2. Process Custom User-Created items ONLY
     userItems.forEach((u) => {
+      if (processedUserItemObjects.has(u)) return;
+
       const uId = String((u as any).id || '');
       const boId = String((u as any).backoffice_id || (u as any).originalId || '');
       const val = getItemValueString(u as Record<string, unknown>).toLowerCase();
 
-      const isOverrideForDefault = (boId && processedKeys.has(boId)) ||
-                                   (uId && (processedKeys.has(uId) || uId.startsWith('default_'))) ||
-                                   (val && processedKeys.has(val));
+      const isOverrideOrNotCustom = processedUserItemObjects.has(u) ||
+                                    Boolean(boId) ||
+                                    (uId && (processedKeys.has(uId) || uId.startsWith('default_'))) ||
+                                    (val && processedKeys.has(val)) ||
+                                    (u as any).is_custom === false ||
+                                    (u as any).isDefault === true ||
+                                    (u as any).is_imported === true;
 
-      if (!isOverrideForDefault) {
-        if (uId) processedKeys.add(uId);
+      if (!isOverrideOrNotCustom) {
+        processedKeys.add(uId);
         if (val) processedKeys.add(val);
 
         merged.push({
