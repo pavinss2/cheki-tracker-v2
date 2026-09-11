@@ -49,6 +49,11 @@ The application employs a dual-storage strategy to ensure real-time Cloud persis
 ### 1.4 Page Authentication & Login Gating
 - **Universal Protection**: All primary page routes (`Home`, `Calendar`, `Analytics`, `Raw Data`, `Events`, `Back Office`, `Admin`) strictly enforce authentication gating via `useAuth()`.
 - **Unauthenticated State**: If `!user && !isDemoUser`, the page immediately renders `<LoginPrompt />` to prevent unauthenticated access to system data.
+- **Demo Mode & Auth State Reset**:
+  - Demo Mode persists across page refreshes via `localStorage.getItem('cheki_demo_user') === 'true'`.
+  - When initiating Google Sign-In (`signInWithGoogle`) or Sign Out (`signOutUser`), `cheki_demo_user` is synchronously removed from `localStorage` *before* state updates or Firebase auth calls.
+  - Google Popup login cancellation/closure (`auth/popup-closed-by-user`) does not force fallback to Demo Mode, keeping the user in a clean unauthenticated state on `<LoginPrompt />`.
+  - In Demo Mode, the Header displays both the "Demo Mode" banner and direct "Sign in with Google" / "Exit Demo Mode" buttons to allow one-click account switching to real Google login.
 
 ---
 

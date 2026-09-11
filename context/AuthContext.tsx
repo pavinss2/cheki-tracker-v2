@@ -47,7 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsDemoUser(true);
       setUser({
         uid: 'demo-user-id',
-        email: 'demo.user@chekitracker.app',
+        email: 'pavin.demo@chekitracker.app',
         displayName: 'Pavin (Demo User)',
         photoURL: 'https://api.dicebear.com/7.x/bottts/svg?seed=Pavin',
       } as User);
@@ -56,31 +56,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) {
+      const isDemoStillSet = typeof window !== 'undefined' && localStorage.getItem('cheki_demo_user') === 'true';
+      if (isDemoStillSet) {
+        setIsDemoUser(true);
+        setUser({
+          uid: 'demo-user-id',
+          email: 'pavin.demo@chekitracker.app',
+          displayName: 'Pavin (Demo User)',
+          photoURL: 'https://api.dicebear.com/7.x/bottts/svg?seed=Pavin',
+        } as User);
+      } else if (currentUser) {
         setUser(currentUser);
         setIsDemoUser(false);
-      } else if (!isDemoUser) {
+      } else {
         setUser(null);
+        setIsDemoUser(false);
       }
       setLoading(false);
     }, (error) => {
-      console.warn("Firebase auth listener error (using fallback):", error);
+      console.warn("Firebase auth listener error:", error);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [isDemoUser]);
+  }, []);
 
   const signInWithGoogle = async () => {
     try {
       setLoading(true);
-      await signInWithPopup(auth, googleProvider);
-      localStorage.removeItem('cheki_demo_user');
+      // Synchronously clear demo user flag before initiating Google popup
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('cheki_demo_user');
+      }
       setIsDemoUser(false);
+      setUser(null);
+
+      await signInWithPopup(auth, googleProvider);
     } catch (err: unknown) {
       console.error("Google sign in failed:", err);
-      // If Firebase config is missing or invalid in local dev, allow falling back to demo mode gracefully
-      enableDemoMode();
+      // Do not force demo mode on user cancellation or popup closing.
+      // Only fallback if Firebase config is explicitly dummy/missing in local dev.
+      const isDummyConfig = !process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY.includes("DemoKey");
+      const errCode = (err as { code?: string })?.code;
+      if (isDummyConfig && errCode !== 'auth/popup-closed-by-user' && errCode !== 'auth/cancelled-popup-request') {
+        enableDemoMode();
+      }
     } finally {
       setLoading(false);
     }
@@ -88,7 +108,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const enableDemoMode = () => {
     setIsDemoUser(true);
-    localStorage.setItem('cheki_demo_user', 'true');
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cheki_demo_user', 'true');
+    }
     setUser({
       uid: 'demo-user-id',
       email: 'pavin.demo@chekitracker.app',
@@ -101,14 +123,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOutUser = async () => {
     try {
       setLoading(true);
-      if (isDemoUser) {
+      if (typeof window !== 'undefined') {
         localStorage.removeItem('cheki_demo_user');
-        setIsDemoUser(false);
-        setUser(null);
-      } else {
-        await firebaseSignOut(auth);
-        setUser(null);
       }
+      setIsDemoUser(false);
+      setUser(null);
+      await firebaseSignOut(auth).catch(() => {});
     } catch (err) {
       console.error("Sign out error:", err);
     } finally {

@@ -60,7 +60,27 @@ export const Header: React.FC = () => {
 
         {/* Desktop Header Actions */}
         <div className="desktop-header-actions">
-          {user ? (
+          {isDemoUser ? (
+            <>
+              <button onClick={signInWithGoogle} className="btn btn-primary btn-sm">
+                <LogIn size={16} />
+                <span>Sign in with Google</span>
+              </button>
+              <div className="user-profile" title="Demo User Mode - Click icon to exit">
+                {user?.photoURL ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={user.photoURL} alt={user.displayName || 'Demo User'} className="user-avatar" width={28} height={28} />
+                ) : (
+                  <div className="user-avatar-placeholder">
+                    <UserIcon size={16} />
+                  </div>
+                )}
+                <button onClick={signOutUser} className="btn-icon" title="Exit Demo Mode">
+                  <LogOut size={16} />
+                </button>
+              </div>
+            </>
+          ) : user ? (
             <div className="user-profile" title={user.displayName || user.email || 'Logged in User'}>
               {user.photoURL ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
@@ -112,7 +132,24 @@ export const Header: React.FC = () => {
                   <span>Back Office</span>
                 </Link>
               )}
-              {user ? (
+              {isDemoUser ? (
+                <>
+                  <button 
+                    className="menu-item primary" 
+                    onClick={() => { setIsMobileMenuOpen(false); signInWithGoogle(); }}
+                  >
+                    <LogIn size={16} />
+                    <span>Sign in with Google</span>
+                  </button>
+                  <button 
+                    className="menu-item danger" 
+                    onClick={() => { setIsMobileMenuOpen(false); signOutUser(); }}
+                  >
+                    <LogOut size={16} />
+                    <span>Exit Demo Mode</span>
+                  </button>
+                </>
+              ) : user ? (
                 <button 
                   className="menu-item danger" 
                   onClick={() => { setIsMobileMenuOpen(false); signOutUser(); }}
