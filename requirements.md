@@ -237,8 +237,8 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
   - Column 1 contains a checkbox selector for multiselect batch operations **rendered exclusively for custom-made user items** (`is_custom: true`). Subscribed default items (`default_dims`) cannot be multiselected or checked in Column 1 and are managed exclusively via the "Manage Subscriptions" menu popup.
   - Column 2 contains the Edit pencil icon button (`<Edit2 size={15} />`), **rendered exclusively for custom-made user items**. For subscribed default data rows (`status: Sub`), the Edit `.btn-icon` button is hidden.
 - **Batch Action Bar**: Selecting one or more custom-made rows triggers a floating batch bar above the table with actions restricted strictly to **Set Active**, **Set Inactive**, **Delete**, and **Deselect All**.
-- **1-to-1 Backoffice Status Tag Styling (`.status-tag`)**:
-  - Displays **`Sub`** (blue tag), **`Active`** (green tag), and **`Inactive`** (red tag) matching Back Office `.status-tag` dimensions 1-to-1 (`padding: 2px 8px`, `border-radius: 10px`, `font-size: 0.75rem`, `font-weight: 700`, `cursor: default`, `user-select: none`).
+- **1-to-1 Backoffice Pill Tag Styling (`.status-tag`)**:
+  - Displays **`Sub`** (blue pill tag: `rgba(59, 130, 246, 0.15)` bg, `#3b82f6` text, subtle blue border), **`Active`** (green pill tag: `rgba(34, 197, 94, 0.15)` bg, `#22c55e` text, subtle green border), and **`Inactive`** (red pill tag: `rgba(239, 68, 68, 0.15)` bg, `#ef4444` text, subtle red border) matching attached pill tag image specs (`padding: 4px 14px`, `border-radius: 9999px`, `font-size: 0.8rem`, `font-weight: 700`, `cursor: default`, `user-select: none`).
 - **Table Header Gold Hover Color**:
   - All `.dim-table` column headers (`th`, `.sortable-th`) specify `transition: color 0.15s ease` and turn **gold (`var(--accent-primary)`)** on mouse hover matching all other page tables (`/backoffice`, `/events`, `/raw`).
 - **Back Office Entity Key Connection (`backoffice_id`)**:
