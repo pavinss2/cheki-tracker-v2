@@ -743,63 +743,70 @@ export default function AdminPage() {
               </div>
             )}
 
-            <div className="table-wrapper">
-              <table className="dim-table member-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: '38px', textAlign: 'center' }}>
-                      {(() => {
-                        const customMembers = sortedMembers.filter(m => !m.isDefault && !m.id?.startsWith('default_') && !m.backoffice_id);
-                        const allCustomSelected = customMembers.length > 0 && customMembers.every(m => selectedItemIds.includes(m.id));
-                        return (
-                          <input 
-                            type="checkbox" 
-                            checked={allCustomSelected}
-                            onChange={() => handleToggleSelectAllCustom(sortedMembers)}
-                            style={{ cursor: customMembers.length > 0 ? 'pointer' : 'not-allowed', width: '16px', height: '16px' }}
-                            disabled={customMembers.length === 0}
-                            title="Select / deselect all custom items"
-                          />
-                        );
-                      })()}
-                    </th>
-                    <th>Action</th>
-                    <th className="sortable-th" onClick={() => handleSortMembers('is_active')}>
-                      Status {memberSortKey === 'is_active' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                    </th>
-                    <th>Avatar</th>
-                    <th className="sortable-th" onClick={() => handleSortMembers('member_name')}>
-                      Member Name {memberSortKey === 'member_name' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                    </th>
-                    <th className="sortable-th" onClick={() => handleSortMembers('color')}>
-                      Color {memberSortKey === 'color' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                    </th>
-                    <th className="sortable-th" onClick={() => handleSortMembers('group')}>
-                      Group {memberSortKey === 'group' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                    </th>
-                    <th className="sortable-th" onClick={() => handleSortMembers('country')}>
-                      Country <span title="Locked & auto-mapped by Group"><Lock size={11} /></span> {memberSortKey === 'country' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                    </th>
-                    <th className="sortable-th" onClick={() => handleSortMembers('company')}>
-                      Company <span title="Locked & auto-mapped by Group"><Lock size={11} /></span> {memberSortKey === 'company' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                    </th>
-                    <th>X Profile</th>
-                    <th className="sortable-th" onClick={() => handleSortMembers('date_added')}>
-                      Date Added {memberSortKey === 'date_added' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {/* Temp Draft Row */}
-                  {tempMember && !isMobile && (
-                    <tr className="temp-row">
-                      <td></td>
-                      <td>
-                        <div className="action-btns">
-                          <button type="button" className="btn btn-primary btn-xs" onClick={handleSaveTempMember}><Save size={13} /> Save</button>
-                          <button type="button" className="btn btn-secondary btn-xs" onClick={() => setTempMember(null)}><X size={13} /></button>
-                        </div>
-                      </td>
+            {(() => {
+              const hasCustomMembers = sortedMembers.some(m => !m.isDefault && !m.is_imported && !m.backoffice_id && !(typeof m.id === 'string' && m.id.startsWith('default_'))) || Boolean(tempMember);
+              return (
+                <div className="table-wrapper">
+                  <table className="dim-table member-table">
+                    <thead>
+                      <tr>
+                        {hasCustomMembers && (
+                          <th style={{ width: '38px', textAlign: 'center' }}>
+                            {(() => {
+                              const customMembers = sortedMembers.filter(m => !m.isDefault && !m.id?.startsWith('default_') && !m.backoffice_id);
+                              const allCustomSelected = customMembers.length > 0 && customMembers.every(m => selectedItemIds.includes(m.id));
+                              return (
+                                <input 
+                                  type="checkbox" 
+                                  checked={allCustomSelected}
+                                  onChange={() => handleToggleSelectAllCustom(sortedMembers)}
+                                  style={{ cursor: customMembers.length > 0 ? 'pointer' : 'not-allowed', width: '16px', height: '16px' }}
+                                  disabled={customMembers.length === 0}
+                                  title="Select / deselect all custom items"
+                                />
+                              );
+                            })()}
+                          </th>
+                        )}
+                        {hasCustomMembers && <th>Action</th>}
+                        <th className="sortable-th" onClick={() => handleSortMembers('is_active')}>
+                          Status {memberSortKey === 'is_active' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                        </th>
+                        <th>Avatar</th>
+                        <th className="sortable-th" onClick={() => handleSortMembers('member_name')}>
+                          Member Name {memberSortKey === 'member_name' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                        </th>
+                        <th className="sortable-th" onClick={() => handleSortMembers('color')}>
+                          Color {memberSortKey === 'color' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                        </th>
+                        <th className="sortable-th" onClick={() => handleSortMembers('group')}>
+                          Group {memberSortKey === 'group' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                        </th>
+                        <th className="sortable-th" onClick={() => handleSortMembers('country')}>
+                          Country <span title="Locked & auto-mapped by Group"><Lock size={11} /></span> {memberSortKey === 'country' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                        </th>
+                        <th className="sortable-th" onClick={() => handleSortMembers('company')}>
+                          Company <span title="Locked & auto-mapped by Group"><Lock size={11} /></span> {memberSortKey === 'company' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                        </th>
+                        <th>X Profile</th>
+                        <th className="sortable-th" onClick={() => handleSortMembers('date_added')}>
+                          Date Added {memberSortKey === 'date_added' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {/* Temp Draft Row */}
+                      {tempMember && !isMobile && (
+                        <tr className="temp-row">
+                          {hasCustomMembers && <td></td>}
+                          {hasCustomMembers && (
+                            <td>
+                              <div className="action-btns">
+                                <button type="button" className="btn btn-primary btn-xs" onClick={handleSaveTempMember}><Save size={13} /> Save</button>
+                                <button type="button" className="btn btn-secondary btn-xs" onClick={() => setTempMember(null)}><X size={13} /></button>
+                              </div>
+                            </td>
+                          )}
                       <td>
                         <select
                           className="table-select"
@@ -907,28 +914,32 @@ export default function AdminPage() {
 
                     return (
                       <tr key={m.id} style={{ background: isRowSelected ? 'rgba(212, 168, 75, 0.1)' : undefined }}>
-                        <td style={{ textAlign: 'center' }}>
-                          {!isSubscribed ? (
-                            <input 
-                              type="checkbox" 
-                              checked={isRowSelected}
-                              onChange={() => handleToggleSelectRow(m.id)}
-                              style={{ cursor: 'pointer', width: '16px', height: '16px' }}
-                            />
-                          ) : null}
-                        </td>
-                        <td>
-                          {!isSubscribed ? (
-                            <button 
-                              type="button"
-                              className="btn-icon" 
-                              onClick={() => setEditingItem({ table: 'dim_member', data: { ...m } })}
-                              title="Edit custom member"
-                            >
-                              <Edit2 size={15} />
-                            </button>
-                          ) : null}
-                        </td>
+                        {hasCustomMembers && (
+                          <td style={{ textAlign: 'center' }}>
+                            {!isSubscribed ? (
+                              <input 
+                                type="checkbox" 
+                                checked={isRowSelected}
+                                onChange={() => handleToggleSelectRow(m.id)}
+                                style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                              />
+                            ) : null}
+                          </td>
+                        )}
+                        {hasCustomMembers && (
+                          <td>
+                            {!isSubscribed ? (
+                              <button 
+                                type="button"
+                                className="btn-icon" 
+                                onClick={() => setEditingItem({ table: 'dim_member', data: { ...m } })}
+                                title="Edit custom member"
+                              >
+                                <Edit2 size={15} />
+                              </button>
+                            ) : null}
+                          </td>
+                        )}
                         <td>
                           {renderStatusBadge('dim_member', m, isSubscribed)}
                         </td>
@@ -959,8 +970,10 @@ export default function AdminPage() {
                 </tbody>
               </table>
             </div>
-          </div>
-        )}
+          );
+        })()}
+      </div>
+    )}
 
         {/* GROUPS TAB */}
         {activeTab === 'groups' && (
@@ -1035,82 +1048,93 @@ export default function AdminPage() {
               </div>
             )}
 
-            <div className="table-wrapper">
-              <table className="dim-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: '38px', textAlign: 'center' }}>
-                      {(() => {
-                        const customGroups = sortedGroups.filter(g => !g.isDefault && !g.id?.startsWith('default_') && !g.backoffice_id);
-                        const allCustomSelected = customGroups.length > 0 && customGroups.every(g => selectedItemIds.includes(g.id));
-                        return (
-                          <input 
-                            type="checkbox" 
-                            checked={allCustomSelected}
-                            onChange={() => handleToggleSelectAllCustom(sortedGroups)}
-                            style={{ cursor: customGroups.length > 0 ? 'pointer' : 'not-allowed', width: '16px', height: '16px' }}
-                            disabled={customGroups.length === 0}
-                            title="Select / deselect all custom items"
-                          />
-                        );
-                      })()}
-                    </th>
-                    <th>Action</th>
-                    <th className="sortable-th" onClick={() => handleSortGroups('is_active')}>
-                      Status {groupSortKey === 'is_active' ? (groupSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                    </th>
-                    <th className="sortable-th" onClick={() => handleSortGroups('group')}>
-                      Group Name {groupSortKey === 'group' ? (groupSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                    </th>
-                    <th className="sortable-th" onClick={() => handleSortGroups('country')}>
-                      Country {groupSortKey === 'country' ? (groupSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                    </th>
-                    <th className="sortable-th" onClick={() => handleSortGroups('company')}>
-                      Company {groupSortKey === 'company' ? (groupSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedGroups.map((g) => {
-                    const isSubscribed = Boolean(g.isDefault || g.is_imported || g.id?.startsWith('default_'));
-                    const isRowSelected = selectedItemIds.includes(g.id);
-
-                    return (
-                      <tr key={g.id} style={{ background: isRowSelected ? 'rgba(212, 168, 75, 0.1)' : undefined }}>
-                        <td style={{ textAlign: 'center' }}>
-                          {!isSubscribed ? (
-                            <input 
-                              type="checkbox" 
-                              checked={isRowSelected}
-                              onChange={() => handleToggleSelectRow(g.id)}
-                              style={{ cursor: 'pointer', width: '16px', height: '16px' }}
-                            />
-                          ) : null}
-                        </td>
-                        <td>
-                          {!isSubscribed ? (
-                            <button 
-                              type="button"
-                              className="btn-icon" 
-                              onClick={() => setEditingItem({ table: 'dim_group', data: { ...g } })}
-                              title="Edit custom group"
-                            >
-                              <Edit2 size={15} />
-                            </button>
-                          ) : null}
-                        </td>
-                        <td>
-                          {renderStatusBadge('dim_group', g, isSubscribed)}
-                        </td>
-                        <td><strong>{g.group}</strong></td>
-                        <td>{g.country}</td>
-                        <td>{g.company}</td>
+            {(() => {
+              const hasCustomGroups = sortedGroups.some(g => !g.isDefault && !g.is_imported && !g.backoffice_id && !(typeof g.id === 'string' && g.id.startsWith('default_')));
+              return (
+                <div className="table-wrapper">
+                  <table className="dim-table">
+                    <thead>
+                      <tr>
+                        {hasCustomGroups && (
+                          <th style={{ width: '38px', textAlign: 'center' }}>
+                            {(() => {
+                              const customGroups = sortedGroups.filter(g => !g.isDefault && !g.id?.startsWith('default_') && !g.backoffice_id);
+                              const allCustomSelected = customGroups.length > 0 && customGroups.every(g => selectedItemIds.includes(g.id));
+                              return (
+                                <input 
+                                  type="checkbox" 
+                                  checked={allCustomSelected}
+                                  onChange={() => handleToggleSelectAllCustom(sortedGroups)}
+                                  style={{ cursor: customGroups.length > 0 ? 'pointer' : 'not-allowed', width: '16px', height: '16px' }}
+                                  disabled={customGroups.length === 0}
+                                  title="Select / deselect all custom items"
+                                />
+                              );
+                            })()}
+                          </th>
+                        )}
+                        {hasCustomGroups && <th>Action</th>}
+                        <th className="sortable-th" onClick={() => handleSortGroups('is_active')}>
+                          Status {groupSortKey === 'is_active' ? (groupSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                        </th>
+                        <th className="sortable-th" onClick={() => handleSortGroups('group')}>
+                          Group Name {groupSortKey === 'group' ? (groupSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                        </th>
+                        <th className="sortable-th" onClick={() => handleSortGroups('country')}>
+                          Country {groupSortKey === 'country' ? (groupSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                        </th>
+                        <th className="sortable-th" onClick={() => handleSortGroups('company')}>
+                          Company {groupSortKey === 'company' ? (groupSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                        </th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody>
+                      {sortedGroups.map((g) => {
+                        const isSubscribed = Boolean(g.isDefault || g.is_imported || g.id?.startsWith('default_'));
+                        const isRowSelected = selectedItemIds.includes(g.id);
+
+                        return (
+                          <tr key={g.id} style={{ background: isRowSelected ? 'rgba(212, 168, 75, 0.1)' : undefined }}>
+                            {hasCustomGroups && (
+                              <td style={{ textAlign: 'center' }}>
+                                {!isSubscribed ? (
+                                  <input 
+                                    type="checkbox" 
+                                    checked={isRowSelected}
+                                    onChange={() => handleToggleSelectRow(g.id)}
+                                    style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                                  />
+                                ) : null}
+                              </td>
+                            )}
+                            {hasCustomGroups && (
+                              <td>
+                                {!isSubscribed ? (
+                                  <button 
+                                    type="button"
+                                    className="btn-icon" 
+                                    onClick={() => setEditingItem({ table: 'dim_group', data: { ...g } })}
+                                    title="Edit custom group"
+                                  >
+                                    <Edit2 size={15} />
+                                  </button>
+                                ) : null}
+                              </td>
+                            )}
+                            <td>
+                              {renderStatusBadge('dim_group', g, isSubscribed)}
+                            </td>
+                            <td><strong>{g.group}</strong></td>
+                            <td>{g.country}</td>
+                            <td>{g.company}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -1175,74 +1199,85 @@ export default function AdminPage() {
               </div>
             )}
 
-            <div className="table-wrapper">
-              <table className="dim-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: '38px', textAlign: 'center' }}>
-                      {(() => {
-                        const customCompanies = sortedCompanies.filter(c => !c.isDefault && !c.id?.startsWith('default_') && !c.backoffice_id);
-                        const allCustomSelected = customCompanies.length > 0 && customCompanies.every(c => selectedItemIds.includes(c.id));
-                        return (
-                          <input 
-                            type="checkbox" 
-                            checked={allCustomSelected}
-                            onChange={() => handleToggleSelectAllCustom(sortedCompanies)}
-                            style={{ cursor: customCompanies.length > 0 ? 'pointer' : 'not-allowed', width: '16px', height: '16px' }}
-                            disabled={customCompanies.length === 0}
-                            title="Select / deselect all custom items"
-                          />
-                        );
-                      })()}
-                    </th>
-                    <th>Action</th>
-                    <th className="sortable-th" onClick={() => handleSortCompanies('is_active')}>
-                      Status {companySortKey === 'is_active' ? (companySortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                    </th>
-                    <th className="sortable-th" onClick={() => handleSortCompanies('company')}>
-                      Company Name {companySortKey === 'company' ? (companySortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedCompanies.map((c) => {
-                    const isSubscribed = Boolean(c.isDefault || c.is_imported || c.id?.startsWith('default_'));
-                    const isRowSelected = selectedItemIds.includes(c.id);
-
-                    return (
-                      <tr key={c.id} style={{ background: isRowSelected ? 'rgba(212, 168, 75, 0.1)' : undefined }}>
-                        <td style={{ textAlign: 'center' }}>
-                          {!isSubscribed ? (
-                            <input 
-                              type="checkbox" 
-                              checked={isRowSelected}
-                              onChange={() => handleToggleSelectRow(c.id)}
-                              style={{ cursor: 'pointer', width: '16px', height: '16px' }}
-                            />
-                          ) : null}
-                        </td>
-                        <td>
-                          {!isSubscribed ? (
-                            <button 
-                              type="button"
-                              className="btn-icon" 
-                              onClick={() => setEditingItem({ table: 'dim_company', data: { ...c } })}
-                              title="Edit custom company"
-                            >
-                              <Edit2 size={15} />
-                            </button>
-                          ) : null}
-                        </td>
-                        <td>
-                          {renderStatusBadge('dim_company', c, isSubscribed)}
-                        </td>
-                        <td><strong>{c.company}</strong></td>
+            {(() => {
+              const hasCustomCompanies = sortedCompanies.some(c => !c.isDefault && !c.is_imported && !c.backoffice_id && !(typeof c.id === 'string' && c.id.startsWith('default_')));
+              return (
+                <div className="table-wrapper">
+                  <table className="dim-table">
+                    <thead>
+                      <tr>
+                        {hasCustomCompanies && (
+                          <th style={{ width: '38px', textAlign: 'center' }}>
+                            {(() => {
+                              const customCompanies = sortedCompanies.filter(c => !c.isDefault && !c.id?.startsWith('default_') && !c.backoffice_id);
+                              const allCustomSelected = customCompanies.length > 0 && customCompanies.every(c => selectedItemIds.includes(c.id));
+                              return (
+                                <input 
+                                  type="checkbox" 
+                                  checked={allCustomSelected}
+                                  onChange={() => handleToggleSelectAllCustom(sortedCompanies)}
+                                  style={{ cursor: customCompanies.length > 0 ? 'pointer' : 'not-allowed', width: '16px', height: '16px' }}
+                                  disabled={customCompanies.length === 0}
+                                  title="Select / deselect all custom items"
+                                />
+                              );
+                            })()}
+                          </th>
+                        )}
+                        {hasCustomCompanies && <th>Action</th>}
+                        <th className="sortable-th" onClick={() => handleSortCompanies('is_active')}>
+                          Status {companySortKey === 'is_active' ? (companySortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                        </th>
+                        <th className="sortable-th" onClick={() => handleSortCompanies('company')}>
+                          Company Name {companySortKey === 'company' ? (companySortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                        </th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody>
+                      {sortedCompanies.map((c) => {
+                        const isSubscribed = Boolean(c.isDefault || c.is_imported || c.id?.startsWith('default_'));
+                        const isRowSelected = selectedItemIds.includes(c.id);
+
+                        return (
+                          <tr key={c.id} style={{ background: isRowSelected ? 'rgba(212, 168, 75, 0.1)' : undefined }}>
+                            {hasCustomCompanies && (
+                              <td style={{ textAlign: 'center' }}>
+                                {!isSubscribed ? (
+                                  <input 
+                                    type="checkbox" 
+                                    checked={isRowSelected}
+                                    onChange={() => handleToggleSelectRow(c.id)}
+                                    style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                                  />
+                                ) : null}
+                              </td>
+                            )}
+                            {hasCustomCompanies && (
+                              <td>
+                                {!isSubscribed ? (
+                                  <button 
+                                    type="button"
+                                    className="btn-icon" 
+                                    onClick={() => setEditingItem({ table: 'dim_company', data: { ...c } })}
+                                    title="Edit custom company"
+                                  >
+                                    <Edit2 size={15} />
+                                  </button>
+                                ) : null}
+                              </td>
+                            )}
+                            <td>
+                              {renderStatusBadge('dim_company', c, isSubscribed)}
+                            </td>
+                            <td><strong>{c.company}</strong></td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
           </div>
         )}
 
