@@ -307,7 +307,7 @@ export default function CalendarPage() {
       const rowsForDate = activeViewRows.filter((r) => r.date === dateStr);
       const groupedForDate = groupTransactionsByImage(rowsForDate);
       const dObj = new Date(dateStr + 'T00:00:00');
-      const dateFormatted = dObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      const dateFormatted = dObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       const eventsStr = Array.from(new Set(rowsForDate.map((r) => r.event).filter(Boolean))).join(', ');
       const totalQtyForDate = rowsForDate.reduce((sum, r) => sum + (r.quantity || 1), 0);
 
@@ -327,7 +327,7 @@ export default function CalendarPage() {
       const sampleRow = g.rows[0];
       const rawDateStr = sampleRow?.date || selectedDate || '';
       const dateFormatted = rawDateStr 
-        ? new Date(rawDateStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) 
+        ? new Date(rawDateStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) 
         : '';
 
       const memberLabel = g.members.length > 9
