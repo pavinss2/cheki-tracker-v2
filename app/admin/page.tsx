@@ -478,14 +478,9 @@ export default function AdminPage() {
     }
 
     return (
-      <button
-        type="button"
-        className={className}
-        onClick={() => handleToggleUserActive(table, item)}
-        title="Click to toggle Active / Inactive status for your account"
-      >
+      <span className={className}>
         {label}
-      </button>
+      </span>
     );
   };
 
@@ -1755,7 +1750,7 @@ export default function AdminPage() {
           padding: 0px;
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 8px;
           width: 100%;
         }
 
@@ -1980,13 +1975,14 @@ export default function AdminPage() {
         .status-tag {
           display: inline-flex;
           align-items: center;
-          padding: 3px 10px;
-          border-radius: 12px;
-          font-size: 0.76rem;
+          justify-content: center;
+          padding: 4px 14px;
+          border-radius: 9999px;
+          font-size: 0.78rem;
           font-weight: 700;
-          border: none;
-          cursor: pointer;
-          transition: all 0.2s ease;
+          cursor: default;
+          user-select: none;
+          line-height: 1;
         }
 
         .status-tag.active {
@@ -2005,11 +2001,6 @@ export default function AdminPage() {
           background: rgba(231, 76, 60, 0.18);
           color: #e74c3c;
           border: 1px solid rgba(231, 76, 60, 0.4);
-        }
-
-        .status-tag:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
 
         .action-btns {

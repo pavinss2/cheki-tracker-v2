@@ -456,10 +456,42 @@ export async function updateMetadataDoc(
     return;
   }
 
-  // Regular user updating dim_* doc from Admin tab
-  if (id.startsWith('default_')) {
-    const { id: _ignoreId, isDefault: _ignoreDef, ...overrideData } = data;
-    await addMetadataDoc(tableName, userId, overrideData, isDemo);
+  // Regular user updating dim_* doc from Admin tab (user override on default Back Office item)
+  if (id.startsWith('default_') || data.isDefault || data.backoffice_id) {
+    const targetId = String(data.backoffice_id || id);
+    const { isDefault: _ignoreDef, ...overrideData } = data;
+    const overridePayload = {
+      ...overrideData,
+      id: targetId,
+      backoffice_id: targetId,
+      userId,
+      updatedAt: now,
+      date_modified: todayDateStr,
+    };
+
+    if (isDemo || process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes("Demo")) {
+      const key = `${tableName}_${userId || 'demo'}`;
+      const current = getLocalData<Record<string, unknown> & { id: string }>(key, []);
+      let found = false;
+      const updated = current.map(item => {
+        if (item.id === targetId || (item as any).backoffice_id === targetId) {
+          found = true;
+          return { ...item, ...overridePayload };
+        }
+        return item;
+      });
+      if (!found) {
+        updated.unshift(overridePayload);
+      }
+      setLocalData(key, updated);
+      notifyListeners(key);
+      logAdminAction(userId, `UPDATE_${tableName.toUpperCase()}`, `Updated override for ${targetId} (${valStr})`, true);
+      return;
+    }
+
+    const docRef = doc(db, tableName, targetId);
+    await setDoc(docRef, overridePayload, { merge: true });
+    logAdminAction(userId, `UPDATE_${tableName.toUpperCase()}`, `Updated override for ${targetId} (${valStr})`);
     return;
   }
 
@@ -479,7 +511,7 @@ export async function deleteMetadataDoc(
   if (isDemo || process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes("Demo")) {
     const key = `${tableName}_${userId || 'demo'}`;
     const current = getLocalData<{ id: string }>(key, []);
-    setLocalData(key, current.filter(item => item.id !== id));
+    setLocalData(key, current.filter(item => item.id !== id && (item as any).backoffice_id !== id));
     notifyListeners(key);
     logAdminAction(userId, `DELETE_${tableName.toUpperCase()}`, `Deleted ID ${id}${valSuffix}`, true);
     return;
@@ -504,7 +536,40 @@ export async function deleteMetadataDoc(
 
   // Regular user deleting inherited default item from Admin tab
   if (id.startsWith('default_')) {
-    await addMetadataDoc(tableName, userId, { originalId: id, is_deleted: true, is_active: false }, isDemo);
+    const targetId = String(id);
+    const overridePayload = {
+      id: targetId,
+      backoffice_id: targetId,
+      originalId: targetId,
+      userId,
+      is_deleted: true,
+      is_active: false,
+      updatedAt: new Date().toISOString()
+    };
+
+    if (isDemo || process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes("Demo")) {
+      const key = `${tableName}_${userId || 'demo'}`;
+      const current = getLocalData<Record<string, unknown> & { id: string }>(key, []);
+      let found = false;
+      const updated = current.map(item => {
+        if (item.id === targetId || (item as any).backoffice_id === targetId) {
+          found = true;
+          return { ...item, ...overridePayload };
+        }
+        return item;
+      });
+      if (!found) {
+        updated.unshift(overridePayload);
+      }
+      setLocalData(key, updated);
+      notifyListeners(key);
+      logAdminAction(userId, `DELETE_${tableName.toUpperCase()}`, `Deleted ID ${targetId}${valSuffix}`, true);
+      return;
+    }
+
+    const docRef = doc(db, tableName, targetId);
+    await setDoc(docRef, overridePayload, { merge: true });
+    logAdminAction(userId, `DELETE_${tableName.toUpperCase()}`, `Deleted ID ${targetId}${valSuffix}`);
     return;
   }
 
@@ -575,6 +640,10 @@ export function subscribeMergedMetadata<T>(
     userItems.forEach(u => {
       const uId = String((u as any).id || '');
       if (uId) userOverridesById.set(uId, u);
+
+      const boId = String((u as any).backoffice_id || (u as any).originalId || '');
+      if (boId) userOverridesById.set(boId, u);
+
       const val = getItemValueString(u as Record<string, unknown>).toLowerCase();
       if (val) userOverridesByKey.set(val, u);
     });
@@ -607,15 +676,29 @@ export function subscribeMergedMetadata<T>(
 
       const dId = String((d as any).id || '');
       const val = getItemValueString(d as Record<string, unknown>).toLowerCase();
-      const key = val || dId;
 
-      processedKeys.add(key);
-      if (dId) processedKeys.add(dId);
-
+      // Priority lookup: 1) by Back Office ID (dId), 2) by string value
       const override = (dId ? userOverridesById.get(dId) : null) || (val ? userOverridesByKey.get(val) : null);
+
+      if (dId) processedKeys.add(dId);
+      if (val) processedKeys.add(val);
+
+      if (override) {
+        const oId = String((override as any).id || '');
+        const oBoId = String((override as any).backoffice_id || (override as any).originalId || '');
+        const oVal = getItemValueString(override as Record<string, unknown>).toLowerCase();
+
+        if (oId) processedKeys.add(oId);
+        if (oBoId) processedKeys.add(oBoId);
+        if (oVal) processedKeys.add(oVal);
+      }
+
       const activeState = override && (override as any).is_active !== undefined
         ? Boolean((override as any).is_active)
         : ((d as any).is_active !== undefined ? Boolean((d as any).is_active) : true);
+
+      const isDeleted = Boolean((override && (override as any).is_deleted) || (d as any).is_deleted);
+      if (isDeleted) return;
 
       merged.push({
         ...d,
@@ -627,12 +710,16 @@ export function subscribeMergedMetadata<T>(
     // 2. Process Custom User-Created items
     userItems.forEach((u) => {
       const uId = String((u as any).id || '');
+      const boId = String((u as any).backoffice_id || (u as any).originalId || '');
       const val = getItemValueString(u as Record<string, unknown>).toLowerCase();
-      const key = val || uId;
 
-      if (!processedKeys.has(key) && (!uId || !processedKeys.has(uId))) {
-        processedKeys.add(key);
+      const isOverrideForDefault = (boId && processedKeys.has(boId)) ||
+                                   (uId && (processedKeys.has(uId) || uId.startsWith('default_'))) ||
+                                   (val && processedKeys.has(val));
+
+      if (!isOverrideForDefault) {
         if (uId) processedKeys.add(uId);
+        if (val) processedKeys.add(val);
 
         merged.push({
           ...u,
