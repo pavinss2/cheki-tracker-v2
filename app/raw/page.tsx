@@ -127,12 +127,12 @@ export default function RawDataPage() {
 
   const galleryItems: LightboxItem[] = useMemo(() => {
     return groupedPhotos.map((g) => {
-      const memberLabel = g.members.length > 2
-        ? `${g.members.slice(0, 2).join(', ')} +${g.members.length - 2}`
+      const memberLabel = g.members.length > 9
+        ? `${g.members.slice(0, 9).join(', ')} +${g.members.length - 9}`
         : g.members.join(', ');
       return {
         url: g.imgUrl,
-        title: `${memberLabel} ${g.groups.length > 0 ? '• ' + g.groups.join(', ') : ''}`,
+        title: memberLabel || 'Cheki Photo',
         subtitle: `${g.rows[0]?.date || ''} ${g.events.length > 0 ? '• ' + g.events.join(', ') : ''}`,
       };
     });
