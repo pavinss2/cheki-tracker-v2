@@ -2117,12 +2117,17 @@ export default function BackOfficePage() {
         }
 
         .status-tag {
-          padding: 2px 8px;
-          border-radius: 10px;
-          font-size: 0.75rem;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 4px 14px;
+          border-radius: 9999px;
+          font-size: 0.8rem;
           font-weight: 700;
-          &.active { background: rgba(46, 204, 113, 0.2); color: #2ecc71; }
-          &.inactive { background: rgba(231, 76, 60, 0.2); color: #e74c3c; }
+          line-height: 1.2;
+          border: 1px solid transparent;
+          &.active { background: rgba(34, 197, 94, 0.15); color: #22c55e; border-color: rgba(34, 197, 94, 0.4); }
+          &.inactive { background: rgba(239, 68, 68, 0.15); color: #ef4444; border-color: rgba(239, 68, 68, 0.4); }
         }
 
         .action-btns {
@@ -2316,24 +2321,27 @@ export default function BackOfficePage() {
         }
 
         .badge-toggle {
-          padding: 3px 10px;
-          border-radius: 12px;
-          font-size: 0.75rem;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 4px 14px;
+          border-radius: 9999px;
+          font-size: 0.8rem;
           font-weight: 700;
           cursor: pointer;
           border: 1px solid;
           transition: all 0.15s;
           &.allowed {
-            background: rgba(46, 204, 113, 0.15);
-            color: #2ecc71;
-            border-color: rgba(46, 204, 113, 0.4);
-            &:hover { background: rgba(46, 204, 113, 0.25); }
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+            border-color: rgba(34, 197, 94, 0.4);
+            &:hover { background: rgba(34, 197, 94, 0.25); }
           }
           &.disallowed {
-            background: rgba(231, 76, 60, 0.12);
-            color: #e74c3c;
-            border-color: rgba(231, 76, 60, 0.35);
-            &:hover { background: rgba(231, 76, 60, 0.2); }
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border-color: rgba(239, 68, 68, 0.4);
+            &:hover { background: rgba(239, 68, 68, 0.25); }
           }
         }
       `}</style>

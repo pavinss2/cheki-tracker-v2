@@ -2027,28 +2027,32 @@ export default function AdminPage() {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          padding: 2px 8px;
-          border-radius: 10px;
-          font-size: 0.75rem;
+          padding: 4px 14px;
+          border-radius: 9999px;
+          font-size: 0.8rem;
           font-weight: 700;
           cursor: default;
           user-select: none;
-          line-height: 1;
+          line-height: 1.2;
+          border: 1px solid transparent;
         }
 
         .status-tag.active {
-          background: rgba(46, 204, 113, 0.2);
-          color: #2ecc71;
+          background: rgba(34, 197, 94, 0.15);
+          color: #22c55e;
+          border-color: rgba(34, 197, 94, 0.4);
         }
 
         .status-tag.sub {
-          background: rgba(59, 130, 246, 0.2);
-          color: #60a5fa;
+          background: rgba(59, 130, 246, 0.15);
+          color: #3b82f6;
+          border-color: rgba(59, 130, 246, 0.4);
         }
 
         .status-tag.inactive {
-          background: rgba(231, 76, 60, 0.2);
-          color: #e74c3c;
+          background: rgba(239, 68, 68, 0.15);
+          color: #ef4444;
+          border-color: rgba(239, 68, 68, 0.4);
         }
 
         .action-btns {
