@@ -434,26 +434,6 @@ export default function RawDataPage() {
     <div className="raw-data-page">
       <FilterBar transactions={allTransactions} />
 
-      {/* Integrated Grid Entry Action Controls (Positioned under FilterBar) */}
-      <div className="raw-actions-bar">
-        <button className="btn btn-secondary" onClick={() => setShowRuleModal(true)}>
-          <Settings size={16} /> Price Rules
-        </button>
-        <button className="btn btn-secondary btn-paste-tsv" onClick={() => setShowPasteModal(true)}>
-          <Clipboard size={16} /> Paste TSV
-        </button>
-        <button className="btn btn-secondary" onClick={handleAddRow}>
-          <Plus size={16} /> Add Row
-        </button>
-        <button 
-          className="btn btn-primary" 
-          onClick={handleBatchSave} 
-          disabled={isSavingBatch || validDirtyCount === 0}
-        >
-          <Save size={16} /> {isSavingBatch ? 'Saving...' : `Save (${validDirtyCount})`}
-        </button>
-      </div>
-
       {saveSuccessMsg && (
         <div className="success-banner">
           <CheckCircle2 size={18} />
@@ -461,8 +441,28 @@ export default function RawDataPage() {
         </div>
       )}
 
-      {/* Transactions Table */}
+      {/* Transactions Table Card */}
       <div className="table-card card">
+        <div className="tab-header raw-actions-bar" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
+          <button className="btn btn-secondary btn-sm" onClick={() => setShowRuleModal(true)}>
+            <Settings size={14} /> Price Rules
+          </button>
+          <button className="btn btn-secondary btn-sm btn-paste-tsv" onClick={() => setShowPasteModal(true)}>
+            <Clipboard size={14} /> Paste TSV
+          </button>
+          <button className="btn btn-secondary btn-sm" onClick={handleAddRow}>
+            <Plus size={14} /> Add Row
+          </button>
+          <button 
+            className="btn btn-primary btn-sm" 
+            style={{ marginLeft: '8px' }}
+            onClick={handleBatchSave} 
+            disabled={isSavingBatch || validDirtyCount === 0}
+          >
+            <Save size={14} /> {isSavingBatch ? 'Saving...' : `Save (${validDirtyCount})`}
+          </button>
+        </div>
+
         <div className="table-wrapper">
           <table className="raw-table">
             <thead>
@@ -916,13 +916,15 @@ export default function RawDataPage() {
 
         .raw-actions-bar {
           display: flex;
-          gap: 12px;
-          flex-wrap: flex;
+          justify-content: flex-end;
+          gap: 8px;
+          flex-wrap: wrap;
           align-items: center;
+          margin-bottom: 14px;
         }
 
-        .raw-actions-bar > .btn-primary {
-          margin-left: auto;
+        .raw-actions-bar > button {
+          margin-left: 4px;
         }
 
         @media (max-width: 768px) {
