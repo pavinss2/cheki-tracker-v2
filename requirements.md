@@ -235,13 +235,13 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 
 ### 6.15 Admin Tab Table Layout, Combined Status & Entity Key Linking
 - **Action Column & Checkbox Multiselect (1st & 2nd Column)**:
-  - Column 1 contains a checkbox selector for multiselect batch operations (with a Select All checkbox in the table header).
+  - Column 1 contains a checkbox selector for multiselect batch operations **rendered exclusively for custom-made user items** (`is_custom: true`). Subscribed default items (`default_dims`) cannot be multiselected or checked in Column 1 and are managed exclusively via the "Manage Subscriptions" menu popup.
   - Column 2 contains the Edit pencil icon button (`<Edit2 size={15} />`).
-- **Batch Action Bar**: Selecting one or more rows triggers a floating batch bar with actions restricted strictly to **Set Active**, **Set Inactive**, and **Delete**. Subscribing/unsubscribing default data is managed exclusively through the "Manage Subscriptions" menu modal.
-- **Delete Button inside Edit Modal**: Custom (editable) records display a red **"Delete Record"** button at the bottom-left of the Edit Record modal dialog.
-- **Static "Status" Pill Tag (3rd Column)**:
-  - Displays **`Sub`** (blue pill tag), **`Active`** (green pill tag), and **`Inactive`** (red pill tag).
-  - Rendered as static, non-toggleable `<span>` pill tags (`border-radius: 9999px`, `padding: 4px 14px`, `cursor: default`, `user-select: none`). Hover translation/clicks are disabled to prevent accidental status changes during cell selection. Active/Inactive adjustments are made via batch action bar or edit modal.
+- **Batch Action Bar**: Selecting one or more custom-made rows triggers a floating batch bar above the table with actions restricted strictly to **Set Active**, **Set Inactive**, **Delete**, and **Deselect All**.
+- **1-to-1 Backoffice Status Tag Styling (`.status-tag`)**:
+  - Displays **`Sub`** (blue tag), **`Active`** (green tag), and **`Inactive`** (red tag) matching Back Office `.status-tag` dimensions 1-to-1 (`padding: 2px 8px`, `border-radius: 10px`, `font-size: 0.75rem`, `font-weight: 700`, `cursor: default`, `user-select: none`).
+- **Table Header Gold Hover Color**:
+  - All `.dim-table` column headers (`th`, `.sortable-th`) specify `transition: color 0.15s ease` and turn **gold (`var(--accent-primary)`)** on mouse hover matching all other page tables (`/backoffice`, `/events`, `/raw`).
 - **Back Office Entity Key Connection (`backoffice_id`)**:
   - User overrides on default items directly preserve and bind to the Back Office primary key (`id` / `backoffice_id`).
   - When an item's name or metadata is modified in Back Office (e.g. `"Tonliw"` $\rightarrow$ `"Tonliw (BNK48)"`), the live updates flow through to the Admin tab row in real time while preserving user active preferences, avoiding duplicate row creation.
