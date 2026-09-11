@@ -918,14 +918,16 @@ export default function AdminPage() {
                           ) : null}
                         </td>
                         <td>
-                          <button 
-                            type="button"
-                            className="btn-icon" 
-                            onClick={() => setEditingItem({ table: 'dim_member', data: { ...m } })}
-                            title={isSubscribed ? "View / edit subscribed member" : "Edit custom member"}
-                          >
-                            <Edit2 size={15} />
-                          </button>
+                          {!isSubscribed ? (
+                            <button 
+                              type="button"
+                              className="btn-icon" 
+                              onClick={() => setEditingItem({ table: 'dim_member', data: { ...m } })}
+                              title="Edit custom member"
+                            >
+                              <Edit2 size={15} />
+                            </button>
+                          ) : null}
                         </td>
                         <td>
                           {renderStatusBadge('dim_member', m, isSubscribed)}
@@ -1086,14 +1088,16 @@ export default function AdminPage() {
                           ) : null}
                         </td>
                         <td>
-                          <button 
-                            type="button"
-                            className="btn-icon" 
-                            onClick={() => setEditingItem({ table: 'dim_group', data: { ...g } })}
-                            title={isSubscribed ? "View / edit subscribed group" : "Edit custom group"}
-                          >
-                            <Edit2 size={15} />
-                          </button>
+                          {!isSubscribed ? (
+                            <button 
+                              type="button"
+                              className="btn-icon" 
+                              onClick={() => setEditingItem({ table: 'dim_group', data: { ...g } })}
+                              title="Edit custom group"
+                            >
+                              <Edit2 size={15} />
+                            </button>
+                          ) : null}
                         </td>
                         <td>
                           {renderStatusBadge('dim_group', g, isSubscribed)}
@@ -1218,14 +1222,16 @@ export default function AdminPage() {
                           ) : null}
                         </td>
                         <td>
-                          <button 
-                            type="button"
-                            className="btn-icon" 
-                            onClick={() => setEditingItem({ table: 'dim_company', data: { ...c } })}
-                            title={isSubscribed ? "View / edit subscribed company" : "Edit custom company"}
-                          >
-                            <Edit2 size={15} />
-                          </button>
+                          {!isSubscribed ? (
+                            <button 
+                              type="button"
+                              className="btn-icon" 
+                              onClick={() => setEditingItem({ table: 'dim_company', data: { ...c } })}
+                              title="Edit custom company"
+                            >
+                              <Edit2 size={15} />
+                            </button>
+                          ) : null}
                         </td>
                         <td>
                           {renderStatusBadge('dim_company', c, isSubscribed)}
