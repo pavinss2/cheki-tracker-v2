@@ -993,10 +993,13 @@ export default function CalendarPage() {
           .cal-grid-card {
             padding: 10px;
           }
+          .cal-day-cell {
+            aspect-ratio: 1 / 1;
+          }
         }
 
         .cal-day-cell {
-          aspect-ratio: 1 / 1;
+          aspect-ratio: 1 / 0.6;
           background-color: var(--bg-surface-2);
           border: 1px solid var(--border-subtle);
           border-radius: 8px;
