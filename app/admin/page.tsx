@@ -2,10 +2,21 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useChekiData } from '@/hooks/useChekiData';
-import { addMetadataDoc, updateMetadataDoc, deleteMetadataDoc, getAdminLogs, getItemValueString } from '@/lib/dataStore';
+import { 
+  addMetadataDoc, 
+  updateMetadataDoc, 
+  deleteMetadataDoc, 
+  getAdminLogs, 
+  getItemValueString,
+  getUserSubscriptions,
+  saveUserSubscriptions,
+  subscribeDefaultMetadata,
+  UserSubscriptionConfig
+} from '@/lib/dataStore';
+import { DEFAULT_COUNTRIES, DEFAULT_COMPANIES, DEFAULT_GROUPS, DEFAULT_MEMBERS } from '@/lib/seedData';
 import { useAuth } from '@/context/AuthContext';
 import { LoginPrompt } from '@/components/layout/LoginPrompt';
-import { Plus, Edit2, Trash2, Shield, Users, Building, Layers, X, Save, ArrowUpDown, ExternalLink, Lock, Sparkles } from 'lucide-react';
+import { Plus, Edit2, Trash2, Shield, Users, Building, Layers, X, Save, ArrowUpDown, ExternalLink, Lock, Sparkles, Sliders, Check } from 'lucide-react';
 import { CircularSpinner } from '@/components/common/CircularSpinner';
 import { MemberAvatar } from '@/components/common/MemberAvatar';
 import { formatDisplayName, formatBrowserTimestamp } from '@/lib/imageUtils';
@@ -33,6 +44,40 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<'members' | 'groups' | 'companies' | 'logs'>('members');
   const [editingItem, setEditingItem] = useState<{ table: string; data: Record<string, unknown> } | null>(null);
 
+  // Subscribe Modal State
+  const [isSubscribeModalOpen, setIsSubscribeModalOpen] = useState(false);
+  const [subConfig, setSubConfig] = useState<UserSubscriptionConfig>({
+    subscribeAll: true,
+    countries: [],
+    companies: [],
+    groups: [],
+  });
+
+  // Default raw metadata list from Back Office for subscribe selection modal
+  const [defaultMembers, setDefaultMembers] = useState<any[]>([]);
+  const [defaultGroups, setDefaultGroups] = useState<any[]>([]);
+  const [defaultCompanies, setDefaultCompanies] = useState<any[]>([]);
+  const [defaultCountries, setDefaultCountries] = useState<any[]>([]);
+
+  useEffect(() => {
+    const unsubMem = subscribeDefaultMetadata<any>('dim_member', DEFAULT_MEMBERS, setDefaultMembers, isDemoUser);
+    const unsubGrp = subscribeDefaultMetadata<any>('dim_group', DEFAULT_GROUPS, setDefaultGroups, isDemoUser);
+    const unsubCmp = subscribeDefaultMetadata<any>('dim_company', DEFAULT_COMPANIES, setDefaultCompanies, isDemoUser);
+    const unsubCnt = subscribeDefaultMetadata<any>('dim_country', DEFAULT_COUNTRIES, setDefaultCountries, isDemoUser);
+    return () => {
+      unsubMem();
+      unsubGrp();
+      unsubCmp();
+      unsubCnt();
+    };
+  }, [isDemoUser]);
+
+  useEffect(() => {
+    if (userId) {
+      setSubConfig(getUserSubscriptions(userId));
+    }
+  }, [userId]);
+
   const [isMobile, setIsMobile] = useState<boolean>(false);
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth <= 640);
@@ -41,25 +86,20 @@ export default function AdminPage() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
   
-  // Sorting state for dim_member (Defaults to date_added descending)
+  // Sorting states
   const [memberSortKey, setMemberSortKey] = useState<MemberSortKey>('date_added');
   const [memberSortAsc, setMemberSortAsc] = useState<boolean>(false);
-
-  // Sorting state for dim_group and dim_company
   const [groupSortKey, setGroupSortKey] = useState<GroupSortKey>('group');
   const [groupSortAsc, setGroupSortAsc] = useState<boolean>(true);
   const [companySortKey, setCompanySortKey] = useState<CompanySortKey>('company');
   const [companySortAsc, setCompanySortAsc] = useState<boolean>(true);
 
-  // Temporary draft row state for creating a new member (pinned at top row)
+  // Draft states
   const [tempMember, setTempMember] = useState<TempMemberRow | null>(null);
   const [tempGroup, setTempGroup] = useState<{ group: string; country: string; company: string } | null>(null);
   const [tempCompany, setTempCompany] = useState<{ company: string } | null>(null);
 
-  // Quick inline new option modal for creating missing choices on the fly
   const [inlineNewModal, setInlineNewModal] = useState<{ table: string; fieldKey: string; name: string } | null>(null);
-
-  // Custom popup for delete confirmation
   const [deleteConfirmModal, setDeleteConfirmModal] = useState<{
     table: string;
     id: string;
@@ -68,7 +108,6 @@ export default function AdminPage() {
 
   const logs = getAdminLogs(userId);
 
-  // Group lookup map for auto-populating country & company when group is selected
   const groupLookup = useMemo(() => {
     const map: Record<string, { company: string; country: string }> = {};
     groups.forEach((g) => {
@@ -77,7 +116,23 @@ export default function AdminPage() {
     return map;
   }, [groups]);
 
-  // Handle column sorting
+  // Options for subscribe modal
+  const availableSubCountries = useMemo(() => {
+    const list = defaultCountries.length > 0 ? defaultCountries : DEFAULT_COUNTRIES;
+    return list.map(c => c.displayed_country || c.country).filter(Boolean);
+  }, [defaultCountries]);
+
+  const availableSubCompanies = useMemo(() => {
+    const list = defaultCompanies.length > 0 ? defaultCompanies : DEFAULT_COMPANIES;
+    return list.map(c => c.company).filter(Boolean);
+  }, [defaultCompanies]);
+
+  const availableSubGroups = useMemo(() => {
+    const list = defaultGroups.length > 0 ? defaultGroups : DEFAULT_GROUPS;
+    return list.map(g => g.group).filter(Boolean);
+  }, [defaultGroups]);
+
+  // Sort handlers
   const handleSortMembers = (key: MemberSortKey) => {
     if (memberSortKey === key) {
       setMemberSortAsc(!memberSortAsc);
@@ -105,7 +160,7 @@ export default function AdminPage() {
     }
   };
 
-  // Toggle user active status override for subscribed or custom item
+  // Toggle Active/Inactive status for user
   const handleToggleUserActive = async (table: string, item: any) => {
     const nextActive = item.is_active === false ? true : false;
     try {
@@ -113,6 +168,33 @@ export default function AdminPage() {
     } catch (err) {
       alert("Error updating active status: " + (err instanceof Error ? err.message : String(err)));
     }
+  };
+
+  // Save Subscribe Config
+  const handleSaveSubscriptions = () => {
+    saveUserSubscriptions(userId, subConfig);
+    setIsSubscribeModalOpen(false);
+  };
+
+  const handleToggleSubCountry = (cnt: string) => {
+    const set = new Set(subConfig.countries);
+    if (set.has(cnt)) set.delete(cnt);
+    else set.add(cnt);
+    setSubConfig({ ...subConfig, subscribeAll: false, countries: Array.from(set) });
+  };
+
+  const handleToggleSubCompany = (comp: string) => {
+    const set = new Set(subConfig.companies);
+    if (set.has(comp)) set.delete(comp);
+    else set.add(comp);
+    setSubConfig({ ...subConfig, subscribeAll: false, companies: Array.from(set) });
+  };
+
+  const handleToggleSubGroup = (grp: string) => {
+    const set = new Set(subConfig.groups);
+    if (set.has(grp)) set.delete(grp);
+    else set.add(grp);
+    setSubConfig({ ...subConfig, subscribeAll: false, groups: Array.from(set) });
   };
 
   const sortedMembers = useMemo(() => {
@@ -168,7 +250,6 @@ export default function AdminPage() {
     });
   }, [companies, companySortKey, companySortAsc]);
 
-  // Init temporary member draft row
   const handleStartAddMember = () => {
     const todayStr = new Date().toISOString().split('T')[0];
     const firstGroup = groups[0]?.group || '';
@@ -187,11 +268,7 @@ export default function AdminPage() {
   };
 
   const handleSaveTempMember = async () => {
-    if (!tempMember) return;
-    if (!tempMember.member_name.trim()) {
-      alert("Please enter a Member Name.");
-      return;
-    }
+    if (!tempMember || !tempMember.member_name.trim()) return;
     try {
       await addMetadataDoc('dim_member', userId, {
         ...tempMember,
@@ -229,22 +306,15 @@ export default function AdminPage() {
     const { table, name } = inlineNewModal;
     try {
       let defaultObj: Record<string, unknown> = {};
-      if (table === 'dim_color') {
-        defaultObj = { color: name.trim(), color_code: '#ffffff' };
-      } else if (table === 'dim_group') {
-        defaultObj = { group: name.trim(), country: '🇹🇭 TH', company: 'Individual' };
-      } else if (table === 'dim_company') {
-        defaultObj = { company: name.trim() };
-      } else {
-        defaultObj = { [inlineNewModal.fieldKey]: name.trim() };
-      }
+      if (table === 'dim_color') defaultObj = { color: name.trim(), color_code: '#ffffff' };
+      else if (table === 'dim_group') defaultObj = { group: name.trim(), country: '🇹🇭 TH', company: 'Individual' };
+      else if (table === 'dim_company') defaultObj = { company: name.trim() };
+      else defaultObj = { [inlineNewModal.fieldKey]: name.trim() };
+
       await addMetadataDoc(table, userId, defaultObj, isDemoUser);
-      
       if (tempMember) {
         if (table === 'dim_color') setTempMember({ ...tempMember, color: name.trim() });
-        if (table === 'dim_group') {
-          setTempMember({ ...tempMember, group: name.trim(), country: '🇹🇭 TH', company: 'Individual' });
-        }
+        if (table === 'dim_group') setTempMember({ ...tempMember, group: name.trim(), country: '🇹🇭 TH', company: 'Individual' });
       }
       setInlineNewModal(null);
     } catch (err) {
@@ -255,10 +325,8 @@ export default function AdminPage() {
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingItem) return;
-
     const { table, data } = editingItem;
-    const id = data.id as string;
-    await updateMetadataDoc(table, id, userId, data, isDemoUser);
+    await updateMetadataDoc(table, data.id as string, userId, data, isDemoUser);
     setEditingItem(null);
   };
 
@@ -274,34 +342,42 @@ export default function AdminPage() {
 
   return (
     <div className="admin-page">
-      {/* Tabs Bar */}
+      {/* Navigation Tabs */}
       <div className="tabs-bar">
-        <button className={`tab-btn ${activeTab === 'members' ? 'active' : ''}`} onClick={() => setActiveTab('members')}>
+        <button type="button" className={`tab-btn ${activeTab === 'members' ? 'active' : ''}`} onClick={() => setActiveTab('members')}>
           <Users size={16} /> Members ({members.length})
         </button>
-        <button className={`tab-btn ${activeTab === 'groups' ? 'active' : ''}`} onClick={() => setActiveTab('groups')}>
+        <button type="button" className={`tab-btn ${activeTab === 'groups' ? 'active' : ''}`} onClick={() => setActiveTab('groups')}>
           <Layers size={16} /> Groups ({groups.length})
         </button>
-        <button className={`tab-btn ${activeTab === 'companies' ? 'active' : ''}`} onClick={() => setActiveTab('companies')}>
+        <button type="button" className={`tab-btn ${activeTab === 'companies' ? 'active' : ''}`} onClick={() => setActiveTab('companies')}>
           <Building size={16} /> Companies ({companies.length})
         </button>
-        <button className={`tab-btn ${activeTab === 'logs' ? 'active' : ''}`} onClick={() => setActiveTab('logs')}>
+        <button type="button" className={`tab-btn ${activeTab === 'logs' ? 'active' : ''}`} onClick={() => setActiveTab('logs')}>
           <Shield size={16} /> Audit Logs ({logs.length})
         </button>
       </div>
 
-      {/* Content Area */}
+      {/* Main Table Card */}
       <div className="table-card card">
         {/* MEMBERS TAB */}
         {activeTab === 'members' && (
           <div>
-            <div className="tab-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span className="badge-pill gold-outline" style={{ fontSize: '0.82rem', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                  <Sparkles size={14} /> Subscribed live from Back Office
+            <div className="tab-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <button 
+                  type="button"
+                  className="btn btn-secondary btn-sm" 
+                  onClick={() => setIsSubscribeModalOpen(true)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Sliders size={14} /> Manage Subscriptions
+                </button>
+                <span className="badge-pill gold-outline" style={{ fontSize: '0.8rem', padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <Sparkles size={13} /> {subConfig.subscribeAll ? 'Subscribed: All Default Data' : `Subscribed: Custom Scope`}
                 </span>
               </div>
-              <button className="btn btn-primary btn-sm" onClick={handleStartAddMember} disabled={Boolean(tempMember)}>
+              <button type="button" className="btn btn-primary btn-sm" onClick={handleStartAddMember} disabled={Boolean(tempMember)}>
                 <Plus size={14} /> Add
               </button>
             </div>
@@ -337,10 +413,10 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {/* Temporary Unsaved New Member Row Pinned at Top Row */}
+                  {/* Temp Draft Row */}
                   {tempMember && !isMobile && (
                     <tr className="temp-row">
-                      <td><span className="badge-pill dark" style={{ fontSize: '0.72rem' }}>New Draft</span></td>
+                      <td><span className="badge-pill dark">New Draft</span></td>
                       <td style={{ minWidth: '160px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <MemberAvatar 
@@ -352,10 +428,9 @@ export default function AdminPage() {
                           <input 
                             type="url" 
                             className="table-input" 
-                            placeholder="Image URL (https://...)" 
+                            placeholder="Image URL" 
                             value={tempMember.member_image} 
                             onChange={(e) => setTempMember({ ...tempMember, member_image: e.target.value })}
-                            title="Member Avatar Image URL"
                           />
                         </div>
                       </td>
@@ -413,24 +488,8 @@ export default function AdminPage() {
                           <option value="__CREATE_NEW__">+ Create New Group...</option>
                         </select>
                       </td>
-                      <td>
-                        <input 
-                          type="text" 
-                          disabled 
-                          className="table-input disabled" 
-                          value={tempMember.country} 
-                          title="Country is locked and auto-mapped by selected Group"
-                        />
-                      </td>
-                      <td>
-                        <input 
-                          type="text" 
-                          disabled 
-                          className="table-input disabled" 
-                          value={tempMember.company} 
-                          title="Company is locked and auto-mapped by selected Group"
-                        />
-                      </td>
+                      <td><input type="text" disabled className="table-input disabled" value={tempMember.country} /></td>
+                      <td><input type="text" disabled className="table-input disabled" value={tempMember.company} /></td>
                       <td>
                         <select
                           className="table-select"
@@ -453,14 +512,14 @@ export default function AdminPage() {
                       <td className="mono">{tempMember.date_added}</td>
                       <td>
                         <div className="action-btns">
-                          <button className="btn btn-primary btn-xs" onClick={handleSaveTempMember}><Save size={13} /> Save</button>
-                          <button className="btn btn-secondary btn-xs" onClick={() => setTempMember(null)}><X size={13} /></button>
+                          <button type="button" className="btn btn-primary btn-xs" onClick={handleSaveTempMember}><Save size={13} /> Save</button>
+                          <button type="button" className="btn btn-secondary btn-xs" onClick={() => setTempMember(null)}><X size={13} /></button>
                         </div>
                       </td>
                     </tr>
                   )}
 
-                  {/* Sorted Member List */}
+                  {/* Sorted Members List */}
                   {sortedMembers.map((m) => {
                     const colorObj = colors.find(c => c.color === m.color);
                     const xUrl = m.x_profile 
@@ -472,9 +531,9 @@ export default function AdminPage() {
                       <tr key={m.id}>
                         <td>
                           {isSubscribed ? (
-                            <span className="badge-pill gold-outline" style={{ fontSize: '0.72rem', padding: '2px 8px', fontWeight: 600 }}>Subscribed</span>
+                            <span className="badge-pill gold-outline">Subscribed</span>
                           ) : (
-                            <span className="badge-pill dark" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>Custom</span>
+                            <span className="badge-pill dark">Custom</span>
                           )}
                         </td>
                         <td>
@@ -493,7 +552,7 @@ export default function AdminPage() {
                         <td>
                           <button
                             type="button"
-                            className={`status-badge ${m.is_active !== false ? 'active' : 'inactive'}`}
+                            className={`status-tag ${m.is_active !== false ? 'active' : 'inactive'}`}
                             onClick={() => handleToggleUserActive('dim_member', m)}
                             title="Click to toggle Active/Inactive status for your account"
                           >
@@ -511,25 +570,22 @@ export default function AdminPage() {
                         <td>
                           <div className="action-btns">
                             <button 
+                              type="button"
                               className="btn-icon" 
                               onClick={() => setEditingItem({ table: 'dim_member', data: { ...m } })}
                               title={isSubscribed ? "View / toggle status for subscribed item" : "Edit custom member"}
                             >
                               <Edit2 size={15} />
                             </button>
-                            {isSubscribed ? (
-                              <button className="btn-icon danger" disabled style={{ opacity: 0.3, cursor: 'not-allowed' }} title="Subscribed items cannot be deleted">
-                                <Trash2 size={15} />
-                              </button>
-                            ) : (
-                              <button 
-                                className="btn-icon danger" 
-                                onClick={() => setDeleteConfirmModal({ table: 'dim_member', id: m.id, displayValue: getItemValueString(m as unknown as Record<string, unknown>) })}
-                                title="Delete custom member"
-                              >
-                                <Trash2 size={15} />
-                              </button>
-                            )}
+                            <button 
+                              type="button"
+                              className="btn-icon danger" 
+                              disabled={isSubscribed}
+                              onClick={() => !isSubscribed && setDeleteConfirmModal({ table: 'dim_member', id: m.id, displayValue: getItemValueString(m as unknown as Record<string, unknown>) })}
+                              title={isSubscribed ? "Subscribed items cannot be deleted" : "Delete custom member"}
+                            >
+                              <Trash2 size={15} />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -544,13 +600,21 @@ export default function AdminPage() {
         {/* GROUPS TAB */}
         {activeTab === 'groups' && (
           <div>
-            <div className="tab-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span className="badge-pill gold-outline" style={{ fontSize: '0.82rem', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                  <Sparkles size={14} /> Subscribed live from Back Office
+            <div className="tab-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <button 
+                  type="button"
+                  className="btn btn-secondary btn-sm" 
+                  onClick={() => setIsSubscribeModalOpen(true)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Sliders size={14} /> Manage Subscriptions
+                </button>
+                <span className="badge-pill gold-outline" style={{ fontSize: '0.8rem', padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <Sparkles size={13} /> {subConfig.subscribeAll ? 'Subscribed: All Default Data' : `Subscribed: Custom Scope`}
                 </span>
               </div>
-              <button className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_group', data: { group: '', country: '🇹🇭 TH', company: 'Individual' } })}>
+              <button type="button" className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_group', data: { group: '', country: '🇹🇭 TH', company: 'Individual' } })}>
                 <Plus size={14} /> Add
               </button>
             </div>
@@ -581,9 +645,9 @@ export default function AdminPage() {
                       <tr key={g.id}>
                         <td>
                           {isSubscribed ? (
-                            <span className="badge-pill gold-outline" style={{ fontSize: '0.72rem', padding: '2px 8px', fontWeight: 600 }}>Subscribed</span>
+                            <span className="badge-pill gold-outline">Subscribed</span>
                           ) : (
-                            <span className="badge-pill dark" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>Custom</span>
+                            <span className="badge-pill dark">Custom</span>
                           )}
                         </td>
                         <td><strong>{g.group}</strong></td>
@@ -592,7 +656,7 @@ export default function AdminPage() {
                         <td>
                           <button
                             type="button"
-                            className={`status-badge ${g.is_active !== false ? 'active' : 'inactive'}`}
+                            className={`status-tag ${g.is_active !== false ? 'active' : 'inactive'}`}
                             onClick={() => handleToggleUserActive('dim_group', g)}
                             title="Click to toggle Active/Inactive status for your account"
                           >
@@ -602,25 +666,22 @@ export default function AdminPage() {
                         <td>
                           <div className="action-btns">
                             <button 
+                              type="button"
                               className="btn-icon" 
                               onClick={() => setEditingItem({ table: 'dim_group', data: { ...g } })}
                               title={isSubscribed ? "View / toggle status for subscribed item" : "Edit custom group"}
                             >
                               <Edit2 size={15} />
                             </button>
-                            {isSubscribed ? (
-                              <button className="btn-icon danger" disabled style={{ opacity: 0.3, cursor: 'not-allowed' }} title="Subscribed items cannot be deleted">
-                                <Trash2 size={15} />
-                              </button>
-                            ) : (
-                              <button 
-                                className="btn-icon danger" 
-                                onClick={() => setDeleteConfirmModal({ table: 'dim_group', id: g.id, displayValue: getItemValueString(g as unknown as Record<string, unknown>) })}
-                                title="Delete custom group"
-                              >
-                                <Trash2 size={15} />
-                              </button>
-                            )}
+                            <button 
+                              type="button"
+                              className="btn-icon danger" 
+                              disabled={isSubscribed}
+                              onClick={() => !isSubscribed && setDeleteConfirmModal({ table: 'dim_group', id: g.id, displayValue: getItemValueString(g as unknown as Record<string, unknown>) })}
+                              title={isSubscribed ? "Subscribed items cannot be deleted" : "Delete custom group"}
+                            >
+                              <Trash2 size={15} />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -635,13 +696,21 @@ export default function AdminPage() {
         {/* COMPANIES TAB */}
         {activeTab === 'companies' && (
           <div>
-            <div className="tab-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span className="badge-pill gold-outline" style={{ fontSize: '0.82rem', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                  <Sparkles size={14} /> Subscribed live from Back Office
+            <div className="tab-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <button 
+                  type="button"
+                  className="btn btn-secondary btn-sm" 
+                  onClick={() => setIsSubscribeModalOpen(true)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Sliders size={14} /> Manage Subscriptions
+                </button>
+                <span className="badge-pill gold-outline" style={{ fontSize: '0.8rem', padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <Sparkles size={13} /> {subConfig.subscribeAll ? 'Subscribed: All Default Data' : `Subscribed: Custom Scope`}
                 </span>
               </div>
-              <button className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_company', data: { company: '' } })}>
+              <button type="button" className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_company', data: { company: '' } })}>
                 <Plus size={14} /> Add
               </button>
             </div>
@@ -666,16 +735,16 @@ export default function AdminPage() {
                       <tr key={c.id}>
                         <td>
                           {isSubscribed ? (
-                            <span className="badge-pill gold-outline" style={{ fontSize: '0.72rem', padding: '2px 8px', fontWeight: 600 }}>Subscribed</span>
+                            <span className="badge-pill gold-outline">Subscribed</span>
                           ) : (
-                            <span className="badge-pill dark" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>Custom</span>
+                            <span className="badge-pill dark">Custom</span>
                           )}
                         </td>
                         <td><strong>{c.company}</strong></td>
                         <td>
                           <button
                             type="button"
-                            className={`status-badge ${c.is_active !== false ? 'active' : 'inactive'}`}
+                            className={`status-tag ${c.is_active !== false ? 'active' : 'inactive'}`}
                             onClick={() => handleToggleUserActive('dim_company', c)}
                             title="Click to toggle Active/Inactive status for your account"
                           >
@@ -685,25 +754,22 @@ export default function AdminPage() {
                         <td>
                           <div className="action-btns">
                             <button 
+                              type="button"
                               className="btn-icon" 
                               onClick={() => setEditingItem({ table: 'dim_company', data: { ...c } })}
                               title={isSubscribed ? "View / toggle status for subscribed item" : "Edit custom company"}
                             >
                               <Edit2 size={15} />
                             </button>
-                            {isSubscribed ? (
-                              <button className="btn-icon danger" disabled style={{ opacity: 0.3, cursor: 'not-allowed' }} title="Subscribed items cannot be deleted">
-                                <Trash2 size={15} />
-                              </button>
-                            ) : (
-                              <button 
-                                className="btn-icon danger" 
-                                onClick={() => setDeleteConfirmModal({ table: 'dim_company', id: c.id, displayValue: getItemValueString(c as unknown as Record<string, unknown>) })}
-                                title="Delete custom company"
-                              >
-                                <Trash2 size={15} />
-                              </button>
-                            )}
+                            <button 
+                              type="button"
+                              className="btn-icon danger" 
+                              disabled={isSubscribed}
+                              onClick={() => !isSubscribed && setDeleteConfirmModal({ table: 'dim_company', id: c.id, displayValue: getItemValueString(c as unknown as Record<string, unknown>) })}
+                              title={isSubscribed ? "Subscribed items cannot be deleted" : "Delete custom company"}
+                            >
+                              <Trash2 size={15} />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -759,7 +825,7 @@ export default function AdminPage() {
             <div className="modal-card" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
                 <h3>{editingItem.data.id ? (isSubscribed ? 'View Subscribed Record' : 'Edit Custom Record') : 'Add Custom Record'}</h3>
-                <button className="btn-close" onClick={() => setEditingItem(null)}><X size={18} /></button>
+                <button type="button" className="btn-close" onClick={() => setEditingItem(null)}><X size={18} /></button>
               </div>
               <form onSubmit={handleSaveEdit} className="modal-form">
                 {isSubscribed && (
@@ -998,39 +1064,146 @@ export default function AdminPage() {
         );
       })()}
 
-      {/* Inline Create New Dimension Choice Modal */}
-      {inlineNewModal && (
-        <div className="modal-overlay" onClick={() => setInlineNewModal(null)}>
-          <div className="modal-card small" onClick={(e) => e.stopPropagation()}>
+      {/* MANAGE SUBSCRIPTIONS MODAL */}
+      {isSubscribeModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsSubscribeModalOpen(false)}>
+          <div className="modal-card" style={{ maxWidth: '620px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>+ Create New {inlineNewModal.table.replace('dim_', '').toUpperCase()}</h2>
-              <button className="btn-close" onClick={() => setInlineNewModal(null)}><X size={18} /></button>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Sliders size={18} /> Manage Back Office Subscriptions
+              </h3>
+              <button type="button" className="btn-close" onClick={() => setIsSubscribeModalOpen(false)}><X size={18} /></button>
             </div>
-            <div className="form-group" style={{ marginBottom: '16px' }}>
-              <label>Name / Value *</label>
-              <input
-                type="text"
-                autoFocus
-                value={inlineNewModal.name}
-                onChange={(e) => setInlineNewModal({ ...inlineNewModal, name: e.target.value })}
-                placeholder="Type new option name..."
-              />
-            </div>
-            <div className="form-actions">
-              <button type="button" className="btn btn-secondary" onClick={() => setInlineNewModal(null)}>Cancel</button>
-              <button type="button" className="btn btn-primary" onClick={handleSaveInlineOption}>Save Choice (Confirm)</button>
+            
+            <div style={{ padding: '4px 0 16px 0' }}>
+              <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                Choose which default metadata scopes to subscribe to. Subscribed items automatically update in real-time when changed in Back Office.
+              </p>
+
+              {/* Option A: Subscribe All Toggle */}
+              <div style={{ 
+                background: subConfig.subscribeAll ? 'rgba(212, 168, 75, 0.15)' : 'var(--bg-surface-2)',
+                border: subConfig.subscribeAll ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
+                borderRadius: '8px',
+                padding: '14px',
+                marginBottom: '20px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}
+              onClick={() => setSubConfig({ ...subConfig, subscribeAll: !subConfig.subscribeAll })}
+              >
+                <div>
+                  <div style={{ fontWeight: 700, color: subConfig.subscribeAll ? 'var(--accent-primary)' : 'var(--text-main)', fontSize: '0.95rem' }}>
+                    🌐 Subscribe All Default Data
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    Automatically subscribe to all available Back Office countries, companies, and groups.
+                  </div>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={subConfig.subscribeAll} 
+                  onChange={(e) => setSubConfig({ ...subConfig, subscribeAll: e.target.checked })} 
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+              </div>
+
+              {!subConfig.subscribeAll && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  {/* By Country */}
+                  <div>
+                    <h4 style={{ fontSize: '0.9rem', marginBottom: '8px', color: 'var(--text-main)' }}>Subscribe by Country</h4>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {availableSubCountries.map(cnt => {
+                        const isChecked = subConfig.countries.includes(cnt);
+                        return (
+                          <button
+                            key={cnt}
+                            type="button"
+                            className={`badge-pill ${isChecked ? 'gold-outline' : 'dark'}`}
+                            style={{ cursor: 'pointer', padding: '6px 12px', fontSize: '0.85rem' }}
+                            onClick={() => handleToggleSubCountry(cnt)}
+                          >
+                            {isChecked ? '✓ ' : '+ '} {cnt}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* By Company */}
+                  <div>
+                    <h4 style={{ fontSize: '0.9rem', marginBottom: '8px', color: 'var(--text-main)' }}>Subscribe by Company</h4>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {availableSubCompanies.map(comp => {
+                        const isChecked = subConfig.companies.includes(comp);
+                        return (
+                          <button
+                            key={comp}
+                            type="button"
+                            className={`badge-pill ${isChecked ? 'gold-outline' : 'dark'}`}
+                            style={{ cursor: 'pointer', padding: '6px 12px', fontSize: '0.85rem' }}
+                            onClick={() => handleToggleSubCompany(comp)}
+                          >
+                            {isChecked ? '✓ ' : '+ '} {comp}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* By Group */}
+                  <div>
+                    <h4 style={{ fontSize: '0.9rem', marginBottom: '8px', color: 'var(--text-main)' }}>Subscribe by Group</h4>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', maxHeight: '160px', overflowY: 'auto' }}>
+                      {availableSubGroups.map(grp => {
+                        const isChecked = subConfig.groups.includes(grp);
+                        return (
+                          <button
+                            key={grp}
+                            type="button"
+                            className={`badge-pill ${isChecked ? 'gold-outline' : 'dark'}`}
+                            style={{ cursor: 'pointer', padding: '6px 12px', fontSize: '0.85rem' }}
+                            onClick={() => handleToggleSubGroup(grp)}
+                          >
+                            {isChecked ? '✓ ' : '+ '} {grp}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', marginTop: '24px' }}>
+                <button 
+                  type="button" 
+                  className="btn btn-outline danger-text" 
+                  onClick={() => setSubConfig({ subscribeAll: false, countries: [], companies: [], groups: [] })}
+                >
+                  Unsubscribe All
+                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button type="button" className="btn btn-secondary" onClick={() => setIsSubscribeModalOpen(false)}>Cancel</button>
+                  <button type="button" className="btn btn-primary" onClick={handleSaveSubscriptions}>
+                    <Check size={14} /> Save Subscriptions
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Custom Delete Confirmation Modal */}
+      {/* Delete Confirmation Modal */}
       {deleteConfirmModal && (
         <div className="modal-overlay" onClick={() => setDeleteConfirmModal(null)}>
           <div className="modal-card small" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2 style={{ color: 'var(--color-danger)' }}>Confirm Deletion</h2>
-              <button className="btn-close" onClick={() => setDeleteConfirmModal(null)}><X size={18} /></button>
+              <button type="button" className="btn-close" onClick={() => setDeleteConfirmModal(null)}><X size={18} /></button>
             </div>
             <p style={{ margin: '14px 0', fontSize: '0.9rem', color: 'var(--text-main)' }}>
               Are you sure you want to delete this custom <strong>{deleteConfirmModal.table.replace('dim_', '')}</strong> record?
@@ -1049,106 +1222,217 @@ export default function AdminPage() {
             </div>
 
             <div className="form-actions">
-              <button className="btn btn-secondary" onClick={() => setDeleteConfirmModal(null)}>Cancel</button>
-              <button className="btn btn-danger" onClick={handleConfirmDelete}>Confirm Delete</button>
+              <button type="button" className="btn btn-secondary" onClick={() => setDeleteConfirmModal(null)}>Cancel</button>
+              <button type="button" className="btn btn-danger" onClick={handleConfirmDelete}>Confirm Delete</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Mobile Add Dim Modal */}
-      {isMobile && (tempMember || tempGroup || tempCompany) && (
-        <div className="modal-overlay" onClick={() => { setTempMember(null); setTempGroup(null); setTempCompany(null); }}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>
-                {tempMember && '👤 Add New Custom Member'}
-                {tempGroup && '📸 Add New Custom Group'}
-                {tempCompany && '🏢 Add New Custom Company'}
-              </h3>
-              <button className="btn-close" onClick={() => { setTempMember(null); setTempGroup(null); setTempCompany(null); }}><X size={18} /></button>
-            </div>
+      {/* Embedded CSS for complete theme alignment */}
+      <style jsx>{`
+        .admin-page {
+          padding: 24px;
+          min-height: 100vh;
+          max-width: 1600px;
+          margin: 0 auto;
+        }
 
-            {tempMember && (
-              <div className="modal-form">
-                <div className="form-group span-2">
-                  <label>Member Name *</label>
-                  <input type="text" className="input-control" value={tempMember.member_name} onChange={(e) => setTempMember({ ...tempMember, member_name: e.target.value })} placeholder="Member name" autoFocus />
-                </div>
-                <div className="form-group">
-                  <label>Color</label>
-                  <select className="input-control" value={tempMember.color} onChange={(e) => setTempMember({ ...tempMember, color: e.target.value })}>
-                    {colors.map(c => <option key={c.id} value={c.color}>{c.color}</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Group</label>
-                  <select className="input-control" value={tempMember.group} onChange={(e) => {
-                    const grp = e.target.value;
-                    const mapped = groupLookup[grp];
-                    setTempMember({
-                      ...tempMember,
-                      group: grp,
-                      company: mapped?.company || 'Individual',
-                      country: mapped?.country || '🇹🇭 TH',
-                    });
-                  }}>
-                    <option value="">-- Select Group --</option>
-                    {groups.map(g => <option key={g.id} value={g.group}>{g.group}</option>)}
-                  </select>
-                </div>
-                <div className="form-group span-2">
-                  <label>Image URL</label>
-                  <input type="url" className="input-control" value={tempMember.member_image} onChange={(e) => setTempMember({ ...tempMember, member_image: e.target.value })} placeholder="https://..." />
-                </div>
-                <div className="modal-actions" style={{ marginTop: '12px' }}>
-                  <button className="btn btn-secondary" onClick={() => setTempMember(null)}>Cancel</button>
-                  <button className="btn btn-primary" onClick={handleSaveTempMember}><Save size={14} /> Save Member</button>
-                </div>
-              </div>
-            )}
+        .tabs-bar {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 20px;
+          border-bottom: 1px solid var(--border-subtle);
+          padding-bottom: 12px;
+          overflow-x: auto;
+        }
 
-            {tempGroup && (
-              <div className="modal-form">
-                <div className="form-group span-2">
-                  <label>Group Name *</label>
-                  <input type="text" className="input-control" value={tempGroup.group} onChange={(e) => setTempGroup({ ...tempGroup, group: e.target.value })} placeholder="Group name" autoFocus />
-                </div>
-                <div className="form-group">
-                  <label>Country</label>
-                  <select className="input-control" value={tempGroup.country} onChange={(e) => setTempGroup({ ...tempGroup, country: e.target.value })}>
-                    {countries.map(c => <option key={c.id} value={c.displayed_country}>{c.displayed_country}</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Company</label>
-                  <select className="input-control" value={tempGroup.company} onChange={(e) => setTempGroup({ ...tempGroup, company: e.target.value })}>
-                    <option value="Individual">Individual</option>
-                    {companies.filter(c => c.company !== 'Individual').map(c => <option key={c.id} value={c.company}>{c.company}</option>)}
-                  </select>
-                </div>
-                <div className="modal-actions" style={{ marginTop: '12px' }}>
-                  <button className="btn btn-secondary" onClick={() => setTempGroup(null)}>Cancel</button>
-                  <button className="btn btn-primary" onClick={handleSaveTempGroup}><Save size={14} /> Save Group</button>
-                </div>
-              </div>
-            )}
+        .tab-btn {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 16px;
+          background: var(--bg-surface-1);
+          border: 1px solid var(--border-subtle);
+          border-radius: var(--radius-sm);
+          color: var(--text-muted);
+          font-size: 0.9rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          white-space: nowrap;
+        }
 
-            {tempCompany && (
-              <div className="modal-form">
-                <div className="form-group span-2">
-                  <label>Company Name *</label>
-                  <input type="text" className="input-control" value={tempCompany.company} onChange={(e) => setTempCompany({ ...tempCompany, company: e.target.value })} placeholder="Company name" autoFocus />
-                </div>
-                <div className="modal-actions" style={{ marginTop: '12px' }}>
-                  <button className="btn btn-secondary" onClick={() => setTempCompany(null)}>Cancel</button>
-                  <button className="btn btn-primary" onClick={handleSaveTempCompany}><Save size={14} /> Save Company</button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+        .tab-btn:hover {
+          background: var(--bg-surface-2);
+          color: var(--text-main);
+        }
+
+        .tab-btn.active {
+          background: rgba(212, 168, 75, 0.18);
+          color: var(--accent-primary);
+          border-color: var(--accent-primary);
+          font-weight: 600;
+        }
+
+        .table-card {
+          background-color: var(--bg-surface-1);
+          border-radius: var(--radius-md);
+          border: 1px solid var(--border-subtle);
+          padding: 20px;
+        }
+
+        .table-wrapper {
+          overflow-x: auto;
+          margin-top: 12px;
+        }
+
+        .dim-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 0.88rem;
+        }
+
+        .dim-table th, .dim-table td {
+          padding: 12px;
+          text-align: left;
+          border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .dim-table th {
+          color: var(--text-muted);
+          font-weight: 600;
+          background-color: var(--bg-surface-2);
+          white-space: nowrap;
+        }
+
+        .dim-table tr:hover td {
+          background-color: rgba(255,255,255,0.02);
+        }
+
+        .sortable-th {
+          cursor: pointer;
+          user-select: none;
+        }
+        .sortable-th:hover {
+          color: var(--accent-primary);
+        }
+
+        .bold { font-weight: 700; color: var(--text-main); }
+        .mono { font-family: monospace; font-size: 0.82rem; }
+
+        .table-input, .table-select {
+          width: 100%;
+          background-color: var(--bg-surface-1);
+          border: 1px solid var(--border-subtle);
+          border-radius: 4px;
+          padding: 6px 8px;
+          color: var(--text-main);
+          font-size: 0.85rem;
+          outline: none;
+        }
+        .table-input:focus, .table-select:focus {
+          border-color: var(--accent-primary);
+        }
+        .table-input.disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .badge-pill {
+          padding: 3px 10px;
+          border-radius: 12px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          display: inline-block;
+        }
+
+        .badge-pill.gold-outline {
+          background-color: rgba(212, 168, 75, 0.15);
+          color: var(--accent-primary);
+          border: 1px solid var(--accent-primary);
+        }
+
+        .badge-pill.dark {
+          background-color: var(--bg-surface-2);
+          color: var(--text-muted);
+          border: 1px solid var(--border-subtle);
+        }
+
+        .status-tag {
+          display: inline-flex;
+          align-items: center;
+          padding: 3px 10px;
+          border-radius: 12px;
+          font-size: 0.76rem;
+          font-weight: 700;
+          border: none;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .status-tag.active {
+          background: rgba(46, 204, 113, 0.18);
+          color: #2ecc71;
+          border: 1px solid rgba(46, 204, 113, 0.4);
+        }
+
+        .status-tag.inactive {
+          background: rgba(231, 76, 60, 0.18);
+          color: #e74c3c;
+          border: 1px solid rgba(231, 76, 60, 0.4);
+        }
+
+        .status-tag:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .action-btns {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .btn-icon {
+          background: var(--bg-surface-2);
+          border: 1px solid var(--border-subtle);
+          color: var(--text-muted);
+          cursor: pointer;
+          width: 30px;
+          height: 30px;
+          border-radius: 6px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.15s ease;
+        }
+
+        .btn-icon:hover:not(:disabled) {
+          color: var(--text-main);
+          background: rgba(255, 255, 255, 0.1);
+          border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-icon.danger:hover:not(:disabled) {
+          color: #e74c3c;
+          background: rgba(231, 76, 60, 0.15);
+          border-color: rgba(231, 76, 60, 0.4);
+        }
+
+        .btn-icon:disabled {
+          opacity: 0.35;
+          cursor: not-allowed;
+        }
+
+        .x-link {
+          color: var(--accent-primary);
+          text-decoration: none;
+        }
+        .x-link:hover {
+          text-decoration: underline;
+        }
+      `}</style>
     </div>
   );
 }

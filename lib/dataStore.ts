@@ -59,6 +59,29 @@ function setLocalData<T>(key: string, data: T[]): void {
   }
 }
 
+function getLocalObject<T>(key: string, defaultValue: T): T {
+  if (typeof window === "undefined") return defaultValue;
+  try {
+    const raw = localStorage.getItem(STORAGE_PREFIX + key);
+    if (!raw) {
+      localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(defaultValue));
+      return defaultValue;
+    }
+    return JSON.parse(raw);
+  } catch {
+    return defaultValue;
+  }
+}
+
+function setLocalObject<T>(key: string, data: T): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(data));
+  } catch (err) {
+    console.error("Failed to save to localStorage:", err);
+  }
+}
+
 // Global subscribers for reactive UI updates in local/demo mode
 const listeners: Record<string, Set<() => void>> = {};
 
@@ -499,6 +522,31 @@ export function subscribeDefaultMetadata<T>(
   return subscribeMetadata<T>(defaultTable, 'global', defaultSeed, onData, isDemo);
 }
 
+export interface UserSubscriptionConfig {
+  subscribeAll: boolean;
+  countries: string[];
+  companies: string[];
+  groups: string[];
+}
+
+export function getUserSubscriptions(userId: string): UserSubscriptionConfig {
+  const key = `subscriptions_${userId || 'demo'}`;
+  return getLocalObject<UserSubscriptionConfig>(key, {
+    subscribeAll: true,
+    countries: [],
+    companies: [],
+    groups: [],
+  });
+}
+
+export function saveUserSubscriptions(userId: string, config: UserSubscriptionConfig): void {
+  const key = `subscriptions_${userId || 'demo'}`;
+  setLocalObject(key, config);
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('cheki_subscriptions_updated'));
+  }
+}
+
 export function subscribeMergedMetadata<T>(
   tableName: string,
   userId: string,
@@ -518,6 +566,8 @@ export function subscribeMergedMetadata<T>(
   let userItems: T[] = [];
 
   const emitMerged = () => {
+    const userSubs = getUserSubscriptions(userId);
+
     // Maps for fast user override lookups
     const userOverridesById = new Map<string, any>();
     const userOverridesByKey = new Map<string, any>();
@@ -532,10 +582,28 @@ export function subscribeMergedMetadata<T>(
     const merged: T[] = [];
     const processedKeys = new Set<string>();
 
-    // 1. Process Default items from Back Office (filter out disallowed items)
+    // 1. Process Default items from Back Office (filter out disallowed & unsubscribed items)
     defaultItems.forEach((d) => {
       const isAllowed = (d as any).is_allowed_import !== false && (d as any).allow_import !== false;
       if (!isAllowed) return; // Disallowed in Back Office
+
+      // Check optional user subscription filters
+      if (!userSubs.subscribeAll) {
+        const itemCountry = String((d as any).country || '').trim().toLowerCase();
+        const itemCompany = String((d as any).company || '').trim().toLowerCase();
+        const itemGroup = String((d as any).group || '').trim().toLowerCase();
+
+        const matchCountry = userSubs.countries.some(c => {
+          const cStr = String(c).trim().toLowerCase();
+          return cStr === itemCountry || (itemCountry && itemCountry.includes(cStr));
+        });
+        const matchCompany = userSubs.companies.some(c => String(c).trim().toLowerCase() === itemCompany);
+        const matchGroup = userSubs.groups.some(g => String(g).trim().toLowerCase() === itemGroup);
+
+        if (!matchCountry && !matchCompany && !matchGroup) {
+          return; // Skip if user chose not to subscribe
+        }
+      }
 
       const dId = String((d as any).id || '');
       const val = getItemValueString(d as Record<string, unknown>).toLowerCase();
@@ -592,9 +660,17 @@ export function subscribeMergedMetadata<T>(
     emitMerged();
   }, isDemo);
 
+  const handleSubscriptionsUpdated = () => emitMerged();
+  if (typeof window !== 'undefined') {
+    window.addEventListener('cheki_subscriptions_updated', handleSubscriptionsUpdated);
+  }
+
   return () => {
     unsubDefault();
     unsubUser();
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('cheki_subscriptions_updated', handleSubscriptionsUpdated);
+    }
   };
 }
 

@@ -224,6 +224,18 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 ### 6.13 Parenthetical Display Name Formatting (`formatDisplayName`)
 - Any member name containing text in parentheses (e.g. `"Zero (NOLiMIT)"`) automatically strips the parentheses for display (rendering as `"Zero"`).
 
+### 6.14 Subscription Refactoring & Optional Selection Model in Admin Tab
+- **Subscription Architecture**: Replaced manual import with real-time live subscriptions from Back Office (`default_dim_*`). Subscribed default items are read-only for default properties while allowing personal `Active`/`Inactive` status toggling.
+- **Optional Subscription Modal**: Admin tab features a **"Manage Subscriptions"** modal allowing users to:
+  - Toggle **"Subscribe All Default Data"** (auto-subscribing to all Back Office countries, companies, and groups).
+  - Selectively subscribe/unsubscribe by individual **Country**, **Company**, or **Group**.
+  - **Unsubscribe All** with a single click.
+- **Cascading Subscription Logic**: Subscribing to a group automatically includes its parent company and country; subscribing to a company automatically includes its country.
+
+### 6.15 Admin Tab Visual Design & Clickable Status Badges
+- **Consistent Styling**: Styled with the dark gold design system (`#d4a84b`), custom rounded tab buttons, glowing green/red pill badges for status tags, and action buttons.
+- **Clickable Status Tags**: Clicking on any `Active` or `Inactive` status badge in the Admin tables directly toggles the user's status override for that item.
+
 ---
 
 ## 7. Mandatory Documentation Rule
