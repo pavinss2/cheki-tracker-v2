@@ -21,7 +21,7 @@ import {
   Award,
   FolderOpen
 } from 'lucide-react';
-import { toJpeg } from 'html-to-image';
+import { toJpeg, toPng } from 'html-to-image';
 
 interface Tier {
   id: string;
@@ -65,6 +65,7 @@ export default function TierMakerPage() {
 
   const [tiers, setTiers] = useState<Tier[]>(DEFAULT_TIERS);
   const [selectedMemberName, setSelectedMemberName] = useState<string | null>(null);
+  const [activeTierMember, setActiveTierMember] = useState<{ tierId: string; memberName: string } | null>(null);
   const [draggedMemberName, setDraggedMemberName] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGroup, setSelectedGroup] = useState('');
@@ -321,13 +322,23 @@ export default function TierMakerPage() {
     setIsExporting(true);
 
     try {
-      await new Promise((r) => setTimeout(r, 100));
+      await new Promise((r) => setTimeout(r, 150));
 
-      const dataUrl = await toJpeg(boardRef.current, {
+      const options = {
         quality: 0.95,
         backgroundColor: '#0d0f15',
-        cacheBust: true,
-      });
+        cacheBust: false,
+        skipFonts: true,
+        imagePlaceholder: 'data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44"><rect width="44" height="44" fill="%23202433"/></svg>',
+      };
+
+      let dataUrl: string;
+      try {
+        dataUrl = await toJpeg(boardRef.current, options);
+      } catch (err) {
+        console.warn("toJpeg failed, attempting toPng fallback:", err);
+        dataUrl = await toPng(boardRef.current, options);
+      }
 
       const link = document.createElement('a');
       const todayStr = new Date().toISOString().split('T')[0];
@@ -336,7 +347,8 @@ export default function TierMakerPage() {
       link.click();
     } catch (err) {
       console.error("Export error:", err);
-      alert("Failed exporting image: " + (err instanceof Error ? err.message : String(err)));
+      const errMsg = err instanceof Error ? err.message : (err && typeof err === 'object' && 'type' in err ? `Image element load error (${(err as Event).type})` : String(err));
+      alert("Failed exporting image: " + errMsg);
     } finally {
       setIsExporting(false);
     }
@@ -429,7 +441,7 @@ export default function TierMakerPage() {
 
       {/* Main Board Container (Captured for JPG export) */}
       <div className="table-card card" style={{ padding: '15px' }}>
-        <div ref={boardRef} className="tier-board-container">
+        <div ref={boardRef} className="tier-board-container" onClick={() => setActiveTierMember(null)}>
           <div className="board-watermark">CHEKI TRACKER • TIER LIST</div>
 
           {tiers.map((tier, index) => {
@@ -472,18 +484,20 @@ export default function TierMakerPage() {
                     {tier.memberIds.map((mName) => {
                       const mObj = memberMap[mName];
                       const colorCode = mObj ? colorHexMap[mObj.color] : undefined;
+                      const isSelectedInTier = activeTierMember?.tierId === tier.id && activeTierMember?.memberName === mName;
 
                       return (
                         <div 
                           key={mName} 
-                          className="tier-member-card"
+                          className={`tier-member-card ${isSelectedInTier ? 'selected' : ''}`}
                           draggable
                           onDragStart={() => setDraggedMemberName(mName)}
                           onDragEnd={() => setDraggedMemberName(null)}
                           onClick={(e) => {
                             e.stopPropagation();
+                            setActiveTierMember(isSelectedInTier ? null : { tierId: tier.id, memberName: mName });
                           }}
-                          title={mName}
+                          title={isSelectedInTier ? `Tap X to remove ${mName}` : `Click to select ${mName}`}
                         >
                           <MemberAvatar 
                             src={mObj?.member_image} 
@@ -492,16 +506,19 @@ export default function TierMakerPage() {
                             colorHex={colorCode}
                           />
                           <span className="tier-member-name">{mName}</span>
-                          <button 
-                            className="remove-card-btn" 
-                            title={`Remove ${mName} from tier`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              moveMemberToTier(mName, null);
-                            }}
-                          >
-                            <X size={11} />
-                          </button>
+                          {isSelectedInTier && (
+                            <button 
+                              className="remove-card-btn" 
+                              title={`Remove ${mName} from tier`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                moveMemberToTier(mName, null);
+                                setActiveTierMember(null);
+                              }}
+                            >
+                              <X size={11} />
+                            </button>
+                          )}
                         </div>
                       );
                     })}
