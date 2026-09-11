@@ -254,7 +254,7 @@ export default function AnalyticsPage() {
           font-size: 0.98rem;
           color: var(--text-main);
           max-width: 95px;
-          min-width: 44px;
+          min-width: 60px;
           flex-shrink: 0;
           white-space: nowrap;
           overflow: hidden;
@@ -272,14 +272,14 @@ export default function AnalyticsPage() {
           width: 100%;
           height: 18px;
           background-color: #262626;
-          border-radius: 9999px;
+          border-radius: 6px;
           overflow: hidden;
           border: 1px solid rgba(255,255,255,0.05);
         }
 
         .bar-fill {
           height: 100%;
-          border-radius: 9999px;
+          border-radius: 6px;
           transform-origin: left;
           animation: barEmerge 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
           transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
