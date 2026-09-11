@@ -77,6 +77,7 @@ export const Header: React.FC = () => {
           top: 0;
           z-index: 45;
           margin-left: var(--sidebar-width);
+          width: calc(100% - var(--sidebar-width));
           box-sizing: border-box;
         }
 
@@ -101,6 +102,7 @@ export const Header: React.FC = () => {
         @media (max-width: 768px) {
           .app-header {
             margin-left: 0;
+            width: 100%;
             padding: 0 16px;
           }
         }

@@ -43,7 +43,7 @@ export default function RootLayout({
           .main-content {
             flex: 1;
             margin-left: var(--sidebar-width);
-            padding: 24px;
+            padding: 10px 12px;
             padding-bottom: 80px;
             max-width: 1600px;
             width: 100%;
