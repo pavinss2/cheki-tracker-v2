@@ -411,22 +411,12 @@ export default function TierMakerPage() {
     <div className="tier-maker-page">
       {/* Action Header Bar */}
       <div className="tier-actions-bar card" style={{ padding: '15px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <h2 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Award size={20} style={{ color: 'var(--accent-primary)' }} /> Tier Maker
-          </h2>
-          <span className="badge-pill dark" style={{ fontSize: '0.78rem' }}>{tiers.length} / 7 Tiers</span>
-          {activeSetupObj && (
-            <span className="badge-pill gold-outline" style={{ fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              <FolderOpen size={12} /> {activeSetupObj.name}
-            </span>
-          )}
-        </div>
+     
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           {/* Saved Setups Selector */}
           {savedSetups.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <select 
                 className="table-select" 
                 style={{ height: '32px', padding: '4px 8px', fontSize: '0.82rem', width: 'auto', maxWidth: '180px' }}
@@ -435,7 +425,7 @@ export default function TierMakerPage() {
               >
                 <option value="">-- Load Saved Setup --</option>
                 {savedSetups.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name} ({s.savedAt})</option>
+                  <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
 

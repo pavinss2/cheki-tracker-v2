@@ -681,8 +681,8 @@ export default function AdminPage() {
         {/* MEMBERS TAB */}
         {activeTab === 'members' && (
           <div>
-            <div className="tab-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <div className="tab-header">
+              <div className="tab-header-top">
                 <button 
                   type="button"
                   className="btn btn-secondary btn-sm" 
@@ -691,33 +691,37 @@ export default function AdminPage() {
                 >
                   <Sliders size={14} /> Manage Subscriptions
                 </button>
-                {/* Filter by Company & Group */}
-                <select 
-                  className="table-select" 
-                  style={{ width: 'auto', minWidth: '130px' }}
-                  value={filterMemberCompany}
-                  onChange={(e) => setFilterMemberCompany(e.target.value)}
-                >
-                  <option value="all">All Companies</option>
-                  {Array.from(new Set(members.map(m => m.company).filter(Boolean))).sort().map(comp => (
-                    <option key={comp} value={comp}>{comp}</option>
-                  ))}
-                </select>
-                <select 
-                  className="table-select" 
-                  style={{ width: 'auto', minWidth: '130px' }}
-                  value={filterMemberGroup}
-                  onChange={(e) => setFilterMemberGroup(e.target.value)}
-                >
-                  <option value="all">All Groups</option>
-                  {Array.from(new Set(members.map(m => m.group).filter(Boolean))).sort().map(grp => (
-                    <option key={grp} value={grp}>{grp}</option>
-                  ))}
-                </select>
               </div>
-              <button type="button" className="btn btn-primary btn-sm" onClick={handleStartAddMember}>
-                <Plus size={14} /> Add
-              </button>
+              <div className="tab-header-row">
+                <div className="filter-select-wrapper">
+                  {/* Filter by Company & Group */}
+                  <select 
+                    className="table-select filter-select" 
+                    style={{ width: 'auto', minWidth: '130px' }}
+                    value={filterMemberCompany}
+                    onChange={(e) => setFilterMemberCompany(e.target.value)}
+                  >
+                    <option value="all">All Companies</option>
+                    {Array.from(new Set(members.map(m => m.company).filter(Boolean))).sort().map(comp => (
+                      <option key={comp} value={comp}>{comp}</option>
+                    ))}
+                  </select>
+                  <select 
+                    className="table-select filter-select" 
+                    style={{ width: 'auto', minWidth: '130px' }}
+                    value={filterMemberGroup}
+                    onChange={(e) => setFilterMemberGroup(e.target.value)}
+                  >
+                    <option value="all">All Groups</option>
+                    {Array.from(new Set(members.map(m => m.group).filter(Boolean))).sort().map(grp => (
+                      <option key={grp} value={grp}>{grp}</option>
+                    ))}
+                  </select>
+                </div>
+                <button type="button" className="btn btn-primary btn-sm" onClick={handleStartAddMember} style={{ marginLeft: 'auto' }}>
+                  <Plus size={14} /> Add
+                </button>
+              </div>
             </div>
 
             {/* Batch Action Bar */}
@@ -889,8 +893,8 @@ export default function AdminPage() {
         {/* GROUPS TAB */}
         {activeTab === 'groups' && (
           <div>
-            <div className="tab-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <div className="tab-header">
+              <div className="tab-header-top">
                 <button 
                   type="button"
                   className="btn btn-secondary btn-sm" 
@@ -899,22 +903,26 @@ export default function AdminPage() {
                 >
                   <Sliders size={14} /> Manage Subscriptions
                 </button>
-                {/* Filter by Company */}
-                <select 
-                  className="table-select" 
-                  style={{ width: 'auto', minWidth: '140px' }}
-                  value={filterGroupCompany}
-                  onChange={(e) => setFilterGroupCompany(e.target.value)}
-                >
-                  <option value="all">All Companies</option>
-                  {Array.from(new Set(groups.map(g => g.company).filter(Boolean))).sort().map(comp => (
-                    <option key={comp} value={comp}>{comp}</option>
-                  ))}
-                </select>
               </div>
-              <button type="button" className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_group', data: { group: '', country: '🇹🇭 TH', company: 'Individual' } })}>
-                <Plus size={14} /> Add
-              </button>
+              <div className="tab-header-row">
+                <div className="filter-select-wrapper">
+                  {/* Filter by Company */}
+                  <select 
+                    className="table-select filter-select" 
+                    style={{ width: 'auto', minWidth: '140px' }}
+                    value={filterGroupCompany}
+                    onChange={(e) => setFilterGroupCompany(e.target.value)}
+                  >
+                    <option value="all">All Companies</option>
+                    {Array.from(new Set(groups.map(g => g.company).filter(Boolean))).sort().map(comp => (
+                      <option key={comp} value={comp}>{comp}</option>
+                    ))}
+                  </select>
+                </div>
+                <button type="button" className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_group', data: { group: '', country: '🇹🇭 TH', company: 'Individual' } })} style={{ marginLeft: 'auto' }}>
+                  <Plus size={14} /> Add
+                </button>
+              </div>
             </div>
 
             {/* Batch Action Bar */}
@@ -1052,8 +1060,8 @@ export default function AdminPage() {
         {/* COMPANIES TAB */}
         {activeTab === 'companies' && (
           <div>
-            <div className="tab-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <div className="tab-header">
+              <div className="tab-header-top">
                 <button 
                   type="button"
                   className="btn btn-secondary btn-sm" 
@@ -1063,9 +1071,11 @@ export default function AdminPage() {
                   <Sliders size={14} /> Manage Subscriptions
                 </button>
               </div>
-              <button type="button" className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_company', data: { company: '' } })}>
-                <Plus size={14} /> Add
-              </button>
+              <div className="tab-header-row" style={{ justifyContent: 'flex-end' }}>
+                <button type="button" className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_company', data: { company: '' } })} style={{ marginLeft: 'auto' }}>
+                  <Plus size={14} /> Add
+                </button>
+              </div>
             </div>
 
             {/* Batch Action Bar */}
@@ -1795,15 +1805,38 @@ export default function AdminPage() {
 
         .tab-header {
           display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 10px;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 12px;
+          margin-bottom: 16px;
+          width: 100%;
         }
 
         .tab-header h2 {
           margin: 0;
           font-size: 1.1rem;
           color: var(--text-main);
+        }
+
+        .tab-header-top {
+          width: 100%;
+          display: flex;
+          align-items: center;
+        }
+
+        .tab-header-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          width: 100%;
+          gap: 12px;
+        }
+
+        .filter-select-wrapper {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          flex-wrap: nowrap;
         }
 
         .table-wrapper {

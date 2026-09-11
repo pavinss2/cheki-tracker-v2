@@ -445,6 +445,14 @@ export default function BackOfficePage() {
     }
   };
 
+  const handleToggleSingleActive = async (item: DimMember) => {
+    try {
+      await updateDefaultMetadataDoc('dim_member', item.id, { ...item, is_active: !item.is_active }, isDemoUser);
+    } catch (err) {
+      alert("Error updating active status: " + (err instanceof Error ? err.message : String(err)));
+    }
+  };
+
   // Init temporary member draft row
   const handleStartAddMember = () => {
     const todayStr = new Date().toISOString().split('T')[0];
@@ -646,9 +654,9 @@ export default function BackOfficePage() {
         {activeTab === 'members' && (
           <div>
             <div className="tab-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                <h2>default_dim_member</h2>
-                <div className="table-filter-group" style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center' }}>
+              <h2>default_dim_member</h2>
+              <div className="tab-header-row">
+                <div className="filter-select-wrapper">
                   <select
                     className="filter-select"
                     value={memberCompanyFilter}
@@ -686,11 +694,10 @@ export default function BackOfficePage() {
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
-
-                  <button className="btn btn-primary btn-sm" onClick={handleStartAddMember} disabled={Boolean(tempMember)}>
-                    <Plus size={14} /> Add
-                  </button>
                 </div>
+                <button className="btn btn-primary btn-sm" onClick={handleStartAddMember} disabled={Boolean(tempMember)}>
+                  <Plus size={14} /> Add
+                </button>
               </div>
             </div>
 
@@ -772,8 +779,8 @@ export default function BackOfficePage() {
                           value={tempMember.color} 
                           onChange={(e) => setTempMember({ ...tempMember, color: e.target.value })}
                         >
-                          {colors.map((c) => (
-                            <option key={c.id} value={c.color}>{c.color}</option>
+                          {(colors.length > 0 ? colors : DEFAULT_COLORS).map((c: any) => (
+                            <option key={c.id || c.color} value={c.color}>{c.color}</option>
                           ))}
                         </select>
                       </td>
@@ -782,37 +789,25 @@ export default function BackOfficePage() {
                           className="table-select" 
                           value={tempMember.group} 
                           onChange={(e) => {
-                            const grp = e.target.value;
-                            const mapped = groupLookup[grp];
+                            const newGrp = e.target.value;
+                            const mapped = groupLookup[newGrp];
                             setTempMember({
                               ...tempMember,
-                              group: grp,
-                              company: mapped?.company || tempMember.company,
+                              group: newGrp,
                               country: mapped?.country || tempMember.country,
+                              company: mapped?.company || tempMember.company,
                             });
                           }}
                         >
-                          <option value="">Select Group...</option>
                           {groups.map((g) => (
                             <option key={g.id} value={g.group}>{g.group}</option>
                           ))}
                         </select>
                       </td>
+                      <td className="locked-cell">{tempMember.country}</td>
+                      <td className="locked-cell">{tempMember.company}</td>
                       <td>
-                        <input type="text" className="table-input locked-input" value={tempMember.country} readOnly title="Auto-mapped by Group" />
-                      </td>
-                      <td>
-                        <input type="text" className="table-input locked-input" value={tempMember.company} readOnly title="Auto-mapped by Group" />
-                      </td>
-                      <td>
-                        <label className="toggle-label" style={{ margin: 0 }}>
-                          <input 
-                            type="checkbox" 
-                            checked={tempMember.is_active} 
-                            onChange={(e) => setTempMember({ ...tempMember, is_active: e.target.checked })} 
-                          />
-                          <span className="toggle-text">{tempMember.is_active ? 'Active' : 'Inactive'}</span>
-                        </label>
+                        <span className="badge-toggle active" style={{ cursor: 'default' }}>Active</span>
                       </td>
                       <td>
                         <span className="badge-toggle allowed" style={{ cursor: 'default' }}>Allowed</span>
@@ -821,28 +816,24 @@ export default function BackOfficePage() {
                         <input 
                           type="text" 
                           className="table-input" 
-                          placeholder="@username" 
+                          placeholder="@handle or URL" 
                           value={tempMember.x_profile} 
                           onChange={(e) => setTempMember({ ...tempMember, x_profile: e.target.value })}
                         />
                       </td>
-                      <td className="mono">{tempMember.date_added}</td>
-                      <td className="mono">{tempMember.date_added}</td>
+                      <td className="mono">{new Date().toISOString().split('T')[0]}</td>
+                      <td className="mono">{new Date().toISOString().split('T')[0]}</td>
                       <td>
                         <div className="action-btns">
-                          <button className="btn btn-primary btn-sm icon-only" onClick={handleSaveTempMember} title="Save Default Member">
-                            <Save size={14} />
-                          </button>
-                          <button className="btn btn-secondary btn-sm icon-only" onClick={() => setTempMember(null)} title="Cancel">
-                            <X size={14} />
-                          </button>
+                          <button className="btn btn-primary btn-xs" onClick={handleSaveTempMember}><Save size={13} /> Save</button>
+                          <button className="btn btn-secondary btn-xs" onClick={() => setTempMember(null)}><X size={13} /></button>
                         </div>
                       </td>
                     </tr>
                   )}
 
                   {filteredMembers.map((m) => {
-                    const colorHex = colors.find(c => c.color === m.color)?.color_code;
+                    const colorObj = colors.find(c => c.color === m.color);
                     const isSelected = selectedIds.has(m.id);
                     const isAllowed = m.is_allowed_import !== false && m.allow_import !== false;
 
@@ -852,23 +843,27 @@ export default function BackOfficePage() {
                           <input type="checkbox" checked={isSelected} onChange={() => handleToggleSelect(m.id)} />
                         </td>
                         <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <MemberAvatar src={m.member_image} name={m.member_name} size={28} colorHex={colorHex} />
-                          </div>
+                          <MemberAvatar 
+                            src={m.member_image} 
+                            name={m.member_name} 
+                            size={32} 
+                            colorHex={colorObj?.color_code} 
+                          />
                         </td>
                         <td className="bold">{m.member_name}</td>
+                        <td>{m.color}</td>
+                        <td>{m.group}</td>
+                        <td>{m.country}</td>
+                        <td>{m.company}</td>
                         <td>
-                          <span className="badge-color" style={{ borderLeftColor: colorHex || '#fff' }}>
-                            {m.color}
-                          </span>
-                        </td>
-                        <td>{m.group || '-'}</td>
-                        <td>{m.country || '-'}</td>
-                        <td>{m.company || '-'}</td>
-                        <td>
-                          <span className={`status-tag ${m.is_active ? 'active' : 'inactive'}`}>
+                          <button
+                            type="button"
+                            className={`badge-toggle ${m.is_active ? 'active' : 'inactive'}`}
+                            onClick={() => handleToggleSingleActive(m)}
+                            title="Click to toggle member active status"
+                          >
                             {m.is_active ? 'Active' : 'Inactive'}
-                          </span>
+                          </button>
                         </td>
                         <td>
                           <button
@@ -880,7 +875,18 @@ export default function BackOfficePage() {
                             {isAllowed ? 'Allowed' : 'Disabled'}
                           </button>
                         </td>
-                        <td>{m.x_profile || '-'}</td>
+                        <td>
+                          {m.x_profile ? (
+                            <a 
+                              href={m.x_profile.startsWith('http') ? m.x_profile : `https://x.com/${m.x_profile.replace('@', '')}`} 
+                              target="_blank" 
+                              rel="noreferrer" 
+                              className="x-link"
+                            >
+                              Link
+                            </a>
+                          ) : '-'}
+                        </td>
                         <td className="mono">{formatBrowserTimestamp(m.date_added, m.createdAt)}</td>
                         <td className="mono">{formatBrowserTimestamp(m.date_modified, m.updatedAt)}</td>
                         <td>
@@ -906,9 +912,9 @@ export default function BackOfficePage() {
         {activeTab === 'groups' && (
           <div>
             <div className="tab-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                <h2>default_dim_group</h2>
-                <div className="table-filter-group" style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center' }}>
+              <h2>default_dim_group</h2>
+              <div className="tab-header-row">
+                <div className="filter-select-wrapper">
                   <select
                     className="filter-select"
                     value={groupCompanyFilter}
@@ -929,10 +935,10 @@ export default function BackOfficePage() {
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
-                  <button className="btn btn-primary btn-sm" onClick={() => setTempGroup({ group: '', country: '🇹🇭 TH', company: 'Individual' })} disabled={Boolean(tempGroup)}>
-                    <Plus size={14} /> Add
-                  </button>
                 </div>
+                <button className="btn btn-primary btn-sm" onClick={() => setTempGroup({ group: '', country: '🇹🇭 TH', company: 'Individual' })} disabled={Boolean(tempGroup)} style={{ marginLeft: 'auto' }}>
+                  <Plus size={14} /> Add
+                </button>
               </div>
             </div>
             <div className="table-wrapper">
@@ -1060,13 +1066,11 @@ export default function BackOfficePage() {
         {activeTab === 'companies' && (
           <div>
             <div className="tab-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                <h2>default_dim_company</h2>
-                <div className="table-filter-group" style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center' }}>
-                  <button className="btn btn-primary btn-sm" onClick={() => setTempCompany({ company: '' })} disabled={Boolean(tempCompany)}>
-                    <Plus size={14} /> Add
-                  </button>
-                </div>
+              <h2>default_dim_company</h2>
+              <div className="tab-header-row" style={{ justifyContent: 'flex-end' }}>
+                <button className="btn btn-primary btn-sm" onClick={() => setTempCompany({ company: '' })} disabled={Boolean(tempCompany)} style={{ marginLeft: 'auto' }}>
+                  <Plus size={14} /> Add
+                </button>
               </div>
             </div>
             <div className="table-wrapper">
@@ -1160,13 +1164,11 @@ export default function BackOfficePage() {
         {activeTab === 'colors' && (
           <div>
             <div className="tab-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                <h2>default_dim_color</h2>
-                <div className="table-filter-group" style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center' }}>
-                  <button className="btn btn-primary btn-sm" onClick={() => setTempColor({ color: '', color_code: '#ffffff' })} disabled={Boolean(tempColor)}>
-                    <Plus size={14} /> Add
-                  </button>
-                </div>
+              <h2>default_dim_color</h2>
+              <div className="tab-header-row" style={{ justifyContent: 'flex-end' }}>
+                <button className="btn btn-primary btn-sm" onClick={() => setTempColor({ color: '', color_code: '#ffffff' })} disabled={Boolean(tempColor)} style={{ marginLeft: 'auto' }}>
+                  <Plus size={14} /> Add
+                </button>
               </div>
             </div>
             <div className="table-wrapper">
@@ -1268,13 +1270,11 @@ export default function BackOfficePage() {
         {activeTab === 'types' && (
           <div>
             <div className="tab-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                <h2>default_dim_type</h2>
-                <div className="table-filter-group" style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center' }}>
-                  <button className="btn btn-primary btn-sm" onClick={() => setTempType({ type: '' })} disabled={Boolean(tempType)}>
-                    <Plus size={14} /> Add
-                  </button>
-                </div>
+              <h2>default_dim_type</h2>
+              <div className="tab-header-row" style={{ justifyContent: 'flex-end' }}>
+                <button className="btn btn-primary btn-sm" onClick={() => setTempType({ type: '' })} disabled={Boolean(tempType)} style={{ marginLeft: 'auto' }}>
+                  <Plus size={14} /> Add
+                </button>
               </div>
             </div>
             <div className="table-wrapper">
@@ -1338,13 +1338,11 @@ export default function BackOfficePage() {
         {activeTab === 'countries' && (
           <div>
             <div className="tab-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                <h2>default_dim_country</h2>
-                <div className="table-filter-group" style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center' }}>
-                  <button className="btn btn-primary btn-sm" onClick={() => setTempCountry({ country: 'JP', displayed_country: '🇯🇵 JP' })} disabled={Boolean(tempCountry)}>
-                    <Plus size={14} /> Add
-                  </button>
-                </div>
+              <h2>default_dim_country</h2>
+              <div className="tab-header-row" style={{ justifyContent: 'flex-end' }}>
+                <button className="btn btn-primary btn-sm" onClick={() => setTempCountry({ country: 'JP', displayed_country: '🇯🇵 JP' })} disabled={Boolean(tempCountry)} style={{ marginLeft: 'auto' }}>
+                  <Plus size={14} /> Add
+                </button>
               </div>
             </div>
             <div className="table-wrapper">
@@ -1408,13 +1406,11 @@ export default function BackOfficePage() {
         {activeTab === 'locations' && (
           <div>
             <div className="tab-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                <h2>default_dim_location</h2>
-                <div className="table-filter-group" style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center' }}>
-                  <button className="btn btn-primary btn-sm" onClick={() => setTempLocation({ location: '' })} disabled={Boolean(tempLocation)}>
-                    <Plus size={14} /> Add
-                  </button>
-                </div>
+              <h2>default_dim_location</h2>
+              <div className="tab-header-row" style={{ justifyContent: 'flex-end' }}>
+                <button className="btn btn-primary btn-sm" onClick={() => setTempLocation({ location: '' })} disabled={Boolean(tempLocation)} style={{ marginLeft: 'auto' }}>
+                  <Plus size={14} /> Add
+                </button>
               </div>
             </div>
             <div className="table-wrapper">
@@ -2009,15 +2005,25 @@ export default function BackOfficePage() {
 
         .tab-header {
           display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 10px;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 14px;
+          margin-bottom: 16px;
+          width: 100%;
 
           h2 {
             margin: 0;
             font-size: 1.1rem;
             color: var(--text-main);
           }
+        }
+
+        .tab-header-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          width: 100%;
+          gap: 12px;
         }
 
         .table-wrapper {
@@ -2332,6 +2338,13 @@ export default function BackOfficePage() {
           &.icon-only { padding: 5px; }
         }
 
+        .filter-select-wrapper {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          flex-wrap: nowrap;
+        }
+
         .filter-select {
           background: var(--bg-surface-1);
           border: 1px solid var(--border-subtle);
@@ -2347,7 +2360,10 @@ export default function BackOfficePage() {
           display: flex;
           gap: 8px;
           align-items: center;
-          flex-wrap: nowrap !important;
+          justify-content: space-between;
+          flex-wrap: nowrap;
+          flex: 1;
+          min-width: 0;
         }
 
         .selected-row td {
