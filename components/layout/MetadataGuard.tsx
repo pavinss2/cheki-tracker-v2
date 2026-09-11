@@ -13,13 +13,14 @@ export function MetadataGuard({ children }: { children: React.ReactNode }) {
   const userId = user?.uid || (isDemoUser ? 'demo-user-id' : '');
 
   useEffect(() => {
-    if (!loading && userId) {
+    // Demo Mode users are exempt from auto-redirection to /admin
+    if (!loading && userId && !isDemoUser) {
       const hasNoMetadata = members.length === 0 && groups.length === 0 && companies.length === 0;
       if (hasNoMetadata && pathname !== '/admin') {
         router.push('/admin?autoSubscribe=true');
       }
     }
-  }, [loading, userId, members.length, groups.length, companies.length, pathname, router]);
+  }, [loading, userId, isDemoUser, members.length, groups.length, companies.length, pathname, router]);
 
   return <>{children}</>;
 }

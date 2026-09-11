@@ -117,6 +117,15 @@ export function isOwnerUser(userEmail?: string | null): boolean {
   return userEmail.trim().toLowerCase() === OWNER_EMAIL.toLowerCase();
 }
 
+export function isLegacySeedTransaction(t: Partial<Transaction>): boolean {
+  if (!t) return false;
+  return INITIAL_TRANSACTIONS.some(init => 
+    init.member === t.member && 
+    init.event === t.event && 
+    init.date === t.date
+  );
+}
+
 export function subscribeTransactions(
   userId: string,
   userEmail: string | undefined,
@@ -135,8 +144,12 @@ export function subscribeTransactions(
 
   if (isDemo || !userId || process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes("Demo")) {
     const load = () => {
-      const items = getLocalData<Transaction>(`transactions_${userId || 'demo'}`, defaultSeed).filter(isValidTransaction);
-      onData(items);
+      const stored = getLocalData<Transaction>(`transactions_${userId || 'demo'}`, defaultSeed);
+      const cleaned = isOwner ? stored : stored.filter(t => !isLegacySeedTransaction(t) && !t.id?.startsWith('trans_default_'));
+      if (!isOwner && cleaned.length !== stored.length) {
+        setLocalObject(`transactions_${userId || 'demo'}`, cleaned);
+      }
+      onData(cleaned.filter(isValidTransaction));
     };
     load();
     return subscribeToLocalStore(`transactions_${userId || 'demo'}`, load);
@@ -606,8 +619,9 @@ export interface UserSubscriptionConfig {
 
 export function getUserSubscriptions(userId: string): UserSubscriptionConfig {
   const key = `subscriptions_${userId || 'demo'}`;
+  const isDemo = userId === 'demo-user-id' || userId === 'demo' || !userId;
   return getLocalObject<UserSubscriptionConfig>(key, {
-    subscribeAll: false,
+    subscribeAll: isDemo ? true : false,
     countries: [],
     companies: [],
     groups: [],
@@ -953,6 +967,23 @@ export async function seedUserDataToFirestore(userId: string, userEmail?: string
 
   // Initial transaction seeding is strictly restricted to owner pavin.ss2@gmail.com
   if (!isOwnerUser(userEmail)) {
+    // Automatically purge pre-refactor legacy seed transactions for non-owner user if any exist
+    try {
+      const transSnap = await getDocs(query(collection(db, "fact_cheki_transaction"), where("userId", "==", userId)));
+      const legacyDocs = transSnap.docs.filter(d => isLegacySeedTransaction(d.data() as Transaction));
+      if (legacyDocs.length > 0) {
+        const CHUNK_SIZE = 400;
+        for (let i = 0; i < legacyDocs.length; i += CHUNK_SIZE) {
+          const chunk = legacyDocs.slice(i, i + CHUNK_SIZE);
+          const batch = writeBatch(db);
+          chunk.forEach(d => batch.delete(d.ref));
+          await batch.commit();
+        }
+        logAdminAction(userId, "PURGE_LEGACY_TRANSACTIONS", `Purged ${legacyDocs.length} pre-refactor seed transactions for non-owner: ${userEmail}`);
+      }
+    } catch (err) {
+      console.warn("Failed to purge legacy transactions for non-owner:", err);
+    }
     return { success: true, message: "User accounts start with their own private transaction database." };
   }
 

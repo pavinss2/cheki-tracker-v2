@@ -78,15 +78,15 @@ export default function AdminPage() {
     }
   }, [userId]);
 
-  // Auto-open Manage Subscriptions modal if user has no metadata available
+  // Auto-open Manage Subscriptions modal if real user has no metadata available (exempt Demo Mode)
   useEffect(() => {
-    if (!loading && userId) {
+    if (!loading && userId && !isDemoUser) {
       const hasNoMetadata = members.length === 0 && groups.length === 0 && companies.length === 0;
       if (hasNoMetadata) {
         setIsSubscribeModalOpen(true);
       }
     }
-  }, [loading, userId, members.length, groups.length, companies.length]);
+  }, [loading, userId, isDemoUser, members.length, groups.length, companies.length]);
 
   const [isMobile, setIsMobile] = useState<boolean>(false);
   useEffect(() => {

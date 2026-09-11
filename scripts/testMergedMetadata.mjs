@@ -220,22 +220,22 @@ console.log('🧪 Running Suite: Back Office Renaming & Group-Level Subscription
 {
   console.log('Test 6: Unticking Group & Saving unsubscribes group and members immediately');
   const defaultMembers = [
-    { id: 'default_dim_member_1', member_name: 'Tonliw', group: 'BNK48' },
-    { id: 'default_dim_member_2', member_name: 'Siso', group: 'CGM48' }
+    { id: 'default_dim_member_1', member_name: 'Tonliw', group: 'Yami Yami' },
+    { id: 'default_dim_member_2', member_name: 'Siso', group: '22%' }
   ];
   const userItems = [];
-  // User unticked "CGM48", so groups only contains "BNK48"
+  // User unticked "Yami Yami", so groups only contains "Yami Yami"
   const userSubs = {
     subscribeAll: false,
     countries: ['🇹🇭 TH'],
-    companies: ['Independent Artist'],
-    groups: ['BNK48']
+    companies: ['Catsolute'],
+    groups: ['Yami Yami']
   };
 
   const merged = mergeMetadata('dim_member', defaultMembers, userItems, userSubs);
-  assert.equal(merged.length, 1, 'Should only contain member of BNK48');
+  assert.equal(merged.length, 1, 'Should only contain member of Yami Yami');
   assert.equal(merged[0].member_name, 'Tonliw');
-  console.log('  ✅ PASSED: CGM48 member unsubscribed immediately when CGM48 unticked and saved\n');
+  console.log('  ✅ PASSED: Yami Yami member unsubscribed immediately when Yami Yami unticked and saved\n');
 }
 
 console.log('🎉 ALL 6 ANTI-DUPLICATE & GROUP SUBSCRIPTION TESTS PASSED SUCCESSFULLY!');

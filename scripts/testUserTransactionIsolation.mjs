@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 
-console.log('🧪 Running Suite: Per-User Transaction Isolation Tests...\n');
+console.log('🧪 Running Suite: Per-User Transaction Isolation & Legacy Cleanup Tests...\n');
 
 // Standardized constants & helpers matching lib/dataStore.ts
 const OWNER_EMAIL = 'pavin.ss2@gmail.com';
@@ -23,6 +23,15 @@ const MOCK_INITIAL_TRANSACTIONS = [
   { member: 'Kaning', group: 'CGM48', date: '2025-01-11', qty: 2, price_total: 700 },
   { member: 'Pancake', group: 'BNK48', date: '2025-01-12', qty: 1, price_total: 350 },
 ];
+
+function isLegacySeedTransaction(t) {
+  if (!t) return false;
+  return MOCK_INITIAL_TRANSACTIONS.some(init => 
+    init.member === t.member && 
+    init.event === t.event && 
+    init.date === t.date
+  );
+}
 
 // Mock in-memory per-user database simulating subscribeTransactions & seedUserDataToFirestore
 const mockDatabase = new Map();
@@ -113,7 +122,18 @@ assert.equal(
   false,
   'User 2 cannot see Owner\'s transactions'
 );
-
 console.log('  ✅ PASSED: Complete multi-tenant transaction isolation verified.\n');
 
-console.log('🎉 ALL USER TRANSACTION ISOLATION TESTS PASSED SUCCESSFULLY!\n');
+// Test 6: Purge pre-refactor legacy seed transactions for non-owner user accounts
+console.log('Test 6: Purge pre-refactor legacy seed transactions for non-owner user accounts');
+const legacyUser4Store = [
+  ...MOCK_INITIAL_TRANSACTIONS.map((t, i) => ({ ...t, id: `trans_legacy_${i}`, userId: 'user4_uid' })),
+  { member: 'CustomMember', event: 'CustomEvent', qty: 1, price_total: 500, date: '2026-09-11', userId: 'user4_uid', id: 'custom_123' },
+];
+
+const cleanedUser4Store = legacyUser4Store.filter(t => !isLegacySeedTransaction(t));
+assert.equal(cleanedUser4Store.length, 1, 'Legacy seed rows purged, only custom transaction retained');
+assert.equal(cleanedUser4Store[0].member, 'CustomMember');
+console.log('  ✅ PASSED: Pre-refactor legacy seed transactions successfully purged for non-owner account.\n');
+
+console.log('🎉 ALL USER TRANSACTION ISOLATION & PURGING TESTS PASSED SUCCESSFULLY!\n');
