@@ -292,13 +292,11 @@ export default function AdminPage() {
   }, [defaultMembers, allowedGroupNames]);
 
   const availableCountries = useMemo(() => {
-    const list = defaultCountries.length > 0 ? defaultCountries : DEFAULT_COUNTRIES;
-    const activeCountries = list.filter(c => isImportAllowed(c)).map(c => c.displayed_country || c.country);
-    if (activeCountries.length === 0) {
-      return Array.from(new Set(allowedGroups.map(g => g.country)));
-    }
-    return Array.from(new Set(activeCountries));
-  }, [defaultCountries, allowedGroups]);
+    const countriesFromAllowedGroups = allowedGroups
+      .map(g => g.country)
+      .filter(Boolean);
+    return Array.from(new Set(countriesFromAllowedGroups));
+  }, [allowedGroups]);
 
   const availableCompanies = useMemo(() => {
     return Array.from(new Set(

@@ -342,6 +342,39 @@ export default function BackOfficePage() {
       for (const item of items) {
         await updateDefaultMetadataDoc(activeTableName, item.id, { ...item, is_allowed_import: allowed, allow_import: allowed }, isDemoUser);
       }
+
+      if (!allowed) {
+        if (activeTab === 'companies') {
+          const compNames = new Set(items.map(i => String((i as any).company || '').trim().toLowerCase()));
+          const relatedGroups = groups.filter(g => compNames.has(String(g.company || '').trim().toLowerCase()) && g.is_allowed_import !== false && g.allow_import !== false);
+          if (relatedGroups.length > 0) {
+            if (confirm(`Do you also want to disallow all ${relatedGroups.length} related group(s) for the selected companies?`)) {
+              for (const g of relatedGroups) {
+                await updateDefaultMetadataDoc('dim_group', g.id, { ...g, is_allowed_import: false, allow_import: false }, isDemoUser);
+              }
+              const relGroupNames = new Set(relatedGroups.map(g => String(g.group || '').trim().toLowerCase()));
+              const relatedMembers = members.filter(m => relGroupNames.has(String(m.group || '').trim().toLowerCase()) && m.is_allowed_import !== false && m.allow_import !== false);
+              if (relatedMembers.length > 0) {
+                if (confirm(`Do you also want to disallow all ${relatedMembers.length} related member(s) in those groups?`)) {
+                  for (const m of relatedMembers) {
+                    await updateDefaultMetadataDoc('dim_member', m.id, { ...m, is_allowed_import: false, allow_import: false }, isDemoUser);
+                  }
+                }
+              }
+            }
+          }
+        } else if (activeTab === 'groups') {
+          const groupNames = new Set(items.map(i => String((i as any).group || '').trim().toLowerCase()));
+          const relatedMembers = members.filter(m => groupNames.has(String(m.group || '').trim().toLowerCase()) && m.is_allowed_import !== false && m.allow_import !== false);
+          if (relatedMembers.length > 0) {
+            if (confirm(`Do you also want to disallow all ${relatedMembers.length} related member(s) in the selected groups?`)) {
+              for (const m of relatedMembers) {
+                await updateDefaultMetadataDoc('dim_member', m.id, { ...m, is_allowed_import: false, allow_import: false }, isDemoUser);
+              }
+            }
+          }
+        }
+      }
       setSelectedIds(new Set());
     } catch (err) {
       alert("Error updating import permission: " + (err instanceof Error ? err.message : String(err)));
@@ -371,20 +404,29 @@ export default function BackOfficePage() {
 
       if (!nextAllowed) {
         if (table === 'dim_company') {
-          const compName = item.company;
-          const relatedGroups = groups.filter(g => g.company === compName && g.is_allowed_import !== false && g.allow_import !== false);
+          const compName = String(item.company || '').trim().toLowerCase();
+          const relatedGroups = groups.filter(g => String(g.company || '').trim().toLowerCase() === compName && g.is_allowed_import !== false && g.allow_import !== false);
           if (relatedGroups.length > 0) {
-            if (confirm(`Do you also want to disallow all ${relatedGroups.length} related group(s) for company "${compName}"?`)) {
+            if (confirm(`Do you also want to disallow all ${relatedGroups.length} related group(s) for company "${item.company}"?`)) {
               for (const g of relatedGroups) {
                 await updateDefaultMetadataDoc('dim_group', g.id, { ...g, is_allowed_import: false, allow_import: false }, isDemoUser);
+              }
+              const relGroupNames = new Set(relatedGroups.map(g => String(g.group || '').trim().toLowerCase()));
+              const relatedMembers = members.filter(m => relGroupNames.has(String(m.group || '').trim().toLowerCase()) && m.is_allowed_import !== false && m.allow_import !== false);
+              if (relatedMembers.length > 0) {
+                if (confirm(`Do you also want to disallow all ${relatedMembers.length} related member(s) in those groups?`)) {
+                  for (const m of relatedMembers) {
+                    await updateDefaultMetadataDoc('dim_member', m.id, { ...m, is_allowed_import: false, allow_import: false }, isDemoUser);
+                  }
+                }
               }
             }
           }
         } else if (table === 'dim_group') {
-          const grpName = item.group;
-          const relatedMembers = members.filter(m => m.group === grpName && m.is_allowed_import !== false && m.allow_import !== false);
+          const grpName = String(item.group || '').trim().toLowerCase();
+          const relatedMembers = members.filter(m => String(m.group || '').trim().toLowerCase() === grpName && m.is_allowed_import !== false && m.allow_import !== false);
           if (relatedMembers.length > 0) {
-            if (confirm(`Do you also want to disallow all ${relatedMembers.length} related member(s) in group "${grpName}"?`)) {
+            if (confirm(`Do you also want to disallow all ${relatedMembers.length} related member(s) in group "${item.group}"?`)) {
               for (const m of relatedMembers) {
                 await updateDefaultMetadataDoc('dim_member', m.id, { ...m, is_allowed_import: false, allow_import: false }, isDemoUser);
               }
@@ -906,13 +948,18 @@ export default function BackOfficePage() {
                         />
                       </td>
                       <td>
-                        <input 
-                          type="text" 
-                          className="table-input" 
-                          placeholder="Country (🇹🇭 TH)" 
+                        <select 
+                          className="table-select" 
                           value={tempGroup.country} 
                           onChange={(e) => setTempGroup({ ...tempGroup, country: e.target.value })}
-                        />
+                        >
+                          {countries.map((c) => {
+                            const val = c.displayed_country || c.country;
+                            return (
+                              <option key={c.id} value={val}>{val}</option>
+                            );
+                          })}
+                        </select>
                       </td>
                       <td>
                         <select 
@@ -1782,7 +1829,18 @@ export default function BackOfficePage() {
                 </div>
                 <div className="form-group">
                   <label>Country</label>
-                  <input type="text" className="input-control" value={tempGroup.country} onChange={(e) => setTempGroup({ ...tempGroup, country: e.target.value })} placeholder="🇹🇭 TH" />
+                  <select 
+                    className="input-control" 
+                    value={tempGroup.country} 
+                    onChange={(e) => setTempGroup({ ...tempGroup, country: e.target.value })}
+                  >
+                    {countries.map((c) => {
+                      const val = c.displayed_country || c.country;
+                      return (
+                        <option key={c.id} value={val}>{val}</option>
+                      );
+                    })}
+                  </select>
                 </div>
                 <div className="form-group">
                   <label>Company</label>
