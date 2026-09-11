@@ -600,7 +600,7 @@ export interface UserSubscriptionConfig {
 export function getUserSubscriptions(userId: string): UserSubscriptionConfig {
   const key = `subscriptions_${userId || 'demo'}`;
   return getLocalObject<UserSubscriptionConfig>(key, {
-    subscribeAll: true,
+    subscribeAll: false,
     countries: [],
     companies: [],
     groups: [],

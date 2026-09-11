@@ -88,6 +88,7 @@ export default function BackOfficePage() {
   const [memberGroupFilter, setMemberGroupFilter] = useState<string>('');
   const [memberCountryFilter, setMemberCountryFilter] = useState<string>('');
   const [groupCompanyFilter, setGroupCompanyFilter] = useState<string>('');
+  const [groupCountryFilter, setGroupCountryFilter] = useState<string>('');
 
   // Multiselect state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -132,7 +133,7 @@ export default function BackOfficePage() {
   // Reset selected items when active tab or filters change
   useEffect(() => {
     setSelectedIds(new Set());
-  }, [activeTab, memberCompanyFilter, memberGroupFilter, memberCountryFilter, groupCompanyFilter]);
+  }, [activeTab, memberCompanyFilter, memberGroupFilter, memberCountryFilter, groupCompanyFilter, groupCountryFilter]);
 
   // Subscribe to default metadata collections
   useEffect(() => {
@@ -249,13 +250,14 @@ export default function BackOfficePage() {
     });
   }, [groups, groupSortKey, groupSortAsc]);
 
-  // Filtered groups list based on company filter
+  // Filtered groups list based on company and country filter
   const filteredGroups = useMemo(() => {
     return sortedGroups.filter((g) => {
       if (groupCompanyFilter && g.company !== groupCompanyFilter) return false;
+      if (groupCountryFilter && g.country !== groupCountryFilter) return false;
       return true;
     });
-  }, [sortedGroups, groupCompanyFilter]);
+  }, [sortedGroups, groupCompanyFilter, groupCountryFilter]);
 
   const handleSortCompanies = (key: CompanySortKey) => {
     if (companySortKey === key) {
@@ -679,9 +681,9 @@ export default function BackOfficePage() {
                     value={memberCountryFilter}
                     onChange={(e) => setMemberCountryFilter(e.target.value)}
                   >
-                    <option value="">All Countries ({countries.length})</option>
-                    {countries.map(c => (
-                      <option key={c.id} value={c.country}>{c.country}</option>
+                    <option value="">All Countries</option>
+                    {Array.from(new Set(members.map(m => m.country).filter(Boolean))).sort().map(c => (
+                      <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
                 </div>
@@ -905,7 +907,7 @@ export default function BackOfficePage() {
             <div className="tab-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
                 <h2>default_dim_group</h2>
-                <div className="table-filter-group">
+                <div className="table-filter-group" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <select
                     className="filter-select"
                     value={groupCompanyFilter}
@@ -914,6 +916,16 @@ export default function BackOfficePage() {
                     <option value="">All Companies ({companies.length})</option>
                     {companies.map(c => (
                       <option key={c.id} value={c.company}>{c.company}</option>
+                    ))}
+                  </select>
+                  <select
+                    className="filter-select"
+                    value={groupCountryFilter}
+                    onChange={(e) => setGroupCountryFilter(e.target.value)}
+                  >
+                    <option value="">All Countries</option>
+                    {Array.from(new Set(groups.map(g => g.country).filter(Boolean))).sort().map(c => (
+                      <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
                 </div>

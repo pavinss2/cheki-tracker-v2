@@ -6,6 +6,8 @@ import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
 
+import { MetadataGuard } from "@/components/layout/MetadataGuard";
+
 export const metadata: Metadata = {
   title: "Cheki Tracker & Database Platform",
   description: "Track, analyze, and manage photobooth cheki transactions with real-time analytics and spreadsheet data entry.",
@@ -21,14 +23,16 @@ export default function RootLayout({
       <body>
         <AuthProvider>
           <FilterProvider>
-            <Header />
-            <div className="layout-wrapper">
-              <Sidebar />
-              <main className="main-content">
-                {children}
-              </main>
-            </div>
-            <MobileNav />
+            <MetadataGuard>
+              <Header />
+              <div className="layout-wrapper">
+                <Sidebar />
+                <main className="main-content">
+                  {children}
+                </main>
+              </div>
+              <MobileNav />
+            </MetadataGuard>
           </FilterProvider>
         </AuthProvider>
 

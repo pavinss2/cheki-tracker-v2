@@ -47,7 +47,7 @@ export default function AdminPage() {
   // Subscribe Modal State
   const [isSubscribeModalOpen, setIsSubscribeModalOpen] = useState(false);
   const [subConfig, setSubConfig] = useState<UserSubscriptionConfig>({
-    subscribeAll: true,
+    subscribeAll: false,
     countries: [],
     companies: [],
     groups: [],
@@ -78,6 +78,16 @@ export default function AdminPage() {
     }
   }, [userId]);
 
+  // Auto-open Manage Subscriptions modal if user has no metadata available
+  useEffect(() => {
+    if (!loading && userId) {
+      const hasNoMetadata = members.length === 0 && groups.length === 0 && companies.length === 0;
+      if (hasNoMetadata) {
+        setIsSubscribeModalOpen(true);
+      }
+    }
+  }, [loading, userId, members.length, groups.length, companies.length]);
+
   const [isMobile, setIsMobile] = useState<boolean>(false);
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth <= 640);
@@ -95,7 +105,6 @@ export default function AdminPage() {
   const [companySortAsc, setCompanySortAsc] = useState<boolean>(true);
 
   // Draft states
-  const [tempMember, setTempMember] = useState<TempMemberRow | null>(null);
   const [tempGroup, setTempGroup] = useState<{ group: string; country: string; company: string } | null>(null);
   const [tempCompany, setTempCompany] = useState<{ company: string } | null>(null);
 
@@ -553,31 +562,20 @@ export default function AdminPage() {
     const todayStr = new Date().toISOString().split('T')[0];
     const firstGroup = groups[0]?.group || '';
     const mapped = groupLookup[firstGroup];
-    setTempMember({
-      member_name: '',
-      color: colors[0]?.color || 'White',
-      group: firstGroup,
-      country: mapped?.country || '🇹🇭 TH',
-      company: mapped?.company || 'Individual',
-      is_active: true,
-      x_profile: '',
-      member_image: '',
-      date_added: todayStr,
+    setEditingItem({
+      table: 'dim_member',
+      data: {
+        member_name: '',
+        color: colors[0]?.color || 'White',
+        group: firstGroup,
+        country: mapped?.country || '🇹🇭 TH',
+        company: mapped?.company || 'Individual',
+        is_active: true,
+        x_profile: '',
+        member_image: '',
+        date_added: todayStr,
+      }
     });
-  };
-
-  const handleSaveTempMember = async () => {
-    if (!tempMember || !tempMember.member_name.trim()) return;
-    try {
-      await addMetadataDoc('dim_member', userId, {
-        ...tempMember,
-        start_date: '1000-12-26',
-        end_date: '9999-12-31',
-      }, isDemoUser);
-      setTempMember(null);
-    } catch (err) {
-      alert("Error saving custom member: " + (err instanceof Error ? err.message : String(err)));
-    }
   };
 
   const handleSaveTempGroup = async () => {
@@ -611,9 +609,9 @@ export default function AdminPage() {
       else defaultObj = { [inlineNewModal.fieldKey]: name.trim() };
 
       await addMetadataDoc(table, userId, defaultObj, isDemoUser);
-      if (tempMember) {
-        if (table === 'dim_color') setTempMember({ ...tempMember, color: name.trim() });
-        if (table === 'dim_group') setTempMember({ ...tempMember, group: name.trim(), country: '🇹🇭 TH', company: 'Individual' });
+      if (editingItem && editingItem.table === 'dim_member') {
+        if (table === 'dim_color') setEditingItem({ ...editingItem, data: { ...editingItem.data, color: name.trim() } });
+        if (table === 'dim_group') setEditingItem({ ...editingItem, data: { ...editingItem.data, group: name.trim(), country: '🇹🇭 TH', company: 'Individual' } });
       }
       setInlineNewModal(null);
     } catch (err) {
@@ -625,8 +623,25 @@ export default function AdminPage() {
     e.preventDefault();
     if (!editingItem) return;
     const { table, data } = editingItem;
-    await updateMetadataDoc(table, data.id as string, userId, data, isDemoUser);
-    setEditingItem(null);
+    try {
+      if (data.id) {
+        await updateMetadataDoc(table, data.id as string, userId, data, isDemoUser);
+      } else {
+        if (table === 'dim_member') {
+          await addMetadataDoc('dim_member', userId, {
+            ...data,
+            start_date: (data.start_date as string) || '1000-12-26',
+            end_date: (data.end_date as string) || '9999-12-31',
+            is_active: data.is_active !== false,
+          }, isDemoUser);
+        } else {
+          await addMetadataDoc(table, userId, { ...data, is_active: data.is_active !== false }, isDemoUser);
+        }
+      }
+      setEditingItem(null);
+    } catch (err) {
+      alert("Error saving record: " + (err instanceof Error ? err.message : String(err)));
+    }
   };
 
   const handleConfirmDelete = async () => {
@@ -696,7 +711,7 @@ export default function AdminPage() {
                   ))}
                 </select>
               </div>
-              <button type="button" className="btn btn-primary btn-sm" onClick={handleStartAddMember} disabled={Boolean(tempMember)}>
+              <button type="button" className="btn btn-primary btn-sm" onClick={handleStartAddMember}>
                 <Plus size={14} /> Add
               </button>
             </div>
@@ -744,7 +759,7 @@ export default function AdminPage() {
             )}
 
             {(() => {
-              const hasCustomMembers = sortedMembers.some(m => !m.isDefault && !m.is_imported && !m.backoffice_id && !(typeof m.id === 'string' && m.id.startsWith('default_'))) || Boolean(tempMember);
+              const hasCustomMembers = sortedMembers.some(m => !m.isDefault && !m.is_imported && !m.backoffice_id && !(typeof m.id === 'string' && m.id.startsWith('default_')));
               return (
                 <div className="table-wrapper">
                   <table className="dim-table member-table">
@@ -795,115 +810,7 @@ export default function AdminPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {/* Temp Draft Row */}
-                      {tempMember && !isMobile && (
-                        <tr className="temp-row">
-                          {hasCustomMembers && <td></td>}
-                          {hasCustomMembers && (
-                            <td>
-                              <div className="action-btns">
-                                <button type="button" className="btn btn-primary btn-xs" onClick={handleSaveTempMember}><Save size={13} /> Save</button>
-                                <button type="button" className="btn btn-secondary btn-xs" onClick={() => setTempMember(null)}><X size={13} /></button>
-                              </div>
-                            </td>
-                          )}
-                      <td>
-                        <select
-                          className="table-select"
-                          value={tempMember.is_active ? 'active' : 'inactive'}
-                          onChange={(e) => setTempMember({ ...tempMember, is_active: e.target.value === 'active' })}
-                        >
-                          <option value="active">Active</option>
-                          <option value="inactive">Inactive</option>
-                        </select>
-                      </td>
-                      <td style={{ minWidth: '160px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <MemberAvatar 
-                            src={tempMember.member_image} 
-                            name={tempMember.member_name || 'New'} 
-                            size={32} 
-                            colorHex={colors.find(c => c.color === tempMember.color)?.color_code} 
-                          />
-                          <input 
-                            type="url" 
-                            className="table-input" 
-                            placeholder="Image URL" 
-                            value={tempMember.member_image} 
-                            onChange={(e) => setTempMember({ ...tempMember, member_image: e.target.value })}
-                          />
-                        </div>
-                      </td>
-                      <td>
-                        <input 
-                          type="text" 
-                          className="table-input bold" 
-                          placeholder="Member Name *" 
-                          autoFocus
-                          value={tempMember.member_name} 
-                          onChange={(e) => setTempMember({ ...tempMember, member_name: e.target.value })}
-                        />
-                      </td>
-                      <td>
-                        <select 
-                          className="table-select"
-                          value={tempMember.color}
-                          onChange={(e) => {
-                            if (e.target.value === '__CREATE_NEW__') {
-                              setInlineNewModal({ table: 'dim_color', fieldKey: 'color', name: '' });
-                            } else {
-                              setTempMember({ ...tempMember, color: e.target.value });
-                            }
-                          }}
-                        >
-                          {colors.map((c) => (
-                            <option key={c.id} value={c.color}>{c.color}</option>
-                          ))}
-                          <option value="__CREATE_NEW__">+ Create New Color...</option>
-                        </select>
-                      </td>
-                      <td>
-                        <select 
-                          className="table-select"
-                          value={tempMember.group}
-                          onChange={(e) => {
-                            const grpVal = e.target.value;
-                            if (grpVal === '__CREATE_NEW__') {
-                              setInlineNewModal({ table: 'dim_group', fieldKey: 'group', name: '' });
-                            } else {
-                              const mapped = groupLookup[grpVal];
-                              setTempMember({ 
-                                ...tempMember, 
-                                group: grpVal,
-                                company: mapped?.company || 'Individual',
-                                country: mapped?.country || '🇹🇭 TH'
-                              });
-                            }
-                          }}
-                        >
-                          <option value="">-- Select Group --</option>
-                          {groups.map((g) => (
-                            <option key={g.id} value={g.group}>{g.group}</option>
-                          ))}
-                          <option value="__CREATE_NEW__">+ Create New Group...</option>
-                        </select>
-                      </td>
-                      <td><input type="text" disabled className="table-input disabled" value={tempMember.country} /></td>
-                      <td><input type="text" disabled className="table-input disabled" value={tempMember.company} /></td>
-                      <td>
-                        <input 
-                          type="text" 
-                          className="table-input" 
-                          placeholder="X Profile" 
-                          value={tempMember.x_profile} 
-                          onChange={(e) => setTempMember({ ...tempMember, x_profile: e.target.value })}
-                        />
-                      </td>
-                      <td className="mono">{tempMember.date_added}</td>
-                    </tr>
-                  )}
-
-                  {/* Sorted Members List */}
+                      {/* Sorted Members List */}
                   {sortedMembers.map((m) => {
                     const colorObj = colors.find(c => c.color === m.color);
                     const xUrl = m.x_profile 
