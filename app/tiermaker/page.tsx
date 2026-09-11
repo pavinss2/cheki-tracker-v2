@@ -477,9 +477,8 @@ export default function TierMakerPage() {
                           onDragEnd={() => setDraggedMemberName(null)}
                           onClick={(e) => {
                             e.stopPropagation();
-                            moveMemberToTier(mName, null);
                           }}
-                          title={`Click to remove ${mName} from this tier`}
+                          title={mName}
                         >
                           <MemberAvatar 
                             src={mObj?.member_image} 
@@ -488,8 +487,15 @@ export default function TierMakerPage() {
                             colorHex={colorCode}
                           />
                           <span className="tier-member-name">{mName}</span>
-                          <button className="remove-card-btn" title="Remove from tier">
-                            <X size={10} />
+                          <button 
+                            className="remove-card-btn" 
+                            title={`Remove ${mName} from tier`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              moveMemberToTier(mName, null);
+                            }}
+                          >
+                            <X size={11} />
                           </button>
                         </div>
                       );
@@ -891,10 +897,6 @@ export default function TierMakerPage() {
           border-color: var(--accent-primary);
         }
 
-        .tier-member-card:hover .remove-card-btn {
-          display: flex;
-        }
-
         .tier-member-name {
           font-size: 0.72rem;
           font-weight: 600;
@@ -908,19 +910,26 @@ export default function TierMakerPage() {
         }
 
         .remove-card-btn {
-          display: none;
+          display: flex;
           position: absolute;
-          top: -4px;
-          right: -4px;
-          width: 16px;
-          height: 16px;
+          top: -5px;
+          right: -5px;
+          width: 18px;
+          height: 18px;
           border-radius: 50%;
           background: var(--color-danger, #ef4444);
-          color: #fff;
-          border: none;
+          color: #ffffff;
+          border: 1px solid rgba(255, 255, 255, 0.4);
           align-items: center;
           justify-content: center;
           cursor: pointer;
+          z-index: 10;
+          transition: transform 0.1s, background-color 0.1s;
+        }
+
+        .remove-card-btn:hover {
+          transform: scale(1.15);
+          background: #dc2626;
         }
 
         .tier-row-controls {
