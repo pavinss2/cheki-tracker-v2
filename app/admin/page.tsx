@@ -460,16 +460,24 @@ export default function AdminPage() {
     });
   }, [companies, companySortKey, companySortAsc]);
 
-  // Combined Status badge helper (Column 2)
-  const renderStatusBadge = (table: string, item: any, isSubscribed: boolean) => {
+  // Combined Status badge helper (Column 3)
+  const renderStatusBadge = (table: string, item: any, isSubscribedProp: boolean) => {
+    const isSub = Boolean(
+      isSubscribedProp ||
+      item.isDefault ||
+      item.is_imported ||
+      (typeof item.id === 'string' && item.id.startsWith('default_')) ||
+      item.backoffice_id
+    );
     const isActive = item.is_active !== false;
+
     let label = 'Active';
     let className = 'status-tag active';
 
     if (!isActive) {
       label = 'Inactive';
       className = 'status-tag inactive';
-    } else if (isSubscribed) {
+    } else if (isSub) {
       label = 'Sub';
       className = 'status-tag sub';
     } else {
@@ -518,34 +526,24 @@ export default function AdminPage() {
     }
   };
 
-  const handleBatchUnsubscribe = () => {
+  const handleBatchDelete = async () => {
     if (selectedItemIds.length === 0) return;
+    const currentTable = activeTab === 'members' ? 'dim_member' : activeTab === 'groups' ? 'dim_group' : 'dim_company';
+    const currentList = activeTab === 'members' ? members : activeTab === 'groups' ? groups : companies;
+    const targetItems = currentList.filter(item => selectedItemIds.includes(item.id));
 
-    let activeCountries = subConfig.subscribeAll ? [...availableSubCountries] : [...subConfig.countries];
-    let activeCompanies = subConfig.subscribeAll ? [...availableSubCompanies] : [...subConfig.companies];
-    let activeGroups = subConfig.subscribeAll ? [...availableSubGroups] : [...subConfig.groups];
-
-    if (activeTab === 'members') {
-      const selectedMembers = members.filter(m => selectedItemIds.includes(m.id));
-      const groupsToUnsub = new Set(selectedMembers.map(m => m.group).filter(Boolean));
-      activeGroups = activeGroups.filter(g => !groupsToUnsub.has(g));
-    } else if (activeTab === 'groups') {
-      const selectedGroups = groups.filter(g => selectedItemIds.includes(g.id));
-      const grpNamesToUnsub = new Set(selectedGroups.map(g => g.group).filter(Boolean));
-      activeGroups = activeGroups.filter(g => !grpNamesToUnsub.has(g));
-    } else if (activeTab === 'companies') {
-      const selectedCompanies = companies.filter(c => selectedItemIds.includes(c.id));
-      const compNamesToUnsub = new Set(selectedCompanies.map(c => c.company).filter(Boolean));
-      activeCompanies = activeCompanies.filter(c => !compNamesToUnsub.has(c));
+    if (!confirm(`Are you sure you want to delete ${targetItems.length} selected record(s)?`)) {
+      return;
     }
 
-    saveUserSubscriptions(userId, {
-      subscribeAll: false,
-      countries: activeCountries,
-      companies: activeCompanies,
-      groups: activeGroups
-    });
-    setSelectedItemIds([]);
+    try {
+      await Promise.all(
+        targetItems.map(item => deleteMetadataDoc(currentTable, item.id, userId, getItemValueString(item as unknown as Record<string, unknown>), isDemoUser))
+      );
+      setSelectedItemIds([]);
+    } catch (err) {
+      alert("Error batch deleting records: " + (err instanceof Error ? err.message : String(err)));
+    }
   };
 
   const handleStartAddMember = () => {
@@ -726,10 +724,10 @@ export default function AdminPage() {
                   <button 
                     type="button" 
                     className="btn btn-secondary btn-sm"
-                    onClick={handleBatchUnsubscribe}
-                    style={{ color: 'var(--accent-primary)', borderColor: 'var(--accent-primary)' }}
+                    onClick={handleBatchDelete}
+                    style={{ color: '#e74c3c', borderColor: 'rgba(231, 76, 60, 0.4)' }}
                   >
-                    <Sliders size={14} /> Unsubscribe Selected
+                    <Trash2 size={14} /> Delete
                   </button>
                   <button 
                     type="button" 
@@ -1006,10 +1004,10 @@ export default function AdminPage() {
                   <button 
                     type="button" 
                     className="btn btn-secondary btn-sm"
-                    onClick={handleBatchUnsubscribe}
-                    style={{ color: 'var(--accent-primary)', borderColor: 'var(--accent-primary)' }}
+                    onClick={handleBatchDelete}
+                    style={{ color: '#e74c3c', borderColor: 'rgba(231, 76, 60, 0.4)' }}
                   >
-                    <Sliders size={14} /> Unsubscribe Selected
+                    <Trash2 size={14} /> Delete
                   </button>
                   <button 
                     type="button" 
@@ -1134,10 +1132,10 @@ export default function AdminPage() {
                   <button 
                     type="button" 
                     className="btn btn-secondary btn-sm"
-                    onClick={handleBatchUnsubscribe}
-                    style={{ color: 'var(--accent-primary)', borderColor: 'var(--accent-primary)' }}
+                    onClick={handleBatchDelete}
+                    style={{ color: '#e74c3c', borderColor: 'rgba(231, 76, 60, 0.4)' }}
                   >
-                    <Sliders size={14} /> Unsubscribe Selected
+                    <Trash2 size={14} /> Delete
                   </button>
                   <button 
                     type="button" 
@@ -1992,9 +1990,9 @@ export default function AdminPage() {
         }
 
         .status-tag.sub {
-          background: rgba(212, 168, 75, 0.2);
-          color: var(--accent-primary);
-          border: 1px solid rgba(212, 168, 75, 0.5);
+          background: rgba(59, 130, 246, 0.18);
+          color: #60a5fa;
+          border: 1px solid rgba(96, 165, 250, 0.4);
         }
 
         .status-tag.inactive {

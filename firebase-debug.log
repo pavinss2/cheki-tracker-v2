@@ -1,0 +1,36 @@
+[debug] [2026-09-11T12:00:52.240Z] ----------------------------------------------------------------------
+[debug] [2026-09-11T12:00:52.242Z] Command:       /opt/homebrew/Cellar/node/25.6.1/bin/node /Users/pavin/.npm/_npx/7750544ccf494d8b/node_modules/.bin/firebase deploy --only hosting
+[debug] [2026-09-11T12:00:52.242Z] CLI Version:   15.30.0
+[debug] [2026-09-11T12:00:52.242Z] Platform:      darwin
+[debug] [2026-09-11T12:00:52.242Z] Node Version:  v25.6.1
+[debug] [2026-09-11T12:00:52.243Z] Detected Agent: antigravity
+[debug] [2026-09-11T12:00:52.243Z] Time:          Fri Sep 11 2026 19:00:52 GMT+0700 (Indochina Time)
+[debug] [2026-09-11T12:00:52.243Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-09-11T12:00:53.302Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-09-11T12:00:53.302Z] > authorizing via signed-in user (pavin.ss2@gmail.com)
+[debug] [2026-09-11T12:00:53.302Z] [iam] checking project cheki-tracker-39407 for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-09-11T12:00:53.320Z] Checked if tokens are valid: false, expires at: 1789128660527
+[debug] [2026-09-11T12:00:53.321Z] Checked if tokens are valid: false, expires at: 1789128660527
+[debug] [2026-09-11T12:00:53.321Z] > refreshing access token with scopes: []
+[debug] [2026-09-11T12:00:53.323Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-09-11T12:00:53.323Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-09-11T12:00:54.204Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-09-11T12:00:54.204Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-09-11T12:00:54.219Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/cheki-tracker-39407:testIamPermissions [none]
+[debug] [2026-09-11T12:00:54.219Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/cheki-tracker-39407:testIamPermissions  x-goog-user-project=cheki-tracker-39407
+[debug] [2026-09-11T12:00:54.219Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/cheki-tracker-39407:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-09-11T12:00:59.046Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/cheki-tracker-39407:testIamPermissions 200
+[debug] [2026-09-11T12:00:59.046Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/cheki-tracker-39407:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-09-11T12:00:59.046Z] Checked if tokens are valid: true, expires at: 1789131653204
+[debug] [2026-09-11T12:00:59.046Z] Checked if tokens are valid: true, expires at: 1789131653204
+[debug] [2026-09-11T12:00:59.046Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/cheki-tracker-39407 [none]
+[debug] [2026-09-11T12:01:00.093Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/cheki-tracker-39407 200
+[debug] [2026-09-11T12:01:00.093Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/cheki-tracker-39407 {"projectId":"cheki-tracker-39407","projectNumber":"793669182842","displayName":"cheki-tracker-prod","name":"projects/cheki-tracker-39407","resources":{"hostingSite":"cheki-tracker-39407"},"state":"ACTIVE","labels":{"firebase":"enabled"},"etag":"1_228d8ad5-1709-4af4-8340-e3d629b7ca71"}
+[info] 
+[info] === Deploying to 'cheki-tracker-39407'...
+[info] 
+[info] i  deploying hosting 
+[debug] [2026-09-11T12:01:00.095Z] Checked if tokens are valid: true, expires at: 1789131653204
+[debug] [2026-09-11T12:01:00.095Z] Checked if tokens are valid: true, expires at: 1789131653204
+[debug] [2026-09-11T12:01:00.095Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/cheki-tracker-39407/sites/cheki-tracker-39407 [none]
