@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useChekiData } from '@/hooks/useChekiData';
 import { FilterBar } from '@/components/layout/FilterBar';
 import { useAuth } from '@/context/AuthContext';
@@ -78,6 +78,15 @@ export default function CalendarPage() {
   const [currentYear, setCurrentYear] = useState<number>(now.getFullYear());
   const [currentMonth, setCurrentMonth] = useState<number>(now.getMonth()); // 0-indexed
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  const gridWrapperRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll calendar grid to show Wed-Sun by default on mobile screens
+  useEffect(() => {
+    if (gridWrapperRef.current && window.innerWidth <= 640) {
+      gridWrapperRef.current.scrollLeft = gridWrapperRef.current.scrollWidth;
+    }
+  }, [currentMonth, currentYear, loading]);
 
   const [lightboxState, setLightboxState] = useState<{ open: boolean; index: number }>({
     open: false,
@@ -444,7 +453,7 @@ export default function CalendarPage() {
 
       {/* 7-column Calendar Grid */}
       <div className="cal-grid-card card">
-        <div className="cal-grid-wrapper">
+        <div className="cal-grid-wrapper" ref={gridWrapperRef}>
           <div className="cal-grid-header">
             {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(w => (
               <div key={w} className="weekday-header">{w}</div>
