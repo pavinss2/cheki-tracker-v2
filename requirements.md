@@ -230,13 +230,12 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
   - Toggle **"Subscribe All Default Data"** (auto-subscribing to all Back Office countries, companies, and groups).
   - Selectively subscribe/unsubscribe by individual **Country**, **Company**, or **Group**.
   - **Unsubscribe All** with a single click.
-- **Cascading Badge-Pill Filters & Auto-Inclusion**:
-  - Selecting a **Country** dynamically filters available **Company** badge-pills to only show companies belonging to the selected country (derived from `default_dim_group` / `default_dim_company`).
-  - Selecting a **Company** dynamically filters available **Group** badge-pills to only show groups under the selected company.
-  - Selecting a **Group** automatically includes its parent company and country in the subscription configuration.
+- **Option Visibility & Subscribe All Behavior**: When "Subscribe All Default Data" is checked, the options list remains visible with all badge-pills highlighted as checked (`✓`). Un-ticking any individual badge automatically expands all items into explicit selections and deselects the chosen item.
+- **Unique Country Filtering**: Subscribe by Country only lists countries derived from unique values present in `default_dim_group`.
+- **Group Select All Tag**: Subscribe by Group features a **"Select All Groups"** / **"Deselect All Groups"** badge tag to toggle all currently visible groups at once.
 
 ### 6.15 Admin Tab Visual Design & Clickable Status Badges
-- **Consistent Styling**: Styled with the dark gold design system (`#d4a84b`), custom rounded tab buttons, glowing green/red pill badges for status tags, and action buttons.
+- **Exact Backoffice CSS Alignment**: Admin table card padding (`15px`), table wrappers, table cell padding (`12px`), tab headers, and button styles (`.btn`, `.btn-primary`, `.btn-secondary`, `.btn-outline`, `.btn-danger`, `.btn-icon`) match the Backoffice tab 1-to-1.
 - **Clickable Status Tags**: Clicking on any `Active` or `Inactive` status badge in the Admin tables directly toggles the user's status override for that item.
 
 ---

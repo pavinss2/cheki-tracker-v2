@@ -134,16 +134,22 @@ export default function AdminPage() {
   }, [defaultGroups]);
 
   // Options for subscribe modal (with cascading filter across Country, Company, Group)
+  // Request 3: Subscribe by Country should only show available countries from unique countries in default_dim_group
   const availableSubCountries = useMemo(() => {
-    const countryNames = rawDefaultCountries.map(c => c.displayed_country || c.country).filter(Boolean);
-    rawDefaultGroups.forEach(g => { if (g.country && !countryNames.includes(g.country)) countryNames.push(g.country); });
-    rawDefaultCompanies.forEach(c => { if (c.country && !countryNames.includes(c.country)) countryNames.push(c.country); });
-    return Array.from(new Set(countryNames)).sort();
-  }, [rawDefaultCountries, rawDefaultGroups, rawDefaultCompanies]);
+    const list = defaultGroups.length > 0 ? defaultGroups : DEFAULT_GROUPS;
+    const allowedGroups = list.filter(g => g.allow_import !== false);
+    const countrySet = new Set<string>();
+    allowedGroups.forEach(g => {
+      if (g.country && typeof g.country === 'string' && g.country.trim()) {
+        countrySet.add(g.country.trim());
+      }
+    });
+    return Array.from(countrySet).sort();
+  }, [defaultGroups]);
 
   const availableSubCompanies = useMemo(() => {
     let list = rawDefaultCompanies;
-    if (subConfig.countries.length > 0) {
+    if (subConfig.countries.length > 0 && !subConfig.subscribeAll) {
       list = list.filter(comp => {
         const compCountry = comp.country;
         if (compCountry && subConfig.countries.includes(compCountry)) return true;
@@ -152,19 +158,28 @@ export default function AdminPage() {
     }
     const names = list.map(c => c.company).filter(Boolean);
     return Array.from(new Set(names)).sort();
-  }, [rawDefaultCompanies, rawDefaultGroups, subConfig.countries]);
+  }, [rawDefaultCompanies, rawDefaultGroups, subConfig.countries, subConfig.subscribeAll]);
 
   const availableSubGroups = useMemo(() => {
     let list = rawDefaultGroups;
-    if (subConfig.countries.length > 0) {
-      list = list.filter(g => subConfig.countries.includes(g.country));
-    }
-    if (subConfig.companies.length > 0) {
-      list = list.filter(g => subConfig.companies.includes(g.company));
+    if (!subConfig.subscribeAll) {
+      if (subConfig.countries.length > 0) {
+        list = list.filter(g => subConfig.countries.includes(g.country));
+      }
+      if (subConfig.companies.length > 0) {
+        list = list.filter(g => subConfig.companies.includes(g.company));
+      }
     }
     const names = list.map(g => g.group).filter(Boolean);
     return Array.from(new Set(names)).sort();
-  }, [rawDefaultGroups, subConfig.countries, subConfig.companies]);
+  }, [rawDefaultGroups, subConfig.countries, subConfig.companies, subConfig.subscribeAll]);
+
+  // Request 4: Check if all currently visible groups are selected
+  const isAllVisibleGroupsSelected = useMemo(() => {
+    if (availableSubGroups.length === 0) return false;
+    if (subConfig.subscribeAll) return true;
+    return availableSubGroups.every(grp => subConfig.groups.includes(grp));
+  }, [availableSubGroups, subConfig.groups, subConfig.subscribeAll]);
 
   // Sort handlers
   const handleSortMembers = (key: MemberSortKey) => {
@@ -210,14 +225,38 @@ export default function AdminPage() {
     setIsSubscribeModalOpen(false);
   };
 
-  const handleToggleSubCountry = (cnt: string) => {
-    const isSelected = subConfig.countries.includes(cnt);
-    let nextCountries = isSelected
-      ? subConfig.countries.filter(c => c !== cnt)
-      : [...subConfig.countries, cnt];
+  // Request 2: Toggle Subscribe All Default Data
+  const handleToggleSubscribeAll = () => {
+    const nextSubAll = !subConfig.subscribeAll;
+    if (nextSubAll) {
+      setSubConfig({
+        subscribeAll: true,
+        countries: [...availableSubCountries],
+        companies: [...availableSubCompanies],
+        groups: [...availableSubGroups],
+      });
+    } else {
+      setSubConfig({
+        subscribeAll: false,
+        countries: [],
+        companies: [],
+        groups: [],
+      });
+    }
+  };
 
-    let nextCompanies = subConfig.companies;
-    let nextGroups = subConfig.groups;
+  const handleToggleSubCountry = (cnt: string) => {
+    const activeCountries = subConfig.subscribeAll ? availableSubCountries : subConfig.countries;
+    const activeCompanies = subConfig.subscribeAll ? availableSubCompanies : subConfig.companies;
+    const activeGroups = subConfig.subscribeAll ? availableSubGroups : subConfig.groups;
+
+    const isSelected = activeCountries.includes(cnt);
+    let nextCountries = isSelected
+      ? activeCountries.filter(c => c !== cnt)
+      : [...activeCountries, cnt];
+
+    let nextCompanies = activeCompanies;
+    let nextGroups = activeGroups;
 
     if (isSelected && nextCountries.length > 0) {
       nextCompanies = nextCompanies.filter(compName => {
@@ -232,7 +271,6 @@ export default function AdminPage() {
     }
 
     setSubConfig({
-      ...subConfig,
       subscribeAll: false,
       countries: nextCountries,
       companies: nextCompanies,
@@ -241,13 +279,17 @@ export default function AdminPage() {
   };
 
   const handleToggleSubCompany = (comp: string) => {
-    const isSelected = subConfig.companies.includes(comp);
-    let nextCompanies = isSelected
-      ? subConfig.companies.filter(c => c !== comp)
-      : [...subConfig.companies, comp];
+    const activeCountries = subConfig.subscribeAll ? availableSubCountries : subConfig.countries;
+    const activeCompanies = subConfig.subscribeAll ? availableSubCompanies : subConfig.companies;
+    const activeGroups = subConfig.subscribeAll ? availableSubGroups : subConfig.groups;
 
-    let nextCountries = [...subConfig.countries];
-    let nextGroups = subConfig.groups;
+    const isSelected = activeCompanies.includes(comp);
+    let nextCompanies = isSelected
+      ? activeCompanies.filter(c => c !== comp)
+      : [...activeCompanies, comp];
+
+    let nextCountries = [...activeCountries];
+    let nextGroups = activeGroups;
 
     if (!isSelected) {
       const compObj = rawDefaultCompanies.find(c => c.company === comp);
@@ -263,7 +305,6 @@ export default function AdminPage() {
     }
 
     setSubConfig({
-      ...subConfig,
       subscribeAll: false,
       countries: nextCountries,
       companies: nextCompanies,
@@ -272,13 +313,17 @@ export default function AdminPage() {
   };
 
   const handleToggleSubGroup = (grp: string) => {
-    const isSelected = subConfig.groups.includes(grp);
-    let nextGroups = isSelected
-      ? subConfig.groups.filter(g => g !== grp)
-      : [...subConfig.groups, grp];
+    const activeCountries = subConfig.subscribeAll ? availableSubCountries : subConfig.countries;
+    const activeCompanies = subConfig.subscribeAll ? availableSubCompanies : subConfig.companies;
+    const activeGroups = subConfig.subscribeAll ? availableSubGroups : subConfig.groups;
 
-    let nextCompanies = [...subConfig.companies];
-    let nextCountries = [...subConfig.countries];
+    const isSelected = activeGroups.includes(grp);
+    let nextGroups = isSelected
+      ? activeGroups.filter(g => g !== grp)
+      : [...activeGroups, grp];
+
+    let nextCompanies = [...activeCompanies];
+    let nextCountries = [...activeCountries];
 
     if (!isSelected) {
       const grpObj = rawDefaultGroups.find(g => g.group === grp);
@@ -293,12 +338,47 @@ export default function AdminPage() {
     }
 
     setSubConfig({
-      ...subConfig,
       subscribeAll: false,
       countries: nextCountries,
       companies: nextCompanies,
       groups: nextGroups
     });
+  };
+
+  // Request 4: Toggle Select All Groups currently appearing
+  const handleToggleSelectAllGroups = () => {
+    const activeCountries = subConfig.subscribeAll ? availableSubCountries : subConfig.countries;
+    const activeCompanies = subConfig.subscribeAll ? availableSubCompanies : subConfig.companies;
+    const activeGroups = subConfig.subscribeAll ? availableSubGroups : subConfig.groups;
+
+    if (isAllVisibleGroupsSelected) {
+      const nextGroups = activeGroups.filter(g => !availableSubGroups.includes(g));
+      setSubConfig({
+        subscribeAll: false,
+        countries: activeCountries,
+        companies: activeCompanies,
+        groups: nextGroups
+      });
+    } else {
+      const nextGroupsSet = new Set([...activeGroups, ...availableSubGroups]);
+      const nextCountriesSet = new Set([...activeCountries]);
+      const nextCompaniesSet = new Set([...activeCompanies]);
+
+      availableSubGroups.forEach(grpName => {
+        const grpObj = rawDefaultGroups.find(g => g.group === grpName);
+        if (grpObj) {
+          if (grpObj.company) nextCompaniesSet.add(grpObj.company);
+          if (grpObj.country) nextCountriesSet.add(grpObj.country);
+        }
+      });
+
+      setSubConfig({
+        subscribeAll: false,
+        countries: Array.from(nextCountriesSet),
+        companies: Array.from(nextCompaniesSet),
+        groups: Array.from(nextGroupsSet)
+      });
+    }
   };
 
   const sortedMembers = useMemo(() => {
@@ -1196,7 +1276,7 @@ export default function AdminPage() {
                 alignItems: 'center',
                 justifyContent: 'space-between'
               }}
-              onClick={() => setSubConfig({ ...subConfig, subscribeAll: !subConfig.subscribeAll })}
+              onClick={handleToggleSubscribeAll}
               >
                 <div>
                   <div style={{ fontWeight: 700, color: subConfig.subscribeAll ? 'var(--accent-primary)' : 'var(--text-main)', fontSize: '0.95rem' }}>
@@ -1209,77 +1289,88 @@ export default function AdminPage() {
                 <input 
                   type="checkbox" 
                   checked={subConfig.subscribeAll} 
-                  onChange={(e) => setSubConfig({ ...subConfig, subscribeAll: e.target.checked })} 
+                  onChange={handleToggleSubscribeAll} 
                   style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                 />
               </div>
 
-              {!subConfig.subscribeAll && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  {/* By Country */}
-                  <div>
-                    <h4 style={{ fontSize: '0.9rem', marginBottom: '8px', color: 'var(--text-main)' }}>Subscribe by Country</h4>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                      {availableSubCountries.map(cnt => {
-                        const isChecked = subConfig.countries.includes(cnt);
-                        return (
-                          <button
-                            key={cnt}
-                            type="button"
-                            className={`badge-pill ${isChecked ? 'gold-outline' : 'dark'}`}
-                            style={{ cursor: 'pointer', padding: '6px 12px', fontSize: '0.85rem' }}
-                            onClick={() => handleToggleSubCountry(cnt)}
-                          >
-                            {isChecked ? '✓ ' : '+ '} {cnt}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* By Company */}
-                  <div>
-                    <h4 style={{ fontSize: '0.9rem', marginBottom: '8px', color: 'var(--text-main)' }}>Subscribe by Company</h4>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                      {availableSubCompanies.map(comp => {
-                        const isChecked = subConfig.companies.includes(comp);
-                        return (
-                          <button
-                            key={comp}
-                            type="button"
-                            className={`badge-pill ${isChecked ? 'gold-outline' : 'dark'}`}
-                            style={{ cursor: 'pointer', padding: '6px 12px', fontSize: '0.85rem' }}
-                            onClick={() => handleToggleSubCompany(comp)}
-                          >
-                            {isChecked ? '✓ ' : '+ '} {comp}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* By Group */}
-                  <div>
-                    <h4 style={{ fontSize: '0.9rem', marginBottom: '8px', color: 'var(--text-main)' }}>Subscribe by Group</h4>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', maxHeight: '160px', overflowY: 'auto' }}>
-                      {availableSubGroups.map(grp => {
-                        const isChecked = subConfig.groups.includes(grp);
-                        return (
-                          <button
-                            key={grp}
-                            type="button"
-                            className={`badge-pill ${isChecked ? 'gold-outline' : 'dark'}`}
-                            style={{ cursor: 'pointer', padding: '6px 12px', fontSize: '0.85rem' }}
-                            onClick={() => handleToggleSubGroup(grp)}
-                          >
-                            {isChecked ? '✓ ' : '+ '} {grp}
-                          </button>
-                        );
-                      })}
-                    </div>
+              {/* Request 2: Always show options; highlight as selected when subscribeAll is true */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* By Country */}
+                <div>
+                  <h4 style={{ fontSize: '0.9rem', marginBottom: '8px', color: 'var(--text-main)' }}>Subscribe by Country</h4>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {availableSubCountries.map(cnt => {
+                      const isChecked = subConfig.subscribeAll || subConfig.countries.includes(cnt);
+                      return (
+                        <button
+                          key={cnt}
+                          type="button"
+                          className={`badge-pill ${isChecked ? 'gold-outline' : 'dark'}`}
+                          style={{ cursor: 'pointer', padding: '6px 12px', fontSize: '0.85rem' }}
+                          onClick={() => handleToggleSubCountry(cnt)}
+                        >
+                          {isChecked ? '✓ ' : '+ '} {cnt}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
-              )}
+
+                {/* By Company */}
+                <div>
+                  <h4 style={{ fontSize: '0.9rem', marginBottom: '8px', color: 'var(--text-main)' }}>Subscribe by Company</h4>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {availableSubCompanies.map(comp => {
+                      const isChecked = subConfig.subscribeAll || subConfig.companies.includes(comp);
+                      return (
+                        <button
+                          key={comp}
+                          type="button"
+                          className={`badge-pill ${isChecked ? 'gold-outline' : 'dark'}`}
+                          style={{ cursor: 'pointer', padding: '6px 12px', fontSize: '0.85rem' }}
+                          onClick={() => handleToggleSubCompany(comp)}
+                        >
+                          {isChecked ? '✓ ' : '+ '} {comp}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* By Group */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <h4 style={{ fontSize: '0.9rem', color: 'var(--text-main)', margin: 0 }}>Subscribe by Group</h4>
+                    {availableSubGroups.length > 0 && (
+                      <button
+                        type="button"
+                        className={`badge-pill ${isAllVisibleGroupsSelected ? 'gold-outline' : 'dark'}`}
+                        style={{ cursor: 'pointer', padding: '4px 10px', fontSize: '0.78rem' }}
+                        onClick={handleToggleSelectAllGroups}
+                      >
+                        {isAllVisibleGroupsSelected ? '✓ Deselect All Groups' : '+ Select All Groups'}
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', maxHeight: '160px', overflowY: 'auto' }}>
+                    {availableSubGroups.map(grp => {
+                      const isChecked = subConfig.subscribeAll || subConfig.groups.includes(grp);
+                      return (
+                        <button
+                          key={grp}
+                          type="button"
+                          className={`badge-pill ${isChecked ? 'gold-outline' : 'dark'}`}
+                          style={{ cursor: 'pointer', padding: '6px 12px', fontSize: '0.85rem' }}
+                          onClick={() => handleToggleSubGroup(grp)}
+                        >
+                          {isChecked ? '✓ ' : '+ '} {grp}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', marginTop: '24px' }}>
                 <button 
@@ -1449,12 +1540,28 @@ export default function AdminPage() {
           background-color: var(--bg-surface-1);
           border-radius: var(--radius-md);
           border: 1px solid var(--border-subtle);
-          padding: 20px;
+          padding: 15px;
+        }
+
+        .tab-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 10px;
+        }
+
+        .tab-header h2 {
+          margin: 0;
+          font-size: 1.1rem;
+          color: var(--text-main);
         }
 
         .table-wrapper {
           overflow-x: auto;
-          margin-top: 12px;
+          width: calc(100% + 20px);
+          max-width: calc(100% + 20px);
+          margin-left: -10px;
+          margin-right: -10px;
         }
 
         .dim-table {
@@ -1478,6 +1585,75 @@ export default function AdminPage() {
 
         .dim-table tr:hover td {
           background-color: rgba(255,255,255,0.02);
+        }
+
+        .btn {
+          padding: 8px 16px;
+          font-weight: 600;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 0.85rem;
+          font-family: inherit;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.15s ease;
+          border: none;
+        }
+
+        .btn-primary {
+          background-color: var(--accent-primary);
+          color: #000000;
+          font-weight: 700;
+        }
+
+        .btn-primary:hover {
+          opacity: 0.9;
+        }
+
+        .btn-secondary {
+          background-color: var(--bg-surface-2);
+          color: var(--text-main);
+          border: 1px solid var(--border-subtle);
+        }
+
+        .btn-secondary:hover {
+          background-color: var(--bg-surface-3);
+          border-color: var(--border-strong);
+        }
+
+        .btn-outline {
+          background-color: transparent;
+          color: var(--text-main);
+          border: 1px solid var(--border-subtle);
+        }
+
+        .btn-outline:hover {
+          border-color: var(--border-strong);
+          background-color: var(--bg-surface-2);
+        }
+
+        .btn-outline.danger-text {
+          color: #e74c3c;
+          border-color: rgba(231, 76, 60, 0.4);
+        }
+
+        .btn-outline.danger-text:hover {
+          background-color: rgba(231, 76, 60, 0.15);
+        }
+
+        .btn-danger {
+          background-color: var(--color-danger);
+          color: #ffffff;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 6px;
+          font-weight: 600;
+          cursor: pointer;
+        }
+
+        .btn-danger:hover {
+          opacity: 0.9;
         }
 
         .sortable-th {
