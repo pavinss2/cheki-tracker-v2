@@ -55,13 +55,26 @@ export default function BackOfficePage() {
   // Import Wizard Modal State
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importStep, setImportStep] = useState<1 | 2 | 3>(1);
-  const [selectedCountry, setSelectedCountry] = useState<string>('');
+  const [selectedCountry, setSelectedCountry] = useState<string>(() => {
+    const countries = Array.from(new Set(DEFAULT_COUNTRIES.map(c => c.displayed_country || c.country)));
+    const th = countries.find(c => c === '🇹🇭 TH' || c.includes('TH') || c.includes('Thailand'));
+    return th ? th : '__ALL__';
+  });
   const [selectedCompany, setSelectedCompany] = useState<string>('');
   const [selectedGroup, setSelectedGroup] = useState<string>('');
   const [isImporting, setIsImporting] = useState(false);
   const [importSuccessMsg, setImportSuccessMsg] = useState<string | null>(null);
 
   const logs = getAdminLogs(userId);
+
+  const handleOpenImportModal = () => {
+    const thOption = availableCountries.find(c => c === '🇹🇭 TH' || c.includes('TH') || c.includes('Thailand'));
+    setSelectedCountry(thOption ? thOption : '__ALL__');
+    setSelectedCompany('');
+    setSelectedGroup('');
+    setImportStep(1);
+    setIsImportModalOpen(true);
+  };
 
   // Group lookup map for auto-populating country & company when group is selected
   const groupLookup = useMemo(() => {
@@ -95,7 +108,8 @@ export default function BackOfficePage() {
         setImportSuccessMsg(null);
         setIsImportModalOpen(false);
         setImportStep(1);
-        setSelectedCountry('');
+        const thOption = availableCountries.find(c => c === '🇹🇭 TH' || c.includes('TH') || c.includes('Thailand'));
+        setSelectedCountry(thOption ? thOption : '__ALL__');
         setSelectedCompany('');
         setSelectedGroup('');
       }, 1800);
@@ -307,7 +321,7 @@ export default function BackOfficePage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <button 
                   className="btn btn-secondary btn-sm" 
-                  onClick={() => { setIsImportModalOpen(true); setImportStep(1); setSelectedCountry(''); setSelectedCompany(''); }}
+                  onClick={handleOpenImportModal}
                 >
                   <Download size={14} /> Import from Default
                 </button>
@@ -598,7 +612,7 @@ export default function BackOfficePage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <button 
                   className="btn btn-secondary btn-sm" 
-                  onClick={() => { setIsImportModalOpen(true); setImportStep(1); setSelectedCountry(''); setSelectedCompany(''); }}
+                  onClick={handleOpenImportModal}
                 >
                   <Download size={14} /> Import from Default
                 </button>
@@ -676,7 +690,7 @@ export default function BackOfficePage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <button 
                   className="btn btn-secondary btn-sm" 
-                  onClick={() => { setIsImportModalOpen(true); setImportStep(1); setSelectedCountry(''); setSelectedCompany(''); }}
+                  onClick={handleOpenImportModal}
                 >
                   <Download size={14} /> Import from Default
                 </button>
