@@ -226,10 +226,9 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 
 ### 6.14 Subscription Refactoring & Optional Selection Model in Admin Tab
 - **Subscription Architecture**: Replaced manual import with real-time live subscriptions from Back Office (`default_dim_*`). Subscribed default items are read-only for default properties while allowing personal `Active`/`Inactive` status toggling.
-- **Optional Subscription Modal Popup**: Admin tab features a centered **"Manage Subscriptions"** modal popup (`position: fixed`, translucent backdrop blur, z-index overlay) allowing users to:
-  - Toggle **"Subscribe All Default Data"** (auto-subscribing to all Back Office countries, companies, and groups).
-  - Selectively subscribe/unsubscribe by individual **Country**, **Company**, or **Group**.
-- **Option Visibility & Subscribe All Behavior**: When "Subscribe All Default Data" is checked, the options list remains visible with all badge-pills highlighted as checked (`✓`). Un-ticking any individual badge automatically expands all items into explicit selections and deselects the chosen item.
+- **Group-Level Subscription Rule**: Subscription is strictly determined on a **Group** level (`userSubs.groups`). Subscribing to a Group automatically subscribes the parent Company, Country, and all Members belonging to that Group. Ticking a Country or Company in the modal without selecting any Group has zero effect.
+- **Untick-to-Unsubscribe Action**: Unticking any Group, Company, or Country badge in the "Manage Subscriptions" modal and clicking **Save** immediately unsubscribes those items and removes them from the user's Admin tab.
+- **Option Visibility & Subscribe All Behavior**: When "Subscribe All Default Data" is checked, all badge-pills remain visible as checked (`✓`). Unticking any individual badge automatically switches to explicit custom selection and deselects the chosen item.
 - **Unique Country Filtering**: Subscribe by Country only lists countries derived from unique values present in `default_dim_group`.
 - **Group Select All Tag**: Subscribe by Group features a **"Select All Groups"** / **"Deselect All Groups"** badge tag to toggle all currently visible groups at once.
 
