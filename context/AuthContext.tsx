@@ -94,13 +94,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await signInWithPopup(auth, googleProvider);
     } catch (err: unknown) {
       console.error("Google sign in failed:", err);
-      // Do not force demo mode on user cancellation or popup closing.
-      // Only fallback if Firebase config is explicitly dummy/missing in local dev.
-      const isDummyConfig = !process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY.includes("DemoKey");
-      const errCode = (err as { code?: string })?.code;
-      if (isDummyConfig && errCode !== 'auth/popup-closed-by-user' && errCode !== 'auth/cancelled-popup-request') {
-        enableDemoMode();
-      }
     } finally {
       setLoading(false);
     }
