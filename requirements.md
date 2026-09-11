@@ -234,14 +234,18 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 - **Group Select All Tag**: Subscribe by Group features a **"Select All Groups"** / **"Deselect All Groups"** badge tag to toggle all currently visible groups at once.
 
 ### 6.15 Admin Tab Table Layout, Combined Status & Filter Controls
-- **Action Column as 1st Column (Edit Pencil Only)**: The Action column is positioned as the very first column in all Admin tables (`dim_member`, `dim_group`, `dim_company`) and contains ONLY the Edit pencil button.
+- **Action Column & Checkbox Multiselect (1st & 2nd Column)**:
+  - Column 1 contains a checkbox selector for multiselect batch operations (with a Select All checkbox in the table header).
+  - Column 2 contains the Edit pencil icon button (`<Edit2 size={15} />`).
+- **Batch Action Bar**: Selecting one or more rows triggers a floating batch bar with actions to **Set Active**, **Set Inactive**, or **Unsubscribe Selected**.
 - **Delete Button inside Edit Modal**: Custom (editable) records display a red **"Delete Record"** button at the bottom-left of the Edit Record modal dialog.
-- **Combined "Status" Column as 2nd Column**:
-  - Replaced separate Origin and Active Status columns with a single **"Status"** column positioned as Column 2.
+- **Combined "Status" Column as 3rd Column**:
   - Displays **`Sub`** (gold pill) for active subscribed items, **`Active`** (green pill) for active custom items, and **`Inactive`** (red pill) for inactive items.
   - Clicking the Status tag directly toggles active/inactive state (`Sub`/`Active` $\leftrightarrow$ `Inactive`).
 - **Group & Company Filters**: Admin tab headers feature filter drop-down selectors for **Group** and **Company** for instant table filtering.
-- **Exact Backoffice CSS Alignment**: Admin table card padding (`15px`), table wrappers, table cell padding (`12px`), tab headers, and button styles match Backoffice 1-to-1.
+- **1-to-1 Backoffice CSS Alignment & Layout**:
+  - Set `.admin-page` container padding to `0px`.
+  - Copied `.tabs-bar` and `.tab-btn` CSS directly from `/backoffice` (`padding: 8px 14px`, `gap: 8px`, `font-size: 0.85rem`, gold-subtle active border).
 
 ---
 

@@ -16,7 +16,7 @@ import {
 import { DEFAULT_COUNTRIES, DEFAULT_COMPANIES, DEFAULT_GROUPS, DEFAULT_MEMBERS } from '@/lib/seedData';
 import { useAuth } from '@/context/AuthContext';
 import { LoginPrompt } from '@/components/layout/LoginPrompt';
-import { Plus, Edit2, Trash2, Shield, Users, Building, Layers, X, Save, ArrowUpDown, ExternalLink, Lock, Sparkles, Sliders, Check } from 'lucide-react';
+import { Plus, Edit2, Trash2, Shield, Users, Building, Layers, X, Save, ArrowUpDown, ExternalLink, Lock, Sparkles, Sliders, Check, CheckCircle, XCircle } from 'lucide-react';
 import { CircularSpinner } from '@/components/common/CircularSpinner';
 import { MemberAvatar } from '@/components/common/MemberAvatar';
 import { formatDisplayName, formatBrowserTimestamp } from '@/lib/imageUtils';
@@ -110,6 +110,12 @@ export default function AdminPage() {
   const [filterMemberGroup, setFilterMemberGroup] = useState<string>('all');
   const [filterMemberCompany, setFilterMemberCompany] = useState<string>('all');
   const [filterGroupCompany, setFilterGroupCompany] = useState<string>('all');
+
+  // Multiselect state
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  useEffect(() => {
+    setSelectedItemIds([]);
+  }, [activeTab]);
 
   const logs = getAdminLogs(userId);
 
@@ -483,6 +489,70 @@ export default function AdminPage() {
     );
   };
 
+  // Multiselect & Batch Action Handlers
+  const handleToggleSelectRow = (id: string) => {
+    setSelectedItemIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleSelectAllVisible = (visibleItems: any[]) => {
+    const visibleIds = visibleItems.map(item => item.id);
+    const allSelected = visibleIds.length > 0 && visibleIds.every(id => selectedItemIds.includes(id));
+
+    if (allSelected) {
+      setSelectedItemIds(prev => prev.filter(id => !visibleIds.includes(id)));
+    } else {
+      setSelectedItemIds(prev => Array.from(new Set([...prev, ...visibleIds])));
+    }
+  };
+
+  const handleBatchSetActive = async (nextActive: boolean) => {
+    if (selectedItemIds.length === 0) return;
+    const currentTable = activeTab === 'members' ? 'dim_member' : activeTab === 'groups' ? 'dim_group' : 'dim_company';
+    const currentList = activeTab === 'members' ? members : activeTab === 'groups' ? groups : companies;
+    const targetItems = currentList.filter(item => selectedItemIds.includes(item.id));
+
+    try {
+      await Promise.all(
+        targetItems.map(item => updateMetadataDoc(currentTable, item.id, userId, { ...item, is_active: nextActive }, isDemoUser))
+      );
+      setSelectedItemIds([]);
+    } catch (err) {
+      alert("Error batch updating status: " + (err instanceof Error ? err.message : String(err)));
+    }
+  };
+
+  const handleBatchUnsubscribe = () => {
+    if (selectedItemIds.length === 0) return;
+
+    let activeCountries = subConfig.subscribeAll ? [...availableSubCountries] : [...subConfig.countries];
+    let activeCompanies = subConfig.subscribeAll ? [...availableSubCompanies] : [...subConfig.companies];
+    let activeGroups = subConfig.subscribeAll ? [...availableSubGroups] : [...subConfig.groups];
+
+    if (activeTab === 'members') {
+      const selectedMembers = members.filter(m => selectedItemIds.includes(m.id));
+      const groupsToUnsub = new Set(selectedMembers.map(m => m.group).filter(Boolean));
+      activeGroups = activeGroups.filter(g => !groupsToUnsub.has(g));
+    } else if (activeTab === 'groups') {
+      const selectedGroups = groups.filter(g => selectedItemIds.includes(g.id));
+      const grpNamesToUnsub = new Set(selectedGroups.map(g => g.group).filter(Boolean));
+      activeGroups = activeGroups.filter(g => !grpNamesToUnsub.has(g));
+    } else if (activeTab === 'companies') {
+      const selectedCompanies = companies.filter(c => selectedItemIds.includes(c.id));
+      const compNamesToUnsub = new Set(selectedCompanies.map(c => c.company).filter(Boolean));
+      activeCompanies = activeCompanies.filter(c => !compNamesToUnsub.has(c));
+    }
+
+    saveUserSubscriptions(userId, {
+      subscribeAll: false,
+      countries: activeCountries,
+      companies: activeCompanies,
+      groups: activeGroups
+    });
+    setSelectedItemIds([]);
+  };
+
   const handleStartAddMember = () => {
     const todayStr = new Date().toISOString().split('T')[0];
     const firstGroup = groups[0]?.group || '';
@@ -634,10 +704,61 @@ export default function AdminPage() {
                 <Plus size={14} /> Add
               </button>
             </div>
+
+            {/* Batch Action Bar */}
+            {selectedItemIds.length > 0 && (
+              <div className="batch-action-bar">
+                <span style={{ fontWeight: 700, color: 'var(--accent-primary)', fontSize: '0.88rem' }}>
+                  Selected: {selectedItemIds.length} item{selectedItemIds.length > 1 ? 's' : ''}
+                </span>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => handleBatchSetActive(true)}
+                    style={{ color: '#2ecc71', borderColor: 'rgba(46, 204, 113, 0.4)' }}
+                  >
+                    <CheckCircle size={14} /> Set Active
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => handleBatchSetActive(false)}
+                    style={{ color: '#e74c3c', borderColor: 'rgba(231, 76, 60, 0.4)' }}
+                  >
+                    <XCircle size={14} /> Set Inactive
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary btn-sm"
+                    onClick={handleBatchUnsubscribe}
+                    style={{ color: 'var(--accent-primary)', borderColor: 'var(--accent-primary)' }}
+                  >
+                    <Sliders size={14} /> Unsubscribe Selected
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-outline btn-sm"
+                    onClick={() => setSelectedItemIds([])}
+                  >
+                    Deselect All
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="table-wrapper">
               <table className="dim-table member-table">
                 <thead>
                   <tr>
+                    <th style={{ width: '38px', textAlign: 'center' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={sortedMembers.length > 0 && sortedMembers.every(m => selectedItemIds.includes(m.id))}
+                        onChange={() => handleToggleSelectAllVisible(sortedMembers)}
+                        style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                      />
+                    </th>
                     <th>Action</th>
                     <th className="sortable-th" onClick={() => handleSortMembers('is_active')}>
                       Status {memberSortKey === 'is_active' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
@@ -668,6 +789,7 @@ export default function AdminPage() {
                   {/* Temp Draft Row */}
                   {tempMember && !isMobile && (
                     <tr className="temp-row">
+                      <td></td>
                       <td>
                         <div className="action-btns">
                           <button type="button" className="btn btn-primary btn-xs" onClick={handleSaveTempMember}><Save size={13} /> Save</button>
@@ -777,9 +899,18 @@ export default function AdminPage() {
                       ? (m.x_profile.startsWith('http') ? m.x_profile : `https://x.com/${m.x_profile.replace('@', '')}`)
                       : '';
                     const isSubscribed = Boolean(m.isDefault || m.is_imported || m.id?.startsWith('default_'));
+                    const isRowSelected = selectedItemIds.includes(m.id);
 
                     return (
-                      <tr key={m.id}>
+                      <tr key={m.id} style={{ background: isRowSelected ? 'rgba(212, 168, 75, 0.1)' : undefined }}>
+                        <td style={{ textAlign: 'center' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={isRowSelected}
+                            onChange={() => handleToggleSelectRow(m.id)}
+                            style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                          />
+                        </td>
                         <td>
                           <button 
                             type="button"
@@ -853,10 +984,61 @@ export default function AdminPage() {
                 <Plus size={14} /> Add
               </button>
             </div>
+
+            {/* Batch Action Bar */}
+            {selectedItemIds.length > 0 && (
+              <div className="batch-action-bar">
+                <span style={{ fontWeight: 700, color: 'var(--accent-primary)', fontSize: '0.88rem' }}>
+                  Selected: {selectedItemIds.length} item{selectedItemIds.length > 1 ? 's' : ''}
+                </span>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => handleBatchSetActive(true)}
+                    style={{ color: '#2ecc71', borderColor: 'rgba(46, 204, 113, 0.4)' }}
+                  >
+                    <CheckCircle size={14} /> Set Active
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => handleBatchSetActive(false)}
+                    style={{ color: '#e74c3c', borderColor: 'rgba(231, 76, 60, 0.4)' }}
+                  >
+                    <XCircle size={14} /> Set Inactive
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary btn-sm"
+                    onClick={handleBatchUnsubscribe}
+                    style={{ color: 'var(--accent-primary)', borderColor: 'var(--accent-primary)' }}
+                  >
+                    <Sliders size={14} /> Unsubscribe Selected
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-outline btn-sm"
+                    onClick={() => setSelectedItemIds([])}
+                  >
+                    Deselect All
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="table-wrapper">
               <table className="dim-table">
                 <thead>
                   <tr>
+                    <th style={{ width: '38px', textAlign: 'center' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={sortedGroups.length > 0 && sortedGroups.every(g => selectedItemIds.includes(g.id))}
+                        onChange={() => handleToggleSelectAllVisible(sortedGroups)}
+                        style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                      />
+                    </th>
                     <th>Action</th>
                     <th className="sortable-th" onClick={() => handleSortGroups('is_active')}>
                       Status {groupSortKey === 'is_active' ? (groupSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
@@ -875,8 +1057,18 @@ export default function AdminPage() {
                 <tbody>
                   {sortedGroups.map((g) => {
                     const isSubscribed = Boolean(g.isDefault || g.is_imported || g.id?.startsWith('default_'));
+                    const isRowSelected = selectedItemIds.includes(g.id);
+
                     return (
-                      <tr key={g.id}>
+                      <tr key={g.id} style={{ background: isRowSelected ? 'rgba(212, 168, 75, 0.1)' : undefined }}>
+                        <td style={{ textAlign: 'center' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={isRowSelected}
+                            onChange={() => handleToggleSelectRow(g.id)}
+                            style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                          />
+                        </td>
                         <td>
                           <button 
                             type="button"
@@ -920,10 +1112,61 @@ export default function AdminPage() {
                 <Plus size={14} /> Add
               </button>
             </div>
+
+            {/* Batch Action Bar */}
+            {selectedItemIds.length > 0 && (
+              <div className="batch-action-bar">
+                <span style={{ fontWeight: 700, color: 'var(--accent-primary)', fontSize: '0.88rem' }}>
+                  Selected: {selectedItemIds.length} item{selectedItemIds.length > 1 ? 's' : ''}
+                </span>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => handleBatchSetActive(true)}
+                    style={{ color: '#2ecc71', borderColor: 'rgba(46, 204, 113, 0.4)' }}
+                  >
+                    <CheckCircle size={14} /> Set Active
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => handleBatchSetActive(false)}
+                    style={{ color: '#e74c3c', borderColor: 'rgba(231, 76, 60, 0.4)' }}
+                  >
+                    <XCircle size={14} /> Set Inactive
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary btn-sm"
+                    onClick={handleBatchUnsubscribe}
+                    style={{ color: 'var(--accent-primary)', borderColor: 'var(--accent-primary)' }}
+                  >
+                    <Sliders size={14} /> Unsubscribe Selected
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-outline btn-sm"
+                    onClick={() => setSelectedItemIds([])}
+                  >
+                    Deselect All
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="table-wrapper">
               <table className="dim-table">
                 <thead>
                   <tr>
+                    <th style={{ width: '38px', textAlign: 'center' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={sortedCompanies.length > 0 && sortedCompanies.every(c => selectedItemIds.includes(c.id))}
+                        onChange={() => handleToggleSelectAllVisible(sortedCompanies)}
+                        style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                      />
+                    </th>
                     <th>Action</th>
                     <th className="sortable-th" onClick={() => handleSortCompanies('is_active')}>
                       Status {companySortKey === 'is_active' ? (companySortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
@@ -936,8 +1179,18 @@ export default function AdminPage() {
                 <tbody>
                   {sortedCompanies.map((c) => {
                     const isSubscribed = Boolean(c.isDefault || c.is_imported || c.id?.startsWith('default_'));
+                    const isRowSelected = selectedItemIds.includes(c.id);
+
                     return (
-                      <tr key={c.id}>
+                      <tr key={c.id} style={{ background: isRowSelected ? 'rgba(212, 168, 75, 0.1)' : undefined }}>
+                        <td style={{ textAlign: 'center' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={isRowSelected}
+                            onChange={() => handleToggleSelectRow(c.id)}
+                            style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                          />
+                        </td>
                         <td>
                           <button 
                             type="button"
@@ -1499,47 +1752,60 @@ export default function AdminPage() {
         }
 
         .admin-page {
-          padding: 24px;
-          min-height: 100vh;
-          max-width: 1600px;
-          margin: 0 auto;
+          padding: 0px;
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+          width: 100%;
         }
 
         .tabs-bar {
           display: flex;
           gap: 8px;
-          margin-bottom: 20px;
-          border-bottom: 1px solid var(--border-subtle);
-          padding-bottom: 12px;
-          overflow-x: auto;
+          flex-wrap: wrap;
+          padding-bottom: 4px;
         }
 
         .tab-btn {
           display: flex;
           align-items: center;
-          gap: 8px;
-          padding: 8px 16px;
-          background: var(--bg-surface-1);
+          gap: 6px;
+          padding: 8px 14px;
+          background-color: var(--bg-surface-1);
           border: 1px solid var(--border-subtle);
           border-radius: var(--radius-sm);
           color: var(--text-muted);
-          font-size: 0.9rem;
-          font-weight: 500;
           cursor: pointer;
-          transition: all 0.2s ease;
+          font-size: 0.85rem;
+          font-weight: 500;
           white-space: nowrap;
+          transition: all var(--transition-fast);
         }
 
         .tab-btn:hover {
-          background: var(--bg-surface-2);
           color: var(--text-main);
+          border-color: var(--border-strong);
         }
 
         .tab-btn.active {
-          background: rgba(212, 168, 75, 0.18);
+          background-color: var(--accent-primary-subtle);
           color: var(--accent-primary);
-          border-color: var(--accent-primary);
+          border-color: rgba(212, 168, 75, 0.4);
           font-weight: 600;
+        }
+
+        .batch-action-bar {
+          background-color: var(--bg-surface-2);
+          border: 1px solid var(--accent-primary);
+          border-radius: var(--radius-sm);
+          padding: 10px 16px;
+          margin-bottom: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 10px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
 
         .table-card {
