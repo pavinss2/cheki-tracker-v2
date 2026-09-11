@@ -399,27 +399,14 @@ export default function CalendarPage() {
               >
                 Today
               </button>
-
-              {/* Primary "+ Add Cheki" Button in Calendar Header */}
-              <button
-                className="btn btn-primary btn-sm btn-add-cheki"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleOpenAddModal(selectedDate || undefined);
-                }}
-                title="Add new cheki transaction"
-              >
-                <Plus size={15} />
-                <span>Add Cheki</span>
-              </button>
             </div>
           </div>
 
           <div className="month-summary-strip">
             <span className="summary-pill">📸 {monthSummary.monthQty} pcs</span>
             <span className="summary-pill">฿ {monthSummary.monthPrice.toLocaleString()} THB</span>
-            <span className="summary-pill">👤 {monthSummary.uniqueMembersCount} Members</span>
-            <span className="summary-pill">🎪 {monthSummary.eventsCount} Events</span>
+            <span className="summary-pill">👤 {monthSummary.uniqueMembersCount} Member</span>
+            <span className="summary-pill">🎪 {monthSummary.eventsCount} Event</span>
           </div>
         </div>
 
@@ -507,7 +494,7 @@ export default function CalendarPage() {
               title="Add new cheki transaction for this date"
             >
               <Plus size={14} />
-              <span>Add Cheki</span>
+              <span>Add</span>
             </button>
 
             {viewHeaderInfo.isDateSelected && (
@@ -826,7 +813,7 @@ export default function CalendarPage() {
         .month-summary-strip {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 3px;
           flex-wrap: wrap;
         }
 
