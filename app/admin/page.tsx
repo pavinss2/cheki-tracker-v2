@@ -1826,17 +1826,24 @@ export default function AdminPage() {
 
         .tab-header-row {
           display: flex;
-          justify-content: space-between;
+          justify-content: center
           align-items: center;
           width: 100%;
-          gap: 12px;
+          gap: 16px;
         }
 
         .filter-select-wrapper {
           display: flex;
-          gap: 8px;
-          align-items: center;
-          flex-wrap: nowrap;
+          gap: 16px;
+          flex: 1;
+          min-width: 0;
+          // align-items: center;
+          // flex-wrap: nowrap;
+        }
+        .filter-select {
+          flex: 1;
+          min-width: 0 !important;
+          width: 100% !important;
         }
 
         .table-wrapper {
@@ -1888,6 +1895,8 @@ export default function AdminPage() {
           background-color: var(--accent-primary);
           color: #000000;
           font-weight: 700;
+          flex: 0 0 auto;
+          margin-left: auto;
         }
 
         .btn-primary:hover {
