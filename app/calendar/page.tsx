@@ -993,13 +993,10 @@ export default function CalendarPage() {
           .cal-grid-card {
             padding: 10px;
           }
-          .cal-day-cell {
-            aspect-ratio: 1 / 1;
-          }
         }
 
         .cal-day-cell {
-          aspect-ratio: 1 / 0.6;
+          aspect-ratio: 1 / 1;
           background-color: var(--bg-surface-2);
           border: 1px solid var(--border-subtle);
           border-radius: 8px;
@@ -1031,6 +1028,12 @@ export default function CalendarPage() {
           &.heat-2 { background-color: rgba(212, 168, 75, 0.25); }
           &.heat-3 { background-color: rgba(212, 168, 75, 0.4); }
           &.heat-4 { background-color: rgba(212, 168, 75, 0.6); }
+        }
+
+        @media (min-width: 641px) {
+          .cal-day-cell {
+            aspect-ratio: 1 / 0.6;
+          }
         }
 
         .day-cell-top {
