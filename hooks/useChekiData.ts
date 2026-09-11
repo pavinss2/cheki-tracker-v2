@@ -36,6 +36,7 @@ export function useChekiData() {
   const { user, isDemoUser } = useAuth();
   const { filters } = useFilters();
   const userId = user?.uid || (isDemoUser ? 'demo-user-id' : '');
+  const userEmail = user?.email || (isDemoUser ? 'pavin.ss2@gmail.com' : '');
 
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [members, setMembers] = useState<DimMember[]>([]);
@@ -63,10 +64,10 @@ export function useChekiData() {
     setLoading(true);
 
     if (!isDemoUser && userId) {
-      seedUserDataToFirestore(userId).catch(console.warn);
+      seedUserDataToFirestore(userId, userEmail).catch(console.warn);
     }
 
-    const unsubTrans = subscribeTransactions(userId, (items) => {
+    const unsubTrans = subscribeTransactions(userId, userEmail, (items) => {
       setAllTransactions(items);
       setLoading(false);
     }, isDemoUser);

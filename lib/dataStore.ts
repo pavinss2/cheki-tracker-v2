@@ -110,20 +110,32 @@ export function isValidTransaction(t: Partial<Transaction>): boolean {
   return hasMember || hasDate;
 }
 
+export const OWNER_EMAIL = 'pavin.ss2@gmail.com';
+
+export function isOwnerUser(userEmail?: string | null): boolean {
+  if (!userEmail) return false;
+  return userEmail.trim().toLowerCase() === OWNER_EMAIL.toLowerCase();
+}
+
 export function subscribeTransactions(
   userId: string,
+  userEmail: string | undefined,
   onData: (items: Transaction[]) => void,
   isDemo: boolean = false
 ): () => void {
+  const isOwner = isOwnerUser(userEmail);
+  const defaultSeed = isOwner
+    ? INITIAL_TRANSACTIONS.filter(isValidTransaction).map((t, idx) => ({
+        ...t,
+        id: `trans_${idx + 1}`,
+        userId: userId || 'demo-user-id',
+        createdAt: new Date().toISOString(),
+      }))
+    : [];
+
   if (isDemo || !userId || process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes("Demo")) {
-    const seed = INITIAL_TRANSACTIONS.filter(isValidTransaction).map((t, idx) => ({
-      ...t,
-      id: `trans_${idx + 1}`,
-      userId: userId || 'demo-user-id',
-      createdAt: new Date().toISOString(),
-    }));
     const load = () => {
-      const items = getLocalData<Transaction>(`transactions_${userId || 'demo'}`, seed).filter(isValidTransaction);
+      const items = getLocalData<Transaction>(`transactions_${userId || 'demo'}`, defaultSeed).filter(isValidTransaction);
       onData(items);
     };
     load();
@@ -145,12 +157,7 @@ export function subscribeTransactions(
       onData(items);
     }, (error) => {
       console.warn("Firestore transactions subscription failed, fallback to local:", error);
-      const seed = INITIAL_TRANSACTIONS.filter(isValidTransaction).map((t, idx) => ({
-        ...t,
-        id: `trans_${idx + 1}`,
-        userId,
-      }));
-      onData(getLocalData<Transaction>(`transactions_${userId}`, seed).filter(isValidTransaction));
+      onData(getLocalData<Transaction>(`transactions_${userId}`, defaultSeed).filter(isValidTransaction));
     });
   } catch {
     return () => {};
@@ -939,9 +946,14 @@ export function getAdminLogs(userId: string): AdminLog[] {
 // ----------------------------------------------------
 // FIRESTORE DATABASE SEEDER / IMPORTER
 // ----------------------------------------------------
-export async function seedUserDataToFirestore(userId: string): Promise<{ success: boolean; message: string }> {
+export async function seedUserDataToFirestore(userId: string, userEmail?: string): Promise<{ success: boolean; message: string }> {
   if (!userId || process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes("Demo")) {
     return { success: true, message: "Running in local demo mode, data is pre-seeded in browser storage." };
+  }
+
+  // Initial transaction seeding is strictly restricted to owner pavin.ss2@gmail.com
+  if (!isOwnerUser(userEmail)) {
+    return { success: true, message: "User accounts start with their own private transaction database." };
   }
 
   try {
@@ -967,7 +979,7 @@ export async function seedUserDataToFirestore(userId: string): Promise<{ success
       }
     }
 
-    logAdminAction(userId, "SEED_FIRESTORE_DATA", `Successfully imported ${INITIAL_TRANSACTIONS.length} transaction records into Firestore`);
+    logAdminAction(userId, "SEED_FIRESTORE_DATA", `Successfully imported ${INITIAL_TRANSACTIONS.length} transaction records into Firestore for ${userEmail}`);
     return { success: true, message: `Successfully synced ${INITIAL_TRANSACTIONS.length} transactions to Firestore!` };
   } catch (err: unknown) {
     const error = err as Error;

@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "next dev",
-    "test": "node scripts/testMergedMetadata.mjs",
+    "test": "node scripts/testMergedMetadata.mjs && node scripts/testUserTransactionIsolation.mjs",
     "build": "npm run test && next build",
     "start": "next start",
     "lint": "next lint",
