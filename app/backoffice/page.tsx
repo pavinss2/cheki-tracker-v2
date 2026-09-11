@@ -1258,15 +1258,15 @@ export default function BackOfficePage() {
         .tab-btn {
           display: flex;
           align-items: center;
-          gap: 8px;
-          padding: 10px 16px;
+          gap: 6px;
+          padding: 8px 14px;
           background-color: var(--bg-surface-1);
           border: 1px solid var(--border-subtle);
           border-radius: var(--radius-sm);
           color: var(--text-muted);
           cursor: pointer;
-          font-size: 0.88rem;
-          font-weight: 600;
+          font-size: 0.85rem;
+          font-weight: 500;
           white-space: nowrap;
           transition: all var(--transition-fast);
 
@@ -1276,9 +1276,10 @@ export default function BackOfficePage() {
           }
 
           &.active {
-            background-color: rgba(212, 168, 75, 0.15);
+            background-color: var(--accent-primary-subtle);
             color: var(--accent-primary);
-            border-color: var(--accent-primary);
+            border-color: rgba(212, 168, 75, 0.4);
+            font-weight: 600;
           }
         }
 
