@@ -250,6 +250,17 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
   - Set `.admin-page` container padding to `0px`.
   - Copied `.tabs-bar` and `.tab-btn` CSS directly from `/backoffice` (`padding: 8px 14px`, `gap: 8px`, `font-size: 0.85rem`, gold-subtle active border).
 
+### 6.16 Performance Optimization & Architectural Enhancements
+- **IndexedDB Persistent Local Cache (`lib/firebase.ts`)**: Firestore is initialized with multi-tab persistent local cache (`persistentLocalCache({ tabManager: persistentMultipleTabManager() })`). Document snapshots persist locally in browser IndexedDB disk storage across page reloads and browser restarts for **0 server reads**.
+- **Global React Data Context (`context/ChekiDataContext.tsx` & `app/layout.tsx`)**: Replaced per-page snapshot listener instantiation with a unified root `<ChekiDataProvider>`. Application-wide subscriptions to transactions and metadata are held in React Context RAM memory and exposed via `useChekiData()`. Navigating between SPA tabs (`/`, `/analytics`, `/raw`, `/tiermaker`, `/calendar`, `/admin`, `/backoffice`) executes **0 component re-subscriptions**.
+- **Server Aggregation API (`lib/dataStore.ts`)**: Implemented `fetchTransactionCount` (`getCountFromServer`) and `fetchTransactionAggregates` (`getAggregateFromServer` with `sum('totalPrice')` and `average('totalPrice')`). High-level analytics summary cards calculate counts and sums on Cloud Firestore servers for **1 Read total** regardless of transaction document volume.
+
+### 6.17 Multi-Tenant Transaction Isolation & Onboarding Flow
+- **Owner-Restricted Initial Seed**: The original `INITIAL_TRANSACTIONS` dataset is strictly assigned to the owner email `pavin.ss2@gmail.com`. All other user accounts start with an empty, private transaction database (`[]`).
+- **Pre-Refactor Legacy Transaction Purging**: Non-owner user logins automatically run legacy transaction cleanup in `seedUserDataToFirestore` and `subscribeTransactions`, purging pre-refactor copied seed entries from Cloud Firestore and browser storage while preserving user-created custom transactions.
+- **First-Time User Onboarding & Metadata Guard (`MetadataGuard.tsx`)**: When a real logged-in user accesses any page without metadata available (empty Admin tab), `MetadataGuard` automatically redirects them to `/admin` and triggers the "Manage Back Office Subscriptions" modal with all options unselected by default for initial setup.
+- **Demo Mode Exemption**: Demo Mode users (`isDemoUser: true`) are explicitly exempted from automatic redirection or subscription setup prompts, defaulting to `subscribeAll: true` so demo users can freely explore all app views out of the box.
+
 ---
 
 ## 7. Mandatory Documentation Rule
@@ -260,7 +271,7 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 ## 8. Verification & Release Criteria
 
 Before any code deployment is finalized:
-1. **Automated Anti-Duplicate Test Suite (`npm test`)**: Must execute `node scripts/testMergedMetadata.mjs` and pass 100% of unit assertions before every `npm run build`. Verifies Back Office renaming, key binding, legacy override skipping, and prevents duplicate row creation.
+1. **Automated Anti-Duplicate & Isolation Test Suites (`npm test`)**: Must execute both `node scripts/testMergedMetadata.mjs` and `node scripts/testUserTransactionIsolation.mjs` and pass 100% of unit assertions before every `npm run build`. Verifies Back Office renaming, key binding, multi-tenant isolation, legacy seed purging, and prevents duplicate row creation.
 2. **TypeScript Validation**: Must pass `npx tsc --noEmit` with 0 errors.
 3. **Production Bundle**: Static export must compile cleanly via `npm run build`.
 4. **Git Sync**: Changes committed and pushed to repository.
