@@ -18,7 +18,8 @@ import {
   Check, 
   Search, 
   X,
-  Award
+  Award,
+  FolderOpen
 } from 'lucide-react';
 import { toJpeg } from 'html-to-image';
 
@@ -27,6 +28,13 @@ interface Tier {
   label: string;
   color: string;
   memberIds: string[];
+}
+
+interface SavedSetup {
+  id: string;
+  name: string;
+  savedAt: string;
+  tiers: Tier[];
 }
 
 const PRESET_COLORS = [
@@ -49,7 +57,7 @@ const DEFAULT_TIERS: Tier[] = [
   { id: 'tier-d', label: 'D', color: '#1e90ff', memberIds: [] },
 ];
 
-const LOCAL_STORAGE_KEY = 'cheki_tiermaker_saved_config_v1';
+const LOCAL_SETUPS_KEY = 'cheki_tiermaker_saved_setups_v2';
 
 export default function TierMakerPage() {
   const { user, isDemoUser } = useAuth();
@@ -60,23 +68,30 @@ export default function TierMakerPage() {
   const [draggedMemberName, setDraggedMemberName] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [editingTier, setEditingTier] = useState<{ id: string; label: string; color: string } | null>(null);
+  
+  // Saved Setups Management
+  const [savedSetups, setSavedSetups] = useState<SavedSetup[]>([]);
+  const [activeSetupId, setActiveSetupId] = useState<string | null>(null);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [setupNameInput, setSetupNameInput] = useState('');
+  
   const [isExporting, setIsExporting] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
 
   const boardRef = useRef<HTMLDivElement>(null);
 
-  // Load saved configuration from localStorage on initial render
+  // Load saved configurations from localStorage on initial render
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setTiers(parsed);
+      const savedStr = localStorage.getItem(LOCAL_SETUPS_KEY);
+      if (savedStr) {
+        const parsed = JSON.parse(savedStr);
+        if (Array.isArray(parsed)) {
+          setSavedSetups(parsed);
         }
       }
     } catch (err) {
-      console.error("Failed to load saved tier configuration:", err);
+      console.error("Failed to load saved tier setups:", err);
     }
   }, []);
 
@@ -127,14 +142,10 @@ export default function TierMakerPage() {
   const moveMemberToTier = (memberName: string, targetTierId: string | null) => {
     setTiers((prevTiers) => {
       return prevTiers.map((tier) => {
-        // Remove from current tier if present
         const filtered = tier.memberIds.filter((m) => m !== memberName);
-
-        // Add to target tier if this is the target
         if (tier.id === targetTierId) {
           return { ...tier, memberIds: [...filtered, memberName] };
         }
-
         return { ...tier, memberIds: filtered };
       });
     });
@@ -179,14 +190,85 @@ export default function TierMakerPage() {
     setTiers(newTiers);
   };
 
-  // Save current tier layout to localStorage
-  const handleSaveConfig = () => {
+  // Open Save Setup Modal
+  const handleOpenSaveModal = () => {
+    const activeSetup = savedSetups.find(s => s.id === activeSetupId);
+    setSetupNameInput(activeSetup ? activeSetup.name : `My Tier List ${savedSetups.length + 1}`);
+    setShowSaveModal(true);
+  };
+
+  // Save current tier layout as a named setup
+  const handleConfirmSaveSetup = (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = setupNameInput.trim();
+    if (!name) return;
+
+    const todayDateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    let updatedSetups: SavedSetup[];
+    let targetId = activeSetupId;
+
+    const existingIndex = savedSetups.findIndex(s => s.id === activeSetupId || s.name.toLowerCase() === name.toLowerCase());
+
+    if (existingIndex >= 0) {
+      // Overwrite existing setup
+      targetId = savedSetups[existingIndex].id;
+      updatedSetups = savedSetups.map((s, idx) => 
+        idx === existingIndex ? { ...s, name, savedAt: todayDateStr, tiers } : s
+      );
+    } else {
+      // Create new saved setup
+      targetId = `setup_${Date.now()}`;
+      const newSetup: SavedSetup = {
+        id: targetId,
+        name,
+        savedAt: todayDateStr,
+        tiers,
+      };
+      updatedSetups = [newSetup, ...savedSetups];
+    }
+
+    setSavedSetups(updatedSetups);
+    setActiveSetupId(targetId);
     try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(tiers));
-      setSaveSuccessMsg("Tier configuration saved successfully!");
-      setTimeout(() => setSaveSuccessMsg(null), 3000);
+      localStorage.setItem(LOCAL_SETUPS_KEY, JSON.stringify(updatedSetups));
     } catch (err) {
-      alert("Failed saving configuration: " + (err instanceof Error ? err.message : String(err)));
+      console.error("Failed persisting saved setups:", err);
+    }
+
+    setShowSaveModal(false);
+    setSaveSuccessMsg(`Saved setup "${name}"!`);
+    setTimeout(() => setSaveSuccessMsg(null), 3000);
+  };
+
+  // Load a selected saved setup
+  const handleSelectSavedSetup = (setupId: string) => {
+    if (!setupId) {
+      setActiveSetupId(null);
+      return;
+    }
+    const target = savedSetups.find(s => s.id === setupId);
+    if (target) {
+      setTiers(target.tiers);
+      setActiveSetupId(target.id);
+      setSaveSuccessMsg(`Loaded setup "${target.name}"!`);
+      setTimeout(() => setSaveSuccessMsg(null), 3000);
+    }
+  };
+
+  // Delete an existing saved setup
+  const handleDeleteSavedSetup = (setupId: string) => {
+    const target = savedSetups.find(s => s.id === setupId);
+    if (!target) return;
+    if (!confirm(`Are you sure you want to delete the saved setup "${target.name}"?`)) return;
+
+    const updated = savedSetups.filter(s => s.id !== setupId);
+    setSavedSetups(updated);
+    if (activeSetupId === setupId) setActiveSetupId(null);
+
+    try {
+      localStorage.setItem(LOCAL_SETUPS_KEY, JSON.stringify(updated));
+    } catch (err) {
+      console.error("Failed saving updated setups:", err);
     }
   };
 
@@ -195,7 +277,7 @@ export default function TierMakerPage() {
     if (!confirm("Are you sure you want to reset all tiers to default S-A-B-C-D? This will clear current placements.")) return;
     setTiers(DEFAULT_TIERS);
     setSelectedMemberName(null);
-    localStorage.removeItem(LOCAL_STORAGE_KEY);
+    setActiveSetupId(null);
   };
 
   // Save edit tier name & color
@@ -237,6 +319,8 @@ export default function TierMakerPage() {
   if (!user && !isDemoUser) return <LoginPrompt />;
   if (loading) return <CircularSpinner />;
 
+  const activeSetupObj = savedSetups.find(s => s.id === activeSetupId);
+
   return (
     <div className="tier-maker-page">
       {/* Action Header Bar */}
@@ -246,9 +330,42 @@ export default function TierMakerPage() {
             <Award size={20} style={{ color: 'var(--accent-primary)' }} /> Tier Maker
           </h2>
           <span className="badge-pill dark" style={{ fontSize: '0.78rem' }}>{tiers.length} / 7 Tiers</span>
+          {activeSetupObj && (
+            <span className="badge-pill gold-outline" style={{ fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <FolderOpen size={12} /> {activeSetupObj.name}
+            </span>
+          )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {/* Saved Setups Selector */}
+          {savedSetups.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <select 
+                className="table-select" 
+                style={{ height: '32px', padding: '4px 8px', fontSize: '0.82rem', width: 'auto', maxWidth: '180px' }}
+                value={activeSetupId || ''} 
+                onChange={(e) => handleSelectSavedSetup(e.target.value)}
+              >
+                <option value="">-- Load Saved Setup --</option>
+                {savedSetups.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name} ({s.savedAt})</option>
+                ))}
+              </select>
+
+              {activeSetupId && (
+                <button 
+                  className="btn-icon danger" 
+                  onClick={() => handleDeleteSavedSetup(activeSetupId)} 
+                  title="Delete current saved setup"
+                  style={{ padding: '4px' }}
+                >
+                  <Trash2 size={15} />
+                </button>
+              )}
+            </div>
+          )}
+
           <button 
             className="btn btn-secondary btn-sm" 
             onClick={handleAddTier} 
@@ -258,8 +375,8 @@ export default function TierMakerPage() {
             <Plus size={14} /> Add Tier
           </button>
 
-          <button className="btn btn-secondary btn-sm" onClick={handleSaveConfig} title="Save current tier setup for later">
-            <Save size={14} /> Save Setup
+          <button className="btn btn-secondary btn-sm" onClick={handleOpenSaveModal} title="Save current setup with a custom name">
+            <Save size={14} /> Save As...
           </button>
 
           <button className="btn btn-secondary btn-sm danger-text" onClick={handleResetTiers} title="Reset to default S-A-B-C-D tiers">
@@ -310,70 +427,62 @@ export default function TierMakerPage() {
                   }
                 }}
               >
-                {/* Tier Label Box */}
+                {/* Clean Tier Label Box (Label Only) */}
                 <div 
                   className="tier-label-box" 
                   style={{ backgroundColor: tier.color, color: '#0d0f15' }}
                 >
                   <span className="tier-name-text">{tier.label}</span>
-                  <div className="tier-label-actions">
-                    <button 
-                      className="tier-mini-btn" 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingTier({ id: tier.id, label: tier.label, color: tier.color });
-                      }}
-                      title="Edit Tier Label & Color"
-                    >
-                      <Edit2 size={12} />
-                    </button>
+                </div>
+
+                {/* Tier Content Drop Area (Clean, No Empty Text Hint) */}
+                <div className={`tier-content-area ${isTargeted ? 'clickable-target' : ''}`}>
+                  <div className="tier-members-grid">
+                    {tier.memberIds.map((mName) => {
+                      const mObj = memberMap[mName];
+                      const colorCode = mObj ? colorHexMap[mObj.color] : undefined;
+
+                      return (
+                        <div 
+                          key={mName} 
+                          className="tier-member-card"
+                          draggable
+                          onDragStart={() => setDraggedMemberName(mName)}
+                          onDragEnd={() => setDraggedMemberName(null)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            moveMemberToTier(mName, null);
+                          }}
+                          title={`Click to remove ${mName} from this tier`}
+                        >
+                          <MemberAvatar 
+                            src={mObj?.member_image} 
+                            name={mName} 
+                            size={44} 
+                            colorHex={colorCode}
+                          />
+                          <span className="tier-member-name">{mName}</span>
+                          <button className="remove-card-btn" title="Remove from tier">
+                            <X size={10} />
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
-                {/* Tier Content Drop Area */}
-                <div className={`tier-content-area ${isTargeted ? 'clickable-target' : ''}`}>
-                  {tier.memberIds.length === 0 ? (
-                    <div className="empty-tier-hint">
-                      {isTargeted ? 'Click here to place selected member' : 'Drag & drop members here'}
-                    </div>
-                  ) : (
-                    <div className="tier-members-grid">
-                      {tier.memberIds.map((mName) => {
-                        const mObj = memberMap[mName];
-                        const colorCode = mObj ? colorHexMap[mObj.color] : undefined;
-
-                        return (
-                          <div 
-                            key={mName} 
-                            className="tier-member-card"
-                            draggable
-                            onDragStart={() => setDraggedMemberName(mName)}
-                            onDragEnd={() => setDraggedMemberName(null)}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              moveMemberToTier(mName, null);
-                            }}
-                            title={`Click to remove ${mName} from this tier`}
-                          >
-                            <MemberAvatar 
-                              src={mObj?.member_image} 
-                              name={mName} 
-                              size={44} 
-                              colorHex={colorCode}
-                            />
-                            <span className="tier-member-name">{mName}</span>
-                            <button className="remove-card-btn" title="Remove from tier">
-                              <X size={10} />
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* Tier Controls (Up/Down/Delete) */}
+                {/* Tier Controls (Edit / Up / Down / Delete) */}
                 <div className="tier-row-controls">
+                  <button 
+                    className="tier-control-btn" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingTier({ id: tier.id, label: tier.label, color: tier.color });
+                    }}
+                    title="Edit Tier Label & Color"
+                  >
+                    <Edit2 size={13} />
+                  </button>
                   <button 
                     className="tier-control-btn" 
                     disabled={index === 0} 
@@ -485,6 +594,38 @@ export default function TierMakerPage() {
         </div>
       </div>
 
+      {/* Save Setup Modal */}
+      {showSaveModal && (
+        <div className="modal-overlay" onClick={() => setShowSaveModal(false)}>
+          <div className="modal-card small" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Save Setup As...</h2>
+              <button className="btn-close" onClick={() => setShowSaveModal(false)}><X size={18} /></button>
+            </div>
+
+            <form onSubmit={handleConfirmSaveSetup} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div className="form-group">
+                <label>Setup Name *</label>
+                <input 
+                  type="text" 
+                  required
+                  autoFocus
+                  maxLength={30}
+                  value={setupNameInput} 
+                  onChange={(e) => setSetupNameInput(e.target.value)}
+                  placeholder="e.g. My Oshi Tier 2026, Best Live Outfits"
+                />
+              </div>
+
+              <div className="form-actions">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowSaveModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Save Setup</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Tier Edit Modal */}
       {editingTier && (
         <div className="modal-overlay" onClick={() => setEditingTier(null)}>
@@ -510,25 +651,28 @@ export default function TierMakerPage() {
               <div className="form-group">
                 <label>Tier Color</label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', margin: '6px 0' }}>
-                  {PRESET_COLORS.map((c) => (
-                    <button 
-                      key={c.hex} 
-                      type="button" 
-                      onClick={() => setEditingTier({ ...editingTier, color: c.hex })}
-                      style={{
-                        backgroundColor: c.hex,
-                        height: '32px',
-                        borderRadius: '6px',
-                        border: editingTier?.color === c.hex ? '2px solid #ffffff' : '1px solid rgba(0,0,0,0.2)',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      {editingTier?.color === c.hex && <Check size={14} style={{ color: '#000' }} />}
-                    </button>
-                  ))}
+                  {PRESET_COLORS.map((c) => {
+                    const isSelected = editingTier.color === c.hex;
+                    return (
+                      <button 
+                        key={c.hex} 
+                        type="button" 
+                        onClick={() => setEditingTier({ ...editingTier, color: c.hex })}
+                        style={{
+                          backgroundColor: c.hex,
+                          height: '32px',
+                          borderRadius: '6px',
+                          border: isSelected ? '2px solid #ffffff' : '1px solid rgba(0,0,0,0.2)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        {isSelected && <Check size={14} style={{ color: '#000' }} />}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -623,24 +767,6 @@ export default function TierMakerPage() {
           line-height: 1.1;
         }
 
-        .tier-label-actions {
-          margin-top: 4px;
-        }
-
-        .tier-mini-btn {
-          background: rgba(0,0,0,0.2);
-          border: none;
-          color: inherit;
-          padding: 2px 5px;
-          border-radius: 4px;
-          cursor: pointer;
-          opacity: 0.7;
-        }
-        .tier-mini-btn:hover {
-          opacity: 1;
-          background: rgba(0,0,0,0.35);
-        }
-
         .tier-content-area {
           flex: 1;
           padding: 8px 10px;
@@ -658,18 +784,13 @@ export default function TierMakerPage() {
           background: rgba(212, 168, 75, 0.08);
         }
 
-        .empty-tier-hint {
-          font-size: 0.78rem;
-          color: rgba(255,255,255,0.25);
-          font-style: italic;
-          user-select: none;
-        }
-
         .tier-members-grid {
           display: flex;
           flex-wrap: wrap;
           gap: 8px;
           align-items: center;
+          width: 100%;
+          min-height: 52px;
         }
 
         .tier-member-card {
