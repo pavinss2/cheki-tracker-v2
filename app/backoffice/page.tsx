@@ -48,6 +48,7 @@ import {
 } from 'lucide-react';
 import { CircularSpinner } from '@/components/common/CircularSpinner';
 import { MemberAvatar } from '@/components/common/MemberAvatar';
+import { formatBrowserTimestamp } from '@/lib/imageUtils';
 
 type MemberSortKey = 'date_added' | 'member_name' | 'color' | 'group' | 'country' | 'company' | 'start_date' | 'end_date' | 'is_active';
 
@@ -526,8 +527,8 @@ export default function BackOfficePage() {
                           </span>
                         </td>
                         <td>{m.x_profile || '-'}</td>
-                        <td className="mono">{m.date_added || (m.createdAt ? m.createdAt.split('T')[0] : '-')}</td>
-                        <td className="mono">{m.date_modified || (m.updatedAt ? m.updatedAt.split('T')[0] : '-')}</td>
+                        <td className="mono">{formatBrowserTimestamp(m.date_added, m.createdAt)}</td>
+                        <td className="mono">{formatBrowserTimestamp(m.date_modified, m.updatedAt)}</td>
                         <td>
                           <div className="action-btns">
                             <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_member', data: { ...m } })}>
@@ -618,8 +619,8 @@ export default function BackOfficePage() {
                       <td className="bold">{g.group}</td>
                       <td>{g.country}</td>
                       <td>{g.company}</td>
-                      <td className="mono">{g.date_added || (g.createdAt ? g.createdAt.split('T')[0] : '-')}</td>
-                      <td className="mono">{g.date_modified || (g.updatedAt ? g.updatedAt.split('T')[0] : '-')}</td>
+                      <td className="mono">{formatBrowserTimestamp(g.date_added, g.createdAt)}</td>
+                      <td className="mono">{formatBrowserTimestamp(g.date_modified, g.updatedAt)}</td>
                       <td>
                         <div className="action-btns">
                           <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_group', data: { ...g } })}>
@@ -684,8 +685,8 @@ export default function BackOfficePage() {
                   {companies.map((c) => (
                     <tr key={c.id}>
                       <td className="bold">{c.company}</td>
-                      <td className="mono">{c.date_added || (c.createdAt ? c.createdAt.split('T')[0] : '-')}</td>
-                      <td className="mono">{c.date_modified || (c.updatedAt ? c.updatedAt.split('T')[0] : '-')}</td>
+                      <td className="mono">{formatBrowserTimestamp(c.date_added, c.createdAt)}</td>
+                      <td className="mono">{formatBrowserTimestamp(c.date_modified, c.updatedAt)}</td>
                       <td>
                         <div className="action-btns">
                           <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_company', data: { ...c } })}>
@@ -781,16 +782,15 @@ export default function BackOfficePage() {
                             type="color" 
                             className="color-picker-input" 
                             value={c.color_code && c.color_code.startsWith('#') ? c.color_code : '#ffffff'} 
-                            onChange={(e) => {
-                              const newHex = e.target.value;
-                              updateDefaultMetadataDoc('dim_color', c.id, { ...c, color_code: newHex }, isDemoUser);
-                            }}
+                            disabled
+                            style={{ opacity: 0.8, cursor: 'not-allowed' }}
+                            title="Click edit button (pen icon) to modify color"
                           />
                           <span className="mono">{c.color_code}</span>
                         </div>
                       </td>
-                      <td className="mono">{c.date_added || (c.createdAt ? c.createdAt.split('T')[0] : '-')}</td>
-                      <td className="mono">{c.date_modified || (c.updatedAt ? c.updatedAt.split('T')[0] : '-')}</td>
+                      <td className="mono">{formatBrowserTimestamp(c.date_added, c.createdAt)}</td>
+                      <td className="mono">{formatBrowserTimestamp(c.date_modified, c.updatedAt)}</td>
                       <td>
                         <div className="action-btns">
                           <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_color', data: { ...c } })}>
@@ -855,8 +855,8 @@ export default function BackOfficePage() {
                   {types.map((t) => (
                     <tr key={t.id}>
                       <td className="bold">{t.type}</td>
-                      <td className="mono">{t.date_added || (t.createdAt ? t.createdAt.split('T')[0] : '-')}</td>
-                      <td className="mono">{t.date_modified || (t.updatedAt ? t.updatedAt.split('T')[0] : '-')}</td>
+                      <td className="mono">{formatBrowserTimestamp(t.date_added, t.createdAt)}</td>
+                      <td className="mono">{formatBrowserTimestamp(t.date_modified, t.updatedAt)}</td>
                       <td>
                         <div className="action-btns">
                           <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_type', data: { ...t } })}>
@@ -921,8 +921,8 @@ export default function BackOfficePage() {
                   {countries.map((c) => (
                     <tr key={c.id}>
                       <td className="bold">{c.displayed_country || c.country}</td>
-                      <td className="mono">{c.date_added || (c.createdAt ? c.createdAt.split('T')[0] : '-')}</td>
-                      <td className="mono">{c.date_modified || (c.updatedAt ? c.updatedAt.split('T')[0] : '-')}</td>
+                      <td className="mono">{formatBrowserTimestamp(c.date_added, c.createdAt)}</td>
+                      <td className="mono">{formatBrowserTimestamp(c.date_modified, c.updatedAt)}</td>
                       <td>
                         <div className="action-btns">
                           <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_country', data: { ...c } })}>
@@ -987,8 +987,8 @@ export default function BackOfficePage() {
                   {locations.map((loc) => (
                     <tr key={loc.id}>
                       <td className="bold">{loc.location}</td>
-                      <td className="mono">{loc.date_added || (loc.createdAt ? loc.createdAt.split('T')[0] : '-')}</td>
-                      <td className="mono">{loc.date_modified || (loc.updatedAt ? loc.updatedAt.split('T')[0] : '-')}</td>
+                      <td className="mono">{formatBrowserTimestamp(loc.date_added, loc.createdAt)}</td>
+                      <td className="mono">{formatBrowserTimestamp(loc.date_modified, loc.updatedAt)}</td>
                       <td>
                         <div className="action-btns">
                           <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_location', data: { ...loc } })}>

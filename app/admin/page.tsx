@@ -9,7 +9,7 @@ import { LoginPrompt } from '@/components/layout/LoginPrompt';
 import { Plus, Edit2, Trash2, Shield, Users, Building, Layers, X, Save, ArrowUpDown, ExternalLink, Lock, Download, ChevronRight, Sparkles, RefreshCw } from 'lucide-react';
 import { CircularSpinner } from '@/components/common/CircularSpinner';
 import { MemberAvatar } from '@/components/common/MemberAvatar';
-import { formatDisplayName } from '@/lib/imageUtils';
+import { formatDisplayName, formatBrowserTimestamp } from '@/lib/imageUtils';
 
 type MemberSortKey = 'date_added' | 'member_name' | 'color' | 'group' | 'country' | 'company' | 'start_date' | 'end_date' | 'is_active';
 
@@ -579,7 +579,7 @@ export default function BackOfficePage() {
                             </a>
                           ) : '-'}
                         </td>
-                        <td>{m.date_added || '-'}</td>
+                        <td className="mono">{formatBrowserTimestamp(m.date_added, m.createdAt)}</td>
                         <td>
                           <div className="action-btns">
                             <button className="btn-icon" onClick={() => setEditingItem({ table: 'dim_member', data: { ...m } })}><Edit2 size={15} /></button>

@@ -89,3 +89,41 @@ export function formatDisplayName(name: string | undefined | null): string {
   if (!name || typeof name !== 'string') return '';
   return name.replace(/\s*\([^)]*\)/g, '').trim();
 }
+
+/**
+ * Format date string or ISO timestamp into user's browser local date + time timestamp.
+ */
+export function formatBrowserTimestamp(dateStr?: string, isoStr?: string): string {
+  const source = isoStr || dateStr;
+  if (!source || source === '-') return '-';
+
+  try {
+    let d: Date;
+    if (source.includes('T')) {
+      d = new Date(source);
+    } else if (dateStr && dateStr.length === 10 && dateStr.includes('-')) {
+      d = new Date(`${dateStr}T00:00:00`);
+    } else {
+      d = new Date(source);
+    }
+
+    if (!isNaN(d.getTime())) {
+      const datePart = d.toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+      const timePart = d.toLocaleTimeString(undefined, {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      });
+      return `${datePart} ${timePart}`;
+    }
+  } catch (err) {
+    console.warn("Timestamp format error:", err);
+  }
+
+  return dateStr || isoStr || '-';
+}
