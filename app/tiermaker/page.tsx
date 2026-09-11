@@ -67,6 +67,8 @@ export default function TierMakerPage() {
   const [selectedMemberName, setSelectedMemberName] = useState<string | null>(null);
   const [draggedMemberName, setDraggedMemberName] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedGroup, setSelectedGroup] = useState('');
+  const [selectedCompany, setSelectedCompany] = useState('');
   const [editingTier, setEditingTier] = useState<{ id: string; label: string; color: string } | null>(null);
   
   // Saved Setups Management
@@ -79,6 +81,28 @@ export default function TierMakerPage() {
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
 
   const boardRef = useRef<HTMLDivElement>(null);
+
+  // Filter out inactive members
+  const activeMembers = useMemo(() => {
+    return members.filter((m) => m.is_active !== false);
+  }, [members]);
+
+  // Options for Group & Company filters
+  const groupOptions = useMemo(() => {
+    const set = new Set<string>();
+    activeMembers.forEach((m) => {
+      if (m.group && m.group.trim()) set.add(m.group.trim());
+    });
+    return Array.from(set).sort();
+  }, [activeMembers]);
+
+  const companyOptions = useMemo(() => {
+    const set = new Set<string>();
+    activeMembers.forEach((m) => {
+      if (m.company && m.company.trim()) set.add(m.company.trim());
+    });
+    return Array.from(set).sort();
+  }, [activeMembers]);
 
   // Load saved configurations from localStorage on initial render
   useEffect(() => {
@@ -95,14 +119,14 @@ export default function TierMakerPage() {
     }
   }, []);
 
-  // Map for fast member lookup
+  // Map for fast member lookup (active members only)
   const memberMap = useMemo(() => {
-    const map: Record<string, typeof members[0]> = {};
-    members.forEach((m) => {
+    const map: Record<string, typeof activeMembers[0]> = {};
+    activeMembers.forEach((m) => {
       map[m.member_name] = m;
     });
     return map;
-  }, [members]);
+  }, [activeMembers]);
 
   // Color code map for member avatars
   const colorHexMap = useMemo(() => {
@@ -122,21 +146,23 @@ export default function TierMakerPage() {
     return set;
   }, [tiers]);
 
-  // Unassigned pool of members
+  // Unassigned pool of active members with group/company/search filters
   const unassignedMembers = useMemo(() => {
-    return members.filter((m) => {
+    return activeMembers.filter((m) => {
       if (placedMemberNames.has(m.member_name)) return false;
+      if (selectedGroup && m.group !== selectedGroup) return false;
+      if (selectedCompany && m.company !== selectedCompany) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         return (
           m.member_name.toLowerCase().includes(q) ||
-          m.group.toLowerCase().includes(q) ||
-          m.company.toLowerCase().includes(q)
+          (m.group && m.group.toLowerCase().includes(q)) ||
+          (m.company && m.company.toLowerCase().includes(q))
         );
       }
       return true;
     });
-  }, [members, placedMemberNames, searchQuery]);
+  }, [activeMembers, placedMemberNames, selectedGroup, selectedCompany, searchQuery]);
 
   // Move member into a target tier (or remove if targetTierId is null)
   const moveMemberToTier = (memberName: string, targetTierId: string | null) => {
@@ -527,13 +553,40 @@ export default function TierMakerPage() {
             )}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', maxWidth: '300px', width: '100%' }}>
-            <div style={{ position: 'relative', width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            {/* Group Filter */}
+            <select 
+              className="table-select" 
+              style={{ height: '34px', fontSize: '0.82rem', padding: '4px 8px', width: 'auto' }}
+              value={selectedGroup}
+              onChange={(e) => setSelectedGroup(e.target.value)}
+            >
+              <option value="">All Groups</option>
+              {groupOptions.map((g) => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
+
+            {/* Company Filter */}
+            <select 
+              className="table-select" 
+              style={{ height: '34px', fontSize: '0.82rem', padding: '4px 8px', width: 'auto' }}
+              value={selectedCompany}
+              onChange={(e) => setSelectedCompany(e.target.value)}
+            >
+              <option value="">All Companies</option>
+              {companyOptions.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+
+            {/* Search Input */}
+            <div style={{ position: 'relative', width: '160px' }}>
               <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
               <input 
                 type="text" 
                 className="search-input" 
-                placeholder="Search member or group..."
+                placeholder="Search member..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{ paddingLeft: '30px', height: '34px', fontSize: '0.84rem' }}

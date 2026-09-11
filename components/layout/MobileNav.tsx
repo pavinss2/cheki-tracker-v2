@@ -3,27 +3,21 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
-import { Home, Calendar, Table, BarChart2, Settings, Shield } from 'lucide-react';
+import { Home, Calendar, Table, BarChart2, Trophy } from 'lucide-react';
 
 export const MobileNav: React.FC = () => {
   const pathname = usePathname();
-  const { isSuperAdmin } = useAuth();
 
   const normalizePath = (p: string) => (p && p.endsWith('/') && p.length > 1 ? p.slice(0, -1) : p);
   const currentPath = normalizePath(pathname || '/');
 
-  const baseItems = [
+  const items = [
     { label: '', href: '/', icon: Home },
     { label: '', href: '/calendar', icon: Calendar },
     { label: '', href: '/analytics', icon: BarChart2 },
     { label: '', href: '/raw', icon: Table },
-    { label: '', href: '/admin', icon: Settings },
+    { label: '', href: '/tiermaker', icon: Trophy },
   ];
-
-  const items = isSuperAdmin
-    ? [...baseItems, { label: '', href: '/backoffice', icon: Shield }]
-    : baseItems;
 
   return (
     <nav className="mobile-nav">

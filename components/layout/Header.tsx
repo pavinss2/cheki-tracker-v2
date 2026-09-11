@@ -1,8 +1,9 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { LogIn, LogOut, User as UserIcon, ShieldAlert } from 'lucide-react';
+import { LogIn, LogOut, User as UserIcon, ShieldAlert, Settings, Shield } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 
 const ROUTE_TITLES: Record<string, string> = {
@@ -18,7 +19,7 @@ const ROUTE_TITLES: Record<string, string> = {
 };
 
 export const Header: React.FC = () => {
-  const { user, signInWithGoogle, signOutUser, isDemoUser } = useAuth();
+  const { user, signInWithGoogle, signOutUser, isDemoUser, isSuperAdmin } = useAuth();
   const pathname = usePathname();
 
   const pageTitle = ROUTE_TITLES[pathname] || 
@@ -37,6 +38,25 @@ export const Header: React.FC = () => {
       </div>
 
       <div className="header-actions">
+        <div className="header-mobile-nav">
+          <Link 
+            href="/admin" 
+            className={`header-nav-btn ${pathname.startsWith('/admin') ? 'active' : ''}`}
+            title="Admin"
+          >
+            <Settings size={18} />
+          </Link>
+          {isSuperAdmin && (
+            <Link 
+              href="/backoffice" 
+              className={`header-nav-btn ${pathname.startsWith('/backoffice') ? 'active' : ''}`}
+              title="Back Office"
+            >
+              <Shield size={18} />
+            </Link>
+          )}
+        </div>
+
         {isDemoUser && (
           <div className="demo-banner">
             <ShieldAlert size={14} />
@@ -107,6 +127,40 @@ export const Header: React.FC = () => {
             width: 100%;
             padding: 0 16px;
           }
+          .header-mobile-nav {
+            display: flex !important;
+          }
+        }
+
+        .header-mobile-nav {
+          display: none;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .header-nav-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          color: var(--text-muted);
+          background-color: var(--bg-surface-2);
+          border: 1px solid var(--border-subtle);
+          transition: all var(--transition-fast);
+          text-decoration: none;
+        }
+
+        .header-nav-btn:hover {
+          color: var(--text-main);
+          border-color: var(--border-strong);
+        }
+
+        .header-nav-btn.active {
+          color: #d4a84b;
+          border-color: rgba(212, 168, 75, 0.4);
+          background-color: rgba(212, 168, 75, 0.15);
         }
 
         .header-actions {
