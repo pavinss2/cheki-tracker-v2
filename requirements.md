@@ -148,6 +148,11 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
   - **Row 2 (Metadata)**: `<date>` `·` `<qty> cheki` `(<index>/<total>)`.
 - **Deduplication**: Transactions sharing the same photo URL are grouped together so the Lightbox gallery displays unique image slides without duplicate navigation steps.
 
+### 4.4 Table Cells & Color Badges
+- **Color Badge Styling (`.color-badge`)**:
+  - Displays color pill with bold text in the "Color" table column.
+  - **Black Color Legibility**: When color is `Black` (or `#000`/`#000000`), automatically renders with a black background (`#000000`), white font (`#ffffff`), and a subtle white border (`rgba(255, 255, 255, 0.35)`) to eliminate black-on-black text blending and ensure high contrast on dark table rows.
+
 ---
 
 ## 5. Calendar Tab Specifications

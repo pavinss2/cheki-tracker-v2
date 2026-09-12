@@ -54,6 +54,11 @@ interface GridRow {
   isDirty?: boolean;
 }
 
+const isBlackColor = (color?: string) => {
+  const c = color?.trim().toLowerCase();
+  return c === 'black' || c === '#000' || c === '#000000';
+};
+
 export default function RawDataPage() {
   const { user, isDemoUser } = useAuth();
   const { 
@@ -652,9 +657,22 @@ export default function RawDataPage() {
                     <td className="clickable-cell" onClick={() => addCellFilter('member', r.member)} title={`Drilldown by Member: ${r.member}`}>{formatDisplayName(r.member)}</td>
                     <td className="clickable-cell" onClick={() => addCellFilter('group', r.group)} title={`Drilldown by Group: ${r.group}`}>{r.group}</td>
                     <td className="clickable-cell" onClick={() => addCellFilter('color', r.color)} title={`Drilldown by Color: ${r.color}`}>
-                      <span className="color-badge" style={{ backgroundColor: r.color?.toLowerCase() === 'white' ? '#fff' : r.color?.toLowerCase() }}>
-                        {r.color}
-                      </span>
+                      {(() => {
+                        const isBlack = isBlackColor(r.color);
+                        return (
+                          <span 
+                            className={`color-badge ${isBlack ? 'color-black' : ''}`} 
+                            style={{ 
+                              backgroundColor: isBlack 
+                                ? '#000000' 
+                                : (r.color?.toLowerCase() === 'white' ? '#fff' : r.color?.toLowerCase()),
+                              color: isBlack ? '#ffffff' : undefined,
+                            }}
+                          >
+                            {r.color}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td>{r.event || '-'}</td>
                     <td className="clickable-cell" onClick={() => addCellFilter('type', r.type)} title={`Drilldown by Type: ${r.type}`}>{r.type}</td>
@@ -1108,6 +1126,12 @@ export default function RawDataPage() {
           font-weight: 700;
           color: #000;
           border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .color-badge.color-black {
+          background-color: #000000 !important;
+          color: #ffffff !important;
+          border: 1px solid rgba(255,255,255,0.35) !important;
         }
 
         .img-btn {
