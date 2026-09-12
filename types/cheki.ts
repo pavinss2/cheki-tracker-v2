@@ -1,3 +1,5 @@
+export type AllowSubscribeStatus = 'Enabled' | 'Disabled' | 'Enabled-Admin';
+
 export interface Transaction {
   id: string;
   userId: string;
@@ -43,6 +45,7 @@ export interface DimMember {
   is_imported?: boolean;
   is_allowed_import?: boolean;
   allow_import?: boolean;
+  allow_subscribe?: AllowSubscribeStatus;
   backoffice_id?: string;
   is_custom?: boolean;
 }
@@ -59,6 +62,7 @@ export interface DimGroup {
   is_imported?: boolean;
   is_allowed_import?: boolean;
   allow_import?: boolean;
+  allow_subscribe?: AllowSubscribeStatus;
   backoffice_id?: string;
   is_custom?: boolean;
   date_added?: string;

@@ -48,7 +48,7 @@ interface ChekiDataContextType {
 const ChekiDataContext = createContext<ChekiDataContextType | undefined>(undefined);
 
 export function ChekiDataProvider({ children }: { children: React.ReactNode }) {
-  const { user, isDemoUser } = useAuth();
+  const { user, isDemoUser, isSuperAdmin } = useAuth();
   const { filters } = useFilters();
   const userId = user?.uid || (isDemoUser ? 'demo-user-id' : '');
   const userEmail = user?.email || (isDemoUser ? 'pavin.ss2@gmail.com' : '');
@@ -103,23 +103,23 @@ export function ChekiDataProvider({ children }: { children: React.ReactNode }) {
       setMembers(items);
       memLoaded = true;
       checkAllLoaded();
-    }, isDemoUser);
+    }, isDemoUser, isSuperAdmin);
 
     const unsubCmp = subscribeMergedMetadata<DimCompany>('dim_company', userId, DEFAULT_COMPANIES, (items) => {
       setCompanies(items);
       cmpLoaded = true;
       checkAllLoaded();
-    }, isDemoUser);
+    }, isDemoUser, isSuperAdmin);
 
     const unsubGrp = subscribeMergedMetadata<DimGroup>('dim_group', userId, DEFAULT_GROUPS, (items) => {
       setGroups(items);
       grpLoaded = true;
       checkAllLoaded();
-    }, isDemoUser);
+    }, isDemoUser, isSuperAdmin);
 
-    const unsubClr = subscribeMergedMetadata<DimColor>('dim_color', userId, DEFAULT_COLORS, setColors, isDemoUser);
-    const unsubTyp = subscribeMergedMetadata<DimType>('dim_type', userId, DEFAULT_TYPES, setTypes, isDemoUser);
-    const unsubCnt = subscribeMergedMetadata<DimCountry>('dim_country', userId, DEFAULT_COUNTRIES, setCountries, isDemoUser);
+    const unsubClr = subscribeMergedMetadata<DimColor>('dim_color', userId, DEFAULT_COLORS, setColors, isDemoUser, isSuperAdmin);
+    const unsubTyp = subscribeMergedMetadata<DimType>('dim_type', userId, DEFAULT_TYPES, setTypes, isDemoUser, isSuperAdmin);
+    const unsubCnt = subscribeMergedMetadata<DimCountry>('dim_country', userId, DEFAULT_COUNTRIES, setCountries, isDemoUser, isSuperAdmin);
 
     setPriceRulesState(getPriceRules(userId));
 
@@ -132,7 +132,7 @@ export function ChekiDataProvider({ children }: { children: React.ReactNode }) {
       unsubTyp();
       unsubCnt();
     };
-  }, [userId, isDemoUser, userEmail]);
+  }, [userId, isDemoUser, userEmail, isSuperAdmin]);
 
   const updateRules = (newRules: PriceRule[]) => {
     setPriceRulesState(newRules);

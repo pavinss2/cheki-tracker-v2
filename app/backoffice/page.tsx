@@ -9,7 +9,10 @@ import {
   updateDefaultMetadataDoc, 
   deleteDefaultMetadataDoc, 
   getAdminLogs, 
-  getItemValueString 
+  getItemValueString,
+  getAllowSubscribeState,
+  isAllowSubscribeAllowed,
+  type AllowSubscribeStatus
 } from '@/lib/dataStore';
 import { 
   DEFAULT_MEMBERS, 
@@ -52,9 +55,9 @@ import { CircularSpinner } from '@/components/common/CircularSpinner';
 import { MemberAvatar } from '@/components/common/MemberAvatar';
 import { formatBrowserTimestamp } from '@/lib/imageUtils';
 
-type MemberSortKey = 'date_added' | 'member_name' | 'color' | 'group' | 'country' | 'company' | 'is_active' | 'is_allowed_import' | 'member_image' | 'x_profile';
+type MemberSortKey = 'date_added' | 'member_name' | 'color' | 'group' | 'country' | 'company' | 'is_allowed_import' | 'member_image' | 'x_profile';
 type GroupSortKey = 'group' | 'country' | 'company' | 'is_allowed_import';
-type CompanySortKey = 'company' | 'is_allowed_import';
+type CompanySortKey = 'company';
 
 interface TempMemberRow {
   member_name: string;
@@ -87,8 +90,14 @@ export default function BackOfficePage() {
   const [memberCompanyFilter, setMemberCompanyFilter] = useState<string>('');
   const [memberGroupFilter, setMemberGroupFilter] = useState<string>('');
   const [memberCountryFilter, setMemberCountryFilter] = useState<string>('');
+  const [memberAllowSubscribeFilter, setMemberAllowSubscribeFilter] = useState<string>('all');
   const [groupCompanyFilter, setGroupCompanyFilter] = useState<string>('');
   const [groupCountryFilter, setGroupCountryFilter] = useState<string>('');
+  const [groupAllowSubscribeFilter, setGroupAllowSubscribeFilter] = useState<string>('all');
+
+  // Stable in-place row ordering refs (prevents rows from bouncing when badge is toggled)
+  const memberFrozenOrderRef = React.useRef<string[]>([]);
+  const groupFrozenOrderRef = React.useRef<string[]>([]);
 
   // Multiselect state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -130,10 +139,12 @@ export default function BackOfficePage() {
 
   const logs = getAdminLogs('global');
 
-  // Reset selected items when active tab or filters change
+  // Reset selected items & clear frozen sort order when active tab or filters change
   useEffect(() => {
     setSelectedIds(new Set());
-  }, [activeTab, memberCompanyFilter, memberGroupFilter, memberCountryFilter, groupCompanyFilter, groupCountryFilter]);
+    memberFrozenOrderRef.current = [];
+    groupFrozenOrderRef.current = [];
+  }, [activeTab, memberCompanyFilter, memberGroupFilter, memberCountryFilter, memberAllowSubscribeFilter, groupCompanyFilter, groupCountryFilter, groupAllowSubscribeFilter]);
 
   // Subscribe to default metadata collections
   useEffect(() => {
@@ -173,8 +184,39 @@ export default function BackOfficePage() {
     return map;
   }, [groups]);
 
+  // Render 3-state Allow Subscribe badge helper
+  const renderAllowSubscribeBadge = (item: any, table: string) => {
+    const state = getAllowSubscribeState(item);
+    let label = '✓ Enabled';
+    let className = 'badge-toggle allowed';
+    let title = 'Click to cycle: Enabled -> Enabled-Admin -> Disabled';
+
+    if (state === 'Enabled-Admin') {
+      label = '🛡️ Enabled-Admin';
+      className = 'badge-toggle admin-only';
+      title = 'Web Admin only. Click to cycle: Enabled-Admin -> Disabled -> Enabled';
+    } else if (state === 'Disabled') {
+      label = '✕ Disabled';
+      className = 'badge-toggle disallowed';
+      title = 'Disabled. Click to cycle: Disabled -> Enabled -> Enabled-Admin';
+    }
+
+    return (
+      <button
+        type="button"
+        className={className}
+        onClick={() => handleCycleSingleAllowSubscribe(table, item)}
+        title={title}
+      >
+        {label}
+      </button>
+    );
+  };
+
   // Handle column sorting
   const handleSortMembers = (key: MemberSortKey) => {
+    // Explicit user click on column header clears frozen order so re-sort takes effect
+    memberFrozenOrderRef.current = [];
     if (memberSortKey === key) {
       setMemberSortAsc(!memberSortAsc);
     } else {
@@ -184,18 +226,27 @@ export default function BackOfficePage() {
   };
 
   const sortedMembers = useMemo(() => {
-    return [...members].sort((a, b) => {
+    // If we have a frozen order (from user toggling status in-place), preserve that exact order
+    const frozen = memberFrozenOrderRef.current;
+    if (frozen && frozen.length > 0) {
+      const orderMap = new Map<string, number>();
+      frozen.forEach((id, idx) => orderMap.set(id, idx));
+      return [...members].sort((a, b) => {
+        const idxA = orderMap.has(a.id) ? orderMap.get(a.id)! : 999999;
+        const idxB = orderMap.has(b.id) ? orderMap.get(b.id)! : 999999;
+        return idxA - idxB;
+      });
+    }
+
+    const sorted = [...members].sort((a, b) => {
       let valA: string | number = '';
       let valB: string | number = '';
 
-      if (memberSortKey === 'is_active') {
-        valA = a.is_active ? 1 : 0;
-        valB = b.is_active ? 1 : 0;
-      } else if (memberSortKey === 'is_allowed_import') {
-        const aAllowed = a.is_allowed_import !== false && a.allow_import !== false;
-        const bAllowed = b.is_allowed_import !== false && b.allow_import !== false;
-        valA = aAllowed ? 1 : 0;
-        valB = bAllowed ? 1 : 0;
+      if (memberSortKey === 'is_allowed_import') {
+        // Sort order: Enabled(2) > Enabled-Admin(1) > Disabled(0)
+        const stateOrder: Record<string, number> = { 'Enabled': 2, 'Enabled-Admin': 1, 'Disabled': 0 };
+        valA = stateOrder[getAllowSubscribeState(a)] ?? 2;
+        valB = stateOrder[getAllowSubscribeState(b)] ?? 2;
       } else if (memberSortKey === 'date_added') {
         valA = a.date_added || '1000-12-26';
         valB = b.date_added || '1000-12-26';
@@ -208,19 +259,26 @@ export default function BackOfficePage() {
       if (valA > valB) return memberSortAsc ? 1 : -1;
       return 0;
     });
+
+    return sorted;
   }, [members, memberSortKey, memberSortAsc]);
 
-  // Filtered members list based on company, group, and country filter
+  // Filtered members list based on company, group, country, and allow_subscribe filter
   const filteredMembers = useMemo(() => {
     return sortedMembers.filter((m) => {
       if (memberCompanyFilter && m.company !== memberCompanyFilter) return false;
       if (memberGroupFilter && m.group !== memberGroupFilter) return false;
       if (memberCountryFilter && m.country !== memberCountryFilter) return false;
+      if (memberAllowSubscribeFilter && memberAllowSubscribeFilter !== 'all') {
+        if (getAllowSubscribeState(m) !== memberAllowSubscribeFilter) return false;
+      }
       return true;
     });
-  }, [sortedMembers, memberCompanyFilter, memberGroupFilter, memberCountryFilter]);
+  }, [sortedMembers, memberCompanyFilter, memberGroupFilter, memberCountryFilter, memberAllowSubscribeFilter]);
 
   const handleSortGroups = (key: GroupSortKey) => {
+    // Explicit user click on column header clears frozen order so re-sort takes effect
+    groupFrozenOrderRef.current = [];
     if (groupSortKey === key) {
       setGroupSortAsc(!groupSortAsc);
     } else {
@@ -230,15 +288,26 @@ export default function BackOfficePage() {
   };
 
   const sortedGroups = useMemo(() => {
-    return [...groups].sort((a, b) => {
+    // If we have a frozen order (from user toggling status in-place), preserve that exact order
+    const frozen = groupFrozenOrderRef.current;
+    if (frozen && frozen.length > 0) {
+      const orderMap = new Map<string, number>();
+      frozen.forEach((id, idx) => orderMap.set(id, idx));
+      return [...groups].sort((a, b) => {
+        const idxA = orderMap.has(a.id) ? orderMap.get(a.id)! : 999999;
+        const idxB = orderMap.has(b.id) ? orderMap.get(b.id)! : 999999;
+        return idxA - idxB;
+      });
+    }
+
+    const sorted = [...groups].sort((a, b) => {
       let valA: string | number = '';
       let valB: string | number = '';
 
       if (groupSortKey === 'is_allowed_import') {
-        const aAllowed = a.is_allowed_import !== false && a.allow_import !== false;
-        const bAllowed = b.is_allowed_import !== false && b.allow_import !== false;
-        valA = aAllowed ? 1 : 0;
-        valB = bAllowed ? 1 : 0;
+        const stateOrder: Record<string, number> = { 'Enabled': 2, 'Enabled-Admin': 1, 'Disabled': 0 };
+        valA = stateOrder[getAllowSubscribeState(a)] ?? 2;
+        valB = stateOrder[getAllowSubscribeState(b)] ?? 2;
       } else {
         valA = String(a[groupSortKey] ?? '').toLowerCase();
         valB = String(b[groupSortKey] ?? '').toLowerCase();
@@ -248,16 +317,21 @@ export default function BackOfficePage() {
       if (valA > valB) return groupSortAsc ? 1 : -1;
       return 0;
     });
+
+    return sorted;
   }, [groups, groupSortKey, groupSortAsc]);
 
-  // Filtered groups list based on company and country filter
+  // Filtered groups list based on company, country, and allow_subscribe filter
   const filteredGroups = useMemo(() => {
     return sortedGroups.filter((g) => {
       if (groupCompanyFilter && g.company !== groupCompanyFilter) return false;
       if (groupCountryFilter && g.country !== groupCountryFilter) return false;
+      if (groupAllowSubscribeFilter && groupAllowSubscribeFilter !== 'all') {
+        if (getAllowSubscribeState(g) !== groupAllowSubscribeFilter) return false;
+      }
       return true;
     });
-  }, [sortedGroups, groupCompanyFilter, groupCountryFilter]);
+  }, [sortedGroups, groupCompanyFilter, groupCountryFilter, groupAllowSubscribeFilter]);
 
   const handleSortCompanies = (key: CompanySortKey) => {
     if (companySortKey === key) {
@@ -270,18 +344,8 @@ export default function BackOfficePage() {
 
   const sortedCompanies = useMemo(() => {
     return [...companies].sort((a, b) => {
-      let valA: string | number = '';
-      let valB: string | number = '';
-
-      if (companySortKey === 'is_allowed_import') {
-        const aAllowed = a.is_allowed_import !== false && a.allow_import !== false;
-        const bAllowed = b.is_allowed_import !== false && b.allow_import !== false;
-        valA = aAllowed ? 1 : 0;
-        valB = bAllowed ? 1 : 0;
-      } else {
-        valA = String(a[companySortKey] ?? '').toLowerCase();
-        valB = String(b[companySortKey] ?? '').toLowerCase();
-      }
+      const valA = String(a[companySortKey] ?? '').toLowerCase();
+      const valB = String(b[companySortKey] ?? '').toLowerCase();
 
       if (valA < valB) return companySortAsc ? -1 : 1;
       if (valA > valB) return companySortAsc ? 1 : -1;
@@ -337,37 +401,8 @@ export default function BackOfficePage() {
     setSelectedIds(next);
   };
 
-  const triggerCompanyCascadeDisallow = async (compNameRaw: string) => {
-    const compName = String(compNameRaw || '').trim().toLowerCase();
-    if (!compName) return;
 
-    // 1. Prompt for related groups
-    const relatedGroups = groups.filter(g => String(g.company || '').trim().toLowerCase() === compName);
-    const allowedRelatedGroups = relatedGroups.filter(g => g.is_allowed_import !== false && g.allow_import !== false);
 
-    if (allowedRelatedGroups.length > 0) {
-      if (confirm(`Do you also want to disallow all ${allowedRelatedGroups.length} related group(s) under company "${compNameRaw}"?`)) {
-        for (const g of allowedRelatedGroups) {
-          await updateDefaultMetadataDoc('dim_group', g.id, { ...g, is_allowed_import: false, allow_import: false }, isDemoUser);
-        }
-      }
-    }
-
-    // 2. Prompt for related members (either directly matching company or under groups of this company)
-    const companyGroupNames = new Set(relatedGroups.map(g => String(g.group || '').trim().toLowerCase()));
-    const allowedRelatedMembers = members.filter(m => 
-      (String(m.company || '').trim().toLowerCase() === compName || companyGroupNames.has(String(m.group || '').trim().toLowerCase())) &&
-      m.is_allowed_import !== false && m.allow_import !== false
-    );
-
-    if (allowedRelatedMembers.length > 0) {
-      if (confirm(`Do you also want to disallow all ${allowedRelatedMembers.length} related member(s) under company "${compNameRaw}"?`)) {
-        for (const m of allowedRelatedMembers) {
-          await updateDefaultMetadataDoc('dim_member', m.id, { ...m, is_allowed_import: false, allow_import: false }, isDemoUser);
-        }
-      }
-    }
-  };
 
   const triggerGroupCascadeDisallow = async (grpNameRaw: string) => {
     const grpName = String(grpNameRaw || '').trim().toLowerCase();
@@ -375,32 +410,29 @@ export default function BackOfficePage() {
 
     const allowedRelatedMembers = members.filter(m => 
       String(m.group || '').trim().toLowerCase() === grpName &&
-      m.is_allowed_import !== false && m.allow_import !== false
+      getAllowSubscribeState(m) !== 'Disabled'
     );
 
     if (allowedRelatedMembers.length > 0) {
-      if (confirm(`Do you also want to disallow all ${allowedRelatedMembers.length} related member(s) in group "${grpNameRaw}"?`)) {
+      if (confirm(`Do you also want to disable subscribe for all ${allowedRelatedMembers.length} related member(s) in group "${grpNameRaw}"?`)) {
         for (const m of allowedRelatedMembers) {
-          await updateDefaultMetadataDoc('dim_member', m.id, { ...m, is_allowed_import: false, allow_import: false }, isDemoUser);
+          await updateDefaultMetadataDoc('dim_member', m.id, { ...m, allow_subscribe: 'Disabled', is_allowed_import: false, allow_import: false }, isDemoUser);
         }
       }
     }
   };
 
-  const handleBatchToggleAllowImport = async (allowed: boolean) => {
+  const handleBatchSetAllowSubscribe = async (status: AllowSubscribeStatus) => {
     if (!activeTableName || selectedIds.size === 0) return;
     const items = activeItems.filter(item => selectedIds.has(item.id));
     try {
       for (const item of items) {
-        await updateDefaultMetadataDoc(activeTableName, item.id, { ...item, is_allowed_import: allowed, allow_import: allowed }, isDemoUser);
+        const legacyAllowed = status !== 'Disabled';
+        await updateDefaultMetadataDoc(activeTableName, item.id, { ...item, allow_subscribe: status, is_allowed_import: legacyAllowed, allow_import: legacyAllowed }, isDemoUser);
       }
 
-      if (!allowed) {
-        if (activeTab === 'companies') {
-          for (const compItem of items) {
-            await triggerCompanyCascadeDisallow(String((compItem as any).company || ''));
-          }
-        } else if (activeTab === 'groups') {
+      if (status === 'Disabled') {
+        if (activeTab === 'groups') {
           for (const grpItem of items) {
             await triggerGroupCascadeDisallow(String((grpItem as any).group || ''));
           }
@@ -408,7 +440,7 @@ export default function BackOfficePage() {
       }
       setSelectedIds(new Set());
     } catch (err) {
-      alert("Error updating import permission: " + (err instanceof Error ? err.message : String(err)));
+      alert("Error updating subscribe permission: " + (err instanceof Error ? err.message : String(err)));
     }
   };
 
@@ -427,29 +459,36 @@ export default function BackOfficePage() {
     }
   };
 
-  const handleToggleSingleAllowImport = async (table: string, item: any) => {
-    const currentAllowed = item.is_allowed_import !== false && item.allow_import !== false;
-    const nextAllowed = !currentAllowed;
-    try {
-      await updateDefaultMetadataDoc(table, item.id, { ...item, is_allowed_import: nextAllowed, allow_import: nextAllowed }, isDemoUser);
+  // 3-state cycling: Enabled → Enabled-Admin → Disabled → Enabled
+  const handleCycleSingleAllowSubscribe = async (table: string, item: any) => {
+    // Freeze current displayed order so row stays exactly in place without bouncing
+    if (table === 'dim_member') {
+      if (memberFrozenOrderRef.current.length === 0) {
+        memberFrozenOrderRef.current = sortedMembers.map(m => m.id);
+      }
+    } else if (table === 'dim_group') {
+      if (groupFrozenOrderRef.current.length === 0) {
+        groupFrozenOrderRef.current = sortedGroups.map(g => g.id);
+      }
+    }
 
-      if (!nextAllowed) {
-        if (table === 'dim_company') {
-          await triggerCompanyCascadeDisallow(item.company);
-        } else if (table === 'dim_group') {
+    const currentState = getAllowSubscribeState(item);
+    let nextState: AllowSubscribeStatus;
+    if (currentState === 'Enabled') nextState = 'Enabled-Admin';
+    else if (currentState === 'Enabled-Admin') nextState = 'Disabled';
+    else nextState = 'Enabled';
+
+    const legacyAllowed = nextState !== 'Disabled';
+    try {
+      await updateDefaultMetadataDoc(table, item.id, { ...item, allow_subscribe: nextState, is_allowed_import: legacyAllowed, allow_import: legacyAllowed }, isDemoUser);
+
+      if (nextState === 'Disabled') {
+        if (table === 'dim_group') {
           await triggerGroupCascadeDisallow(item.group);
         }
       }
     } catch (err) {
-      alert("Error updating import permission: " + (err instanceof Error ? err.message : String(err)));
-    }
-  };
-
-  const handleToggleSingleActive = async (item: DimMember) => {
-    try {
-      await updateDefaultMetadataDoc('dim_member', item.id, { ...item, is_active: !item.is_active }, isDemoUser);
-    } catch (err) {
-      alert("Error updating active status: " + (err instanceof Error ? err.message : String(err)));
+      alert("Error updating subscribe permission: " + (err instanceof Error ? err.message : String(err)));
     }
   };
 
@@ -549,15 +588,13 @@ export default function BackOfficePage() {
     if (!editingItem) return;
     const { table, data } = editingItem;
     const id = data.id as string;
-    const isAllowedNow = data.is_allowed_import !== false && data.allow_import !== false;
+    const subscribeState = getAllowSubscribeState(data);
     try {
       await updateDefaultMetadataDoc(table, id, data, isDemoUser);
       setEditingItem(null);
 
-      if (!isAllowedNow) {
-        if (table === 'dim_company') {
-          await triggerCompanyCascadeDisallow(String(data.company || ''));
-        } else if (table === 'dim_group') {
+      if (subscribeState === 'Disabled') {
+        if (table === 'dim_group') {
           await triggerGroupCascadeDisallow(String(data.group || ''));
         }
       }
@@ -634,12 +671,19 @@ export default function BackOfficePage() {
               <span className="badge-pill primary" style={{ fontWeight: 600 }}>{selectedIds.size} item(s) selected</span>
             </div>
             <div className="batch-buttons">
-              <button type="button" className="btn btn-secondary btn-xs" onClick={() => handleBatchToggleAllowImport(true)}>
-                <CheckCircle size={13} /> Allow Import
-              </button>
-              <button type="button" className="btn btn-secondary btn-xs" onClick={() => handleBatchToggleAllowImport(false)}>
-                <XCircle size={13} /> Disallow Import
-              </button>
+              {(activeTab === 'members' || activeTab === 'groups') && (
+                <>
+                  <button type="button" className="btn btn-secondary btn-xs" onClick={() => handleBatchSetAllowSubscribe('Enabled')}>
+                    <CheckCircle size={13} /> Enabled
+                  </button>
+                  <button type="button" className="btn btn-secondary btn-xs" onClick={() => handleBatchSetAllowSubscribe('Enabled-Admin')} title="Only visible to Web Admins">
+                    🛡️ Enabled-Admin
+                  </button>
+                  <button type="button" className="btn btn-secondary btn-xs" onClick={() => handleBatchSetAllowSubscribe('Disabled')}>
+                    <XCircle size={13} /> Disabled
+                  </button>
+                </>
+              )}
               <button type="button" className="btn btn-danger btn-xs" onClick={handleBatchDelete}>
                 <Trash2 size={13} /> Delete Selected ({selectedIds.size})
               </button>
@@ -694,6 +738,17 @@ export default function BackOfficePage() {
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
+
+                  <select
+                    className="filter-select"
+                    value={memberAllowSubscribeFilter}
+                    onChange={(e) => setMemberAllowSubscribeFilter(e.target.value)}
+                  >
+                    <option value="all">All Allow Subscribe</option>
+                    <option value="Enabled">✓ Enabled</option>
+                    <option value="Enabled-Admin">🛡️ Enabled-Admin</option>
+                    <option value="Disabled">✕ Disabled</option>
+                  </select>
                 </div>
                 <button className="btn btn-primary btn-sm" onClick={handleStartAddMember} disabled={Boolean(tempMember)}>
                   <Plus size={14} /> Add
@@ -726,11 +781,8 @@ export default function BackOfficePage() {
                     <th className="sortable-th" onClick={() => handleSortMembers('company')}>
                       Company <span title="Locked & auto-mapped by Group"><Lock size={11} /></span> {memberSortKey === 'company' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                     </th>
-                    <th className="sortable-th" onClick={() => handleSortMembers('is_active')}>
-                      Status {memberSortKey === 'is_active' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                    </th>
                     <th className="sortable-th" onClick={() => handleSortMembers('is_allowed_import')}>
-                      Allow Import {memberSortKey === 'is_allowed_import' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                      Allow Subscribe {memberSortKey === 'is_allowed_import' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                     </th>
                     <th className="sortable-th" onClick={() => handleSortMembers('x_profile')}>
                       X Profile {memberSortKey === 'x_profile' ? (memberSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
@@ -807,10 +859,7 @@ export default function BackOfficePage() {
                       <td className="locked-cell">{tempMember.country}</td>
                       <td className="locked-cell">{tempMember.company}</td>
                       <td>
-                        <span className="badge-toggle active" style={{ cursor: 'default' }}>Active</span>
-                      </td>
-                      <td>
-                        <span className="badge-toggle allowed" style={{ cursor: 'default' }}>Allowed</span>
+                        <span className="badge-toggle allowed" style={{ cursor: 'default' }}>✓ Enabled</span>
                       </td>
                       <td>
                         <input 
@@ -835,7 +884,6 @@ export default function BackOfficePage() {
                   {filteredMembers.map((m) => {
                     const colorObj = colors.find(c => c.color === m.color);
                     const isSelected = selectedIds.has(m.id);
-                    const isAllowed = m.is_allowed_import !== false && m.allow_import !== false;
 
                     return (
                       <tr key={m.id} className={isSelected ? 'selected-row' : ''}>
@@ -856,24 +904,7 @@ export default function BackOfficePage() {
                         <td>{m.country}</td>
                         <td>{m.company}</td>
                         <td>
-                          <button
-                            type="button"
-                            className={`badge-toggle ${m.is_active ? 'active' : 'inactive'}`}
-                            onClick={() => handleToggleSingleActive(m)}
-                            title="Click to toggle member active status"
-                          >
-                            {m.is_active ? 'Active' : 'Inactive'}
-                          </button>
-                        </td>
-                        <td>
-                          <button
-                            type="button"
-                            className={`badge-toggle ${isAllowed ? 'allowed' : 'disallowed'}`}
-                            onClick={() => handleToggleSingleAllowImport('dim_member', m)}
-                            title="Click to toggle import permission for user import wizard"
-                          >
-                            {isAllowed ? 'Allowed' : 'Disabled'}
-                          </button>
+                          {renderAllowSubscribeBadge(m, 'dim_member')}
                         </td>
                         <td>
                           {m.x_profile ? (
@@ -935,6 +966,16 @@ export default function BackOfficePage() {
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
+                  <select
+                    className="filter-select"
+                    value={groupAllowSubscribeFilter}
+                    onChange={(e) => setGroupAllowSubscribeFilter(e.target.value)}
+                  >
+                    <option value="all">All Allow Subscribe</option>
+                    <option value="Enabled">✓ Enabled</option>
+                    <option value="Enabled-Admin">🛡️ Enabled-Admin</option>
+                    <option value="Disabled">✕ Disabled</option>
+                  </select>
                 </div>
                 <button className="btn btn-primary btn-sm" onClick={() => setTempGroup({ group: '', country: '🇹🇭 TH', company: 'Individual' })} disabled={Boolean(tempGroup)} style={{ marginLeft: 'auto' }}>
                   <Plus size={14} /> Add
@@ -958,7 +999,7 @@ export default function BackOfficePage() {
                       Company {groupSortKey === 'company' ? (groupSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                     </th>
                     <th className="sortable-th" onClick={() => handleSortGroups('is_allowed_import')}>
-                      Allow Import {groupSortKey === 'is_allowed_import' ? (groupSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
+                      Allow Subscribe {groupSortKey === 'is_allowed_import' ? (groupSortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                     </th>
                     <th>Date Added</th>
                     <th>Date Modified</th>
@@ -1006,7 +1047,7 @@ export default function BackOfficePage() {
                         </select>
                       </td>
                       <td>
-                        <span className="badge-toggle allowed" style={{ cursor: 'default' }}>Allowed</span>
+                        <span className="badge-toggle allowed" style={{ cursor: 'default' }}>✓ Enabled</span>
                       </td>
                       <td className="mono">{new Date().toISOString().split('T')[0]}</td>
                       <td className="mono">{new Date().toISOString().split('T')[0]}</td>
@@ -1021,7 +1062,6 @@ export default function BackOfficePage() {
 
                   {filteredGroups.map((g) => {
                     const isSelected = selectedIds.has(g.id);
-                    const isAllowed = g.is_allowed_import !== false && g.allow_import !== false;
 
                     return (
                       <tr key={g.id} className={isSelected ? 'selected-row' : ''}>
@@ -1032,14 +1072,7 @@ export default function BackOfficePage() {
                         <td>{g.country}</td>
                         <td>{g.company}</td>
                         <td>
-                          <button
-                            type="button"
-                            className={`badge-toggle ${isAllowed ? 'allowed' : 'disallowed'}`}
-                            onClick={() => handleToggleSingleAllowImport('dim_group', g)}
-                            title="Click to toggle import permission for user import wizard"
-                          >
-                            {isAllowed ? 'Allowed' : 'Disabled'}
-                          </button>
+                          {renderAllowSubscribeBadge(g, 'dim_group')}
                         </td>
                         <td className="mono">{formatBrowserTimestamp(g.date_added, g.createdAt)}</td>
                         <td className="mono">{formatBrowserTimestamp(g.date_modified, g.updatedAt)}</td>
@@ -1083,9 +1116,6 @@ export default function BackOfficePage() {
                     <th className="sortable-th" onClick={() => handleSortCompanies('company')}>
                       Company {companySortKey === 'company' ? (companySortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
                     </th>
-                    <th className="sortable-th" onClick={() => handleSortCompanies('is_allowed_import')}>
-                      Allow Import {companySortKey === 'is_allowed_import' ? (companySortAsc ? '▲' : '▼') : <ArrowUpDown size={12} />}
-                    </th>
                     <th>Date Added</th>
                     <th>Date Modified</th>
                     <th>Actions</th>
@@ -1105,9 +1135,6 @@ export default function BackOfficePage() {
                           onChange={(e) => setTempCompany({ company: e.target.value })}
                         />
                       </td>
-                      <td>
-                        <span className="badge-toggle allowed" style={{ cursor: 'default' }}>Allowed</span>
-                      </td>
                       <td className="mono">{new Date().toISOString().split('T')[0]}</td>
                       <td className="mono">{new Date().toISOString().split('T')[0]}</td>
                       <td>
@@ -1121,7 +1148,6 @@ export default function BackOfficePage() {
 
                   {sortedCompanies.map((c) => {
                     const isSelected = selectedIds.has(c.id);
-                    const isAllowed = c.is_allowed_import !== false && c.allow_import !== false;
 
                     return (
                       <tr key={c.id} className={isSelected ? 'selected-row' : ''}>
@@ -1129,16 +1155,6 @@ export default function BackOfficePage() {
                           <input type="checkbox" checked={isSelected} onChange={() => handleToggleSelect(c.id)} />
                         </td>
                         <td className="bold">{c.company}</td>
-                        <td>
-                          <button
-                            type="button"
-                            className={`badge-toggle ${isAllowed ? 'allowed' : 'disallowed'}`}
-                            onClick={() => handleToggleSingleAllowImport('dim_company', c)}
-                            title="Click to toggle import permission for user import wizard"
-                          >
-                            {isAllowed ? 'Allowed' : 'Disabled'}
-                          </button>
-                        </td>
                         <td className="mono">{formatBrowserTimestamp(c.date_added, c.createdAt)}</td>
                         <td className="mono">{formatBrowserTimestamp(c.date_modified, c.updatedAt)}</td>
                         <td>
@@ -1588,14 +1604,27 @@ export default function BackOfficePage() {
                   </div>
 
                   <div className="form-group">
-                    <label>Status</label>
+                    <label>Allow Subscribe</label>
                     <select
                       className="input-control"
-                      value={editingItem.data.is_active ? 'true' : 'false'}
-                      onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, is_active: e.target.value === 'true' } })}
+                      value={getAllowSubscribeState(editingItem.data)}
+                      onChange={(e) => {
+                        const val = e.target.value as AllowSubscribeStatus;
+                        const legacyAllowed = val !== 'Disabled';
+                        setEditingItem({
+                          ...editingItem,
+                          data: {
+                            ...editingItem.data,
+                            allow_subscribe: val,
+                            is_allowed_import: legacyAllowed,
+                            allow_import: legacyAllowed
+                          }
+                        });
+                      }}
                     >
-                      <option value="true">Active</option>
-                      <option value="false">Inactive</option>
+                      <option value="Enabled">Enabled (All Users)</option>
+                      <option value="Enabled-Admin">Enabled-Admin (Web Admin Only)</option>
+                      <option value="Disabled">Disabled</option>
                     </select>
                   </div>
 
@@ -1682,6 +1711,30 @@ export default function BackOfficePage() {
                       ))}
                     </select>
                   </div>
+                  <div className="form-group">
+                    <label>Allow Subscribe</label>
+                    <select
+                      className="input-control"
+                      value={getAllowSubscribeState(editingItem.data)}
+                      onChange={(e) => {
+                        const val = e.target.value as AllowSubscribeStatus;
+                        const legacyAllowed = val !== 'Disabled';
+                        setEditingItem({
+                          ...editingItem,
+                          data: {
+                            ...editingItem.data,
+                            allow_subscribe: val,
+                            is_allowed_import: legacyAllowed,
+                            allow_import: legacyAllowed
+                          }
+                        });
+                      }}
+                    >
+                      <option value="Enabled">Enabled (All Users)</option>
+                      <option value="Enabled-Admin">Enabled-Admin (Web Admin Only)</option>
+                      <option value="Disabled">Disabled</option>
+                    </select>
+                  </div>
                 </>
               )}
 
@@ -1728,7 +1781,7 @@ export default function BackOfficePage() {
 
               {editingItem.table !== 'dim_group' && editingItem.table !== 'dim_color' && editingItem.table !== 'dim_member' && (
                 Object.keys(editingItem.data)
-                  .filter(k => k !== 'id' && k !== 'userId' && k !== 'createdAt' && k !== 'updatedAt' && k !== 'date_added' && k !== 'date_modified')
+                  .filter(k => k !== 'id' && k !== 'userId' && k !== 'createdAt' && k !== 'updatedAt' && k !== 'date_added' && k !== 'date_modified' && (editingItem.table !== 'dim_company' || (k !== 'allow_import' && k !== 'is_allowed_import' && k !== 'allow_subscribe')))
                   .map(key => (
                     <div key={key} className={`form-group ${key === 'member_image' || key === 'x_profile' ? 'span-2' : ''}`}>
                       <label>{key}</label>
@@ -2395,6 +2448,12 @@ export default function BackOfficePage() {
           border-color: rgba(34, 197, 94, 0.45) !important;
         }
         :global(.badge-toggle.allowed:hover) { background: rgba(34, 197, 94, 0.3) !important; }
+        :global(.badge-toggle.admin-only) {
+          background: rgba(212, 168, 75, 0.18) !important;
+          color: #d4a84b !important;
+          border-color: rgba(212, 168, 75, 0.45) !important;
+        }
+        :global(.badge-toggle.admin-only:hover) { background: rgba(212, 168, 75, 0.3) !important; }
         :global(.badge-toggle.disallowed) {
           background: rgba(239, 68, 68, 0.18) !important;
           color: #ef4444 !important;

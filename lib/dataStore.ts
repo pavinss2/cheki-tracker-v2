@@ -695,12 +695,35 @@ export function hasUserConfiguredSubscriptions(userId: string): boolean {
   return localStorage.getItem(STORAGE_PREFIX + key) !== null;
 }
 
+// 3-state Allow Subscribe helpers
+export type AllowSubscribeStatus = 'Enabled' | 'Disabled' | 'Enabled-Admin';
+
+export function getAllowSubscribeState(item: any): AllowSubscribeStatus {
+  // Priority: allow_subscribe > allow_import / is_allowed_import (backward compatibility)
+  if (item.allow_subscribe && ['Enabled', 'Disabled', 'Enabled-Admin'].includes(item.allow_subscribe)) {
+    return item.allow_subscribe as AllowSubscribeStatus;
+  }
+  // Legacy backward compatibility
+  if (item.is_allowed_import === false || item.allow_import === false) {
+    return 'Disabled';
+  }
+  return 'Enabled';
+}
+
+export function isAllowSubscribeAllowed(item: any, isSuperAdmin: boolean): boolean {
+  const state = getAllowSubscribeState(item);
+  if (state === 'Enabled') return true;
+  if (state === 'Enabled-Admin' && isSuperAdmin) return true;
+  return false;
+}
+
 export function subscribeMergedMetadata<T>(
   tableName: string,
   userId: string,
   defaultSeed: Omit<T, 'id' | 'userId'>[],
   onData: (items: T[]) => void,
-  isDemo: boolean = false
+  isDemo: boolean = false,
+  isSuperAdmin: boolean = false
 ): () => void {
   const seed = defaultSeed.map((item, idx) => ({
     ...item,
@@ -737,8 +760,11 @@ export function subscribeMergedMetadata<T>(
 
     // 1. Process Default items from Back Office (filter out disallowed & unsubscribed items)
     defaultItems.forEach((d) => {
-      const isAllowed = (d as any).is_allowed_import !== false && (d as any).allow_import !== false;
-      if (!isAllowed) return; // Disallowed in Back Office
+      // Company-level: no allow_subscribe filtering (companies are derived from their groups)
+      // Group/Member-level: use 3-state allow_subscribe check
+      if (tableName !== 'dim_company') {
+        if (!isAllowSubscribeAllowed(d as any, isSuperAdmin)) return; // Disallowed in Back Office
+      }
 
       // Check optional user subscription filters (driven strictly by Group level)
       if (!userSubs.subscribeAll) {
@@ -795,9 +821,11 @@ export function subscribeMergedMetadata<T>(
         if (oVal) processedKeys.add(oVal);
       }
 
+      // For dim_member: ignore Back Office is_active, default to true, respect user override
+      // For other tables: use legacy behavior (check override, then default, then true)
       const activeState = override && (override as any).is_active !== undefined
         ? Boolean((override as any).is_active)
-        : ((d as any).is_active !== undefined ? Boolean((d as any).is_active) : true);
+        : (tableName === 'dim_member' ? true : ((d as any).is_active !== undefined ? Boolean((d as any).is_active) : true));
 
       const isDeleted = Boolean((override && (override as any).is_deleted) || (d as any).is_deleted);
       if (isDeleted) return;

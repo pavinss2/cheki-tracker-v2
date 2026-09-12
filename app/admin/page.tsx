@@ -12,7 +12,9 @@ import {
   saveUserSubscriptions,
   hasUserConfiguredSubscriptions,
   subscribeDefaultMetadata,
-  UserSubscriptionConfig
+  UserSubscriptionConfig,
+  getAllowSubscribeState,
+  isAllowSubscribeAllowed
 } from '@/lib/dataStore';
 import { DEFAULT_COUNTRIES, DEFAULT_COMPANIES, DEFAULT_GROUPS, DEFAULT_MEMBERS } from '@/lib/seedData';
 import { useAuth } from '@/context/AuthContext';
@@ -39,7 +41,7 @@ interface TempMemberRow {
 }
 
 export default function AdminPage() {
-  const { user, isDemoUser } = useAuth();
+  const { user, isDemoUser, isSuperAdmin } = useAuth();
   const { members, companies, groups, colors, types, countries, userId, loading } = useChekiData();
 
   const [activeTab, setActiveTab] = useState<'members' | 'groups' | 'companies' | 'logs'>('members');
@@ -122,13 +124,24 @@ export default function AdminPage() {
   // Table search & filter states
   const [filterMemberGroup, setFilterMemberGroup] = useState<string>('all');
   const [filterMemberCompany, setFilterMemberCompany] = useState<string>('all');
+  const [filterMemberStatus, setFilterMemberStatus] = useState<string>('all');
   const [filterGroupCompany, setFilterGroupCompany] = useState<string>('all');
+  const [filterGroupStatus, setFilterGroupStatus] = useState<string>('all');
+  const [filterCompanyStatus, setFilterCompanyStatus] = useState<string>('all');
+
+  // Stable in-place row ordering refs (prevents rows from bouncing when badge is toggled)
+  const memberFrozenOrderRef = React.useRef<string[]>([]);
+  const groupFrozenOrderRef = React.useRef<string[]>([]);
+  const companyFrozenOrderRef = React.useRef<string[]>([]);
 
   // Multiselect state
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   useEffect(() => {
     setSelectedItemIds([]);
-  }, [activeTab]);
+    memberFrozenOrderRef.current = [];
+    groupFrozenOrderRef.current = [];
+    companyFrozenOrderRef.current = [];
+  }, [activeTab, filterMemberGroup, filterMemberCompany, filterMemberStatus, filterGroupCompany, filterGroupStatus, filterCompanyStatus]);
 
   const logs = getAdminLogs(userId);
 
@@ -149,19 +162,19 @@ export default function AdminPage() {
 
   const rawDefaultCompanies = useMemo(() => {
     const list = defaultCompanies.length > 0 ? defaultCompanies : DEFAULT_COMPANIES;
-    return list.filter(c => c.allow_import !== false);
+    return list;
   }, [defaultCompanies]);
 
   const rawDefaultGroups = useMemo(() => {
     const list = defaultGroups.length > 0 ? defaultGroups : DEFAULT_GROUPS;
-    return list.filter(g => g.allow_import !== false);
-  }, [defaultGroups]);
+    return list.filter(g => isAllowSubscribeAllowed(g, isSuperAdmin));
+  }, [defaultGroups, isSuperAdmin]);
 
   // Options for subscribe modal (with cascading filter across Country, Company, Group)
   // Request 3: Subscribe by Country should only show available countries from unique countries in default_dim_group
   const availableSubCountries = useMemo(() => {
     const list = defaultGroups.length > 0 ? defaultGroups : DEFAULT_GROUPS;
-    const allowedGroups = list.filter(g => g.allow_import !== false);
+    const allowedGroups = list.filter(g => isAllowSubscribeAllowed(g, isSuperAdmin));
     const countrySet = new Set<string>();
     allowedGroups.forEach(g => {
       if (g.country && typeof g.country === 'string' && g.country.trim()) {
@@ -169,20 +182,22 @@ export default function AdminPage() {
       }
     });
     return Array.from(countrySet).sort();
-  }, [defaultGroups]);
+  }, [defaultGroups, isSuperAdmin]);
 
+  // Subscribe by Company should only show companies that have at least one allowed group in rawDefaultGroups
   const availableSubCompanies = useMemo(() => {
-    let list = rawDefaultCompanies;
+    let allowedGroups = rawDefaultGroups;
     if (subConfig.countries.length > 0 && !subConfig.subscribeAll) {
-      list = list.filter(comp => {
-        const compCountry = comp.country;
-        if (compCountry && subConfig.countries.includes(compCountry)) return true;
-        return rawDefaultGroups.some(g => g.company === comp.company && subConfig.countries.includes(g.country));
-      });
+      allowedGroups = allowedGroups.filter(g => subConfig.countries.includes(g.country));
     }
-    const names = list.map(c => c.company).filter(Boolean);
-    return Array.from(new Set(names)).sort();
-  }, [rawDefaultCompanies, rawDefaultGroups, subConfig.countries, subConfig.subscribeAll]);
+    const companySet = new Set<string>();
+    allowedGroups.forEach(g => {
+      if (g.company && typeof g.company === 'string' && g.company.trim()) {
+        companySet.add(g.company.trim());
+      }
+    });
+    return Array.from(companySet).sort();
+  }, [rawDefaultGroups, subConfig.countries, subConfig.subscribeAll]);
 
   const availableSubGroups = useMemo(() => {
     let list = rawDefaultGroups;
@@ -207,6 +222,7 @@ export default function AdminPage() {
 
   // Sort handlers
   const handleSortMembers = (key: MemberSortKey) => {
+    memberFrozenOrderRef.current = [];
     if (memberSortKey === key) {
       setMemberSortAsc(!memberSortAsc);
     } else {
@@ -216,6 +232,7 @@ export default function AdminPage() {
   };
 
   const handleSortGroups = (key: GroupSortKey) => {
+    groupFrozenOrderRef.current = [];
     if (groupSortKey === key) {
       setGroupSortAsc(!groupSortAsc);
     } else {
@@ -225,6 +242,7 @@ export default function AdminPage() {
   };
 
   const handleSortCompanies = (key: CompanySortKey) => {
+    companyFrozenOrderRef.current = [];
     if (companySortKey === key) {
       setCompanySortAsc(!companySortAsc);
     } else {
@@ -233,8 +251,19 @@ export default function AdminPage() {
     }
   };
 
-  // Toggle Active/Inactive status for user
+  // Toggle Active/Inactive status for user (works for groups and companies)
   const handleToggleUserActive = async (table: string, item: any) => {
+    // Freeze current displayed order so row stays in place
+    if (table === 'dim_group') {
+      if (groupFrozenOrderRef.current.length === 0) {
+        groupFrozenOrderRef.current = sortedGroups.map(g => g.id);
+      }
+    } else if (table === 'dim_company') {
+      if (companyFrozenOrderRef.current.length === 0) {
+        companyFrozenOrderRef.current = sortedCompanies.map(c => c.id);
+      }
+    }
+
     const nextActive = item.is_active === false ? true : false;
     try {
       await updateMetadataDoc(table, item.id, userId, { ...item, is_active: nextActive }, isDemoUser);
@@ -405,22 +434,61 @@ export default function AdminPage() {
     }
   };
 
+  const getAdminItemStatus = (table: string, item: any): 'sub' | 'sub-inactive' | 'active' | 'inactive' => {
+    const isSub = Boolean(
+      item.isDefault ||
+      item.is_imported ||
+      (typeof item.id === 'string' && item.id.startsWith('default_')) ||
+      item.backoffice_id
+    );
+    const isActive = item.is_active !== false;
+    if (isSub && !isActive) return 'sub-inactive';
+    if (isSub && isActive) return 'sub';
+    if (!isActive) return 'inactive';
+    return 'active';
+  };
+
   const filteredMembers = useMemo(() => {
     return members.filter(m => {
       if (filterMemberCompany !== 'all' && m.company !== filterMemberCompany) return false;
       if (filterMemberGroup !== 'all' && m.group !== filterMemberGroup) return false;
+      if (filterMemberStatus !== 'all') {
+        const itemStatus = getAdminItemStatus('dim_member', m);
+        if (filterMemberStatus === 'active') {
+          // 'active' matches active custom member or active sub
+          if (m.is_active === false) return false;
+        } else if (filterMemberStatus === 'inactive') {
+          // 'inactive' matches custom inactive
+          if (itemStatus !== 'inactive') return false;
+        } else if (filterMemberStatus === 'sub') {
+          if (itemStatus !== 'sub') return false;
+        } else if (filterMemberStatus === 'sub-inactive') {
+          if (itemStatus !== 'sub-inactive') return false;
+        }
+      }
       return true;
     });
-  }, [members, filterMemberCompany, filterMemberGroup]);
+  }, [members, filterMemberCompany, filterMemberGroup, filterMemberStatus]);
 
   const sortedMembers = useMemo(() => {
+    const frozen = memberFrozenOrderRef.current;
+    if (frozen && frozen.length > 0) {
+      const orderMap = new Map<string, number>();
+      frozen.forEach((id, idx) => orderMap.set(id, idx));
+      return [...filteredMembers].sort((a, b) => {
+        const idxA = orderMap.has(a.id) ? orderMap.get(a.id)! : 999999;
+        const idxB = orderMap.has(b.id) ? orderMap.get(b.id)! : 999999;
+        return idxA - idxB;
+      });
+    }
+
     return [...filteredMembers].sort((a, b) => {
       let valA: any = a[memberSortKey] ?? '';
       let valB: any = b[memberSortKey] ?? '';
 
       if (memberSortKey === 'is_active') {
-        valA = a.is_active ? 1 : 0;
-        valB = b.is_active ? 1 : 0;
+        valA = a.is_active !== false ? 1 : 0;
+        valB = b.is_active !== false ? 1 : 0;
       } else {
         valA = String(valA).toLowerCase();
         valB = String(valB).toLowerCase();
@@ -435,17 +503,38 @@ export default function AdminPage() {
   const filteredGroups = useMemo(() => {
     return groups.filter(g => {
       if (filterGroupCompany !== 'all' && g.company !== filterGroupCompany) return false;
+      if (filterGroupStatus !== 'all') {
+        const itemStatus = getAdminItemStatus('dim_group', g);
+        if (filterGroupStatus === 'active') {
+          if (g.is_active === false) return false;
+        } else if (filterGroupStatus === 'inactive') {
+          if (itemStatus !== 'inactive') return false;
+        } else if (filterGroupStatus === 'sub') {
+          if (itemStatus !== 'sub') return false;
+        }
+      }
       return true;
     });
-  }, [groups, filterGroupCompany]);
+  }, [groups, filterGroupCompany, filterGroupStatus]);
 
   const sortedGroups = useMemo(() => {
+    const frozen = groupFrozenOrderRef.current;
+    if (frozen && frozen.length > 0) {
+      const orderMap = new Map<string, number>();
+      frozen.forEach((id, idx) => orderMap.set(id, idx));
+      return [...filteredGroups].sort((a, b) => {
+        const idxA = orderMap.has(a.id) ? orderMap.get(a.id)! : 999999;
+        const idxB = orderMap.has(b.id) ? orderMap.get(b.id)! : 999999;
+        return idxA - idxB;
+      });
+    }
+
     return [...filteredGroups].sort((a, b) => {
       let valA: any = a[groupSortKey] ?? '';
       let valB: any = b[groupSortKey] ?? '';
       if (groupSortKey === 'is_active') {
-        valA = a.is_active ? 1 : 0;
-        valB = b.is_active ? 1 : 0;
+        valA = a.is_active !== false ? 1 : 0;
+        valB = b.is_active !== false ? 1 : 0;
       } else {
         valA = String(valA).toLowerCase();
         valB = String(valB).toLowerCase();
@@ -456,13 +545,40 @@ export default function AdminPage() {
     });
   }, [filteredGroups, groupSortKey, groupSortAsc]);
 
+  const filteredCompanies = useMemo(() => {
+    return companies.filter(c => {
+      if (filterCompanyStatus !== 'all') {
+        const itemStatus = getAdminItemStatus('dim_company', c);
+        if (filterCompanyStatus === 'active') {
+          if (c.is_active === false) return false;
+        } else if (filterCompanyStatus === 'inactive') {
+          if (itemStatus !== 'inactive') return false;
+        } else if (filterCompanyStatus === 'sub') {
+          if (itemStatus !== 'sub') return false;
+        }
+      }
+      return true;
+    });
+  }, [companies, filterCompanyStatus]);
+
   const sortedCompanies = useMemo(() => {
-    return [...companies].sort((a, b) => {
+    const frozen = companyFrozenOrderRef.current;
+    if (frozen && frozen.length > 0) {
+      const orderMap = new Map<string, number>();
+      frozen.forEach((id, idx) => orderMap.set(id, idx));
+      return [...filteredCompanies].sort((a, b) => {
+        const idxA = orderMap.has(a.id) ? orderMap.get(a.id)! : 999999;
+        const idxB = orderMap.has(b.id) ? orderMap.get(b.id)! : 999999;
+        return idxA - idxB;
+      });
+    }
+
+    return [...filteredCompanies].sort((a, b) => {
       let valA: any = a[companySortKey] ?? '';
       let valB: any = b[companySortKey] ?? '';
       if (companySortKey === 'is_active') {
-        valA = a.is_active ? 1 : 0;
-        valB = b.is_active ? 1 : 0;
+        valA = a.is_active !== false ? 1 : 0;
+        valB = b.is_active !== false ? 1 : 0;
       } else {
         valA = String(valA).toLowerCase();
         valB = String(valB).toLowerCase();
@@ -471,7 +587,25 @@ export default function AdminPage() {
       if (valA > valB) return companySortAsc ? 1 : -1;
       return 0;
     });
-  }, [companies, companySortKey, companySortAsc]);
+  }, [filteredCompanies, companySortKey, companySortAsc]);
+
+  // Toggle member active status (works for both custom and subscribed members)
+  const handleToggleMemberActive = async (table: string, item: any) => {
+    if (table === 'dim_member') {
+      if (memberFrozenOrderRef.current.length === 0) {
+        memberFrozenOrderRef.current = sortedMembers.map(m => m.id);
+      }
+      const nextActive = !(item.is_active !== false);
+      try {
+        await updateMetadataDoc('dim_member', item.id, userId, { ...item, is_active: nextActive }, isDemoUser);
+      } catch (err) {
+        alert("Error updating active status: " + (err instanceof Error ? err.message : String(err)));
+      }
+    } else {
+      // Group or company toggle
+      await handleToggleUserActive(table, item);
+    }
+  };
 
   // Combined Status badge helper (Column 3)
   const renderStatusBadge = (table: string, item: any, isSubscribedProp: boolean) => {
@@ -487,21 +621,30 @@ export default function AdminPage() {
     let label = 'Active';
     let className = 'status-tag active';
 
-    if (!isActive) {
-      label = 'Inactive';
-      className = 'status-tag inactive';
-    } else if (isSub) {
+    if (isSub && !isActive) {
+      label = 'Sub (Inactive)';
+      className = 'status-tag sub-inactive';
+    } else if (isSub && isActive) {
       label = 'Sub';
       className = 'status-tag sub';
+    } else if (!isActive) {
+      label = 'Inactive';
+      className = 'status-tag inactive';
     } else {
       label = 'Active';
       className = 'status-tag active';
     }
 
     return (
-      <span className={className}>
+      <button
+        type="button"
+        className={className}
+        onClick={() => handleToggleMemberActive(table, item)}
+        title={isSub ? (isActive ? 'Click to mark as Sub (Inactive)' : 'Click to mark as Sub (Active)') : (isActive ? 'Click to set Inactive' : 'Click to set Active')}
+        style={{ cursor: 'pointer', border: 'none', background: 'none', padding: 0 }}
+      >
         {label}
-      </span>
+      </button>
     );
   };
 
@@ -717,6 +860,18 @@ export default function AdminPage() {
                       <option key={grp} value={grp}>{grp}</option>
                     ))}
                   </select>
+                  <select 
+                    className="table-select filter-select" 
+                    style={{ width: 'auto', minWidth: '130px' }}
+                    value={filterMemberStatus}
+                    onChange={(e) => setFilterMemberStatus(e.target.value)}
+                  >
+                    <option value="all">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="sub">Sub</option>
+                    <option value="sub-inactive">Sub (Inactive)</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
                 </div>
                 <button type="button" className="btn btn-primary btn-sm" onClick={handleStartAddMember} style={{ marginLeft: 'auto' }}>
                   <Plus size={14} /> Add
@@ -918,6 +1073,17 @@ export default function AdminPage() {
                       <option key={comp} value={comp}>{comp}</option>
                     ))}
                   </select>
+                  <select 
+                    className="table-select filter-select" 
+                    style={{ width: 'auto', minWidth: '130px' }}
+                    value={filterGroupStatus}
+                    onChange={(e) => setFilterGroupStatus(e.target.value)}
+                  >
+                    <option value="all">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="sub">Sub</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
                 </div>
                 <button type="button" className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_group', data: { group: '', country: '🇹🇭 TH', company: 'Individual' } })} style={{ marginLeft: 'auto' }}>
                   <Plus size={14} /> Add
@@ -1071,7 +1237,20 @@ export default function AdminPage() {
                   <Sliders size={14} /> Manage Subscriptions
                 </button>
               </div>
-              <div className="tab-header-row" style={{ justifyContent: 'flex-end' }}>
+              <div className="tab-header-row">
+                <div className="filter-select-wrapper">
+                  <select 
+                    className="table-select filter-select" 
+                    style={{ width: 'auto', minWidth: '130px' }}
+                    value={filterCompanyStatus}
+                    onChange={(e) => setFilterCompanyStatus(e.target.value)}
+                  >
+                    <option value="all">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="sub">Sub</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
                 <button type="button" className="btn btn-primary btn-sm" onClick={() => setEditingItem({ table: 'dim_company', data: { company: '' } })} style={{ marginLeft: 'auto' }}>
                   <Plus size={14} /> Add
                 </button>
@@ -2036,6 +2215,13 @@ export default function AdminPage() {
           background: rgba(59, 130, 246, 0.18) !important;
           color: #3b82f6 !important;
           border-color: rgba(59, 130, 246, 0.45) !important;
+        }
+
+        :global(.status-tag.sub-inactive) {
+          background: rgba(180, 160, 100, 0.15);
+          color: #8a7a50;
+          border: 1px solid rgba(180, 160, 100, 0.3);
+          text-decoration: line-through;
         }
 
         :global(.status-tag.inactive) {

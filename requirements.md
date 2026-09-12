@@ -184,19 +184,33 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 - **User Active / Inactive Status Toggle**: Clicking the Active Status badge on any row (subscribed or custom) toggles `is_active` for the user's account, allowing users to customize which members/groups appear in their personal drop-down choices.
 - **Custom User Dimensions**: Users can click **"+ Add"** to create private custom members, groups, or companies. Custom items render a **"Custom"** badge and can be fully edited and deleted.
 
-### 6.3 Dimension Table Sorting & `date_added` Rule
+### 6.3 Dimension Table Sorting, In-Place Row Stability & `date_added` Rule
 - **Full Header Column Sorting**:
   - In both Admin and Back Office tabs, all tables (`dim_member`, `dim_group`, `dim_company`) support full column header sorting by clicking any column title.
   - Headers toggle between ascending (`▲`) and descending (`▼`) sort order.
 - **Default Sort Order**: By default, `dim_member` table is arranged by `date_added` descending (`▼`), placing newly added members at the top.
+- **In-Place Row Stability on Inline Badge Toggling**:
+  - When a table is sorted by a toggleable column (such as **"Allow Subscribe"** in Back Office or **"Status"** in Admin), clicking a row's badge inline to change its status does **not** cause that row to bounce or jump to another position in the table.
+  - The current visual row ordering is frozen in-place across inline badge updates until the user explicitly clicks a column header to re-sort or changes the active filter.
 
-### 6.4 Back Office Company & Group Cascade Disallow Prompts
-- **Company Cascade**: Disallowing a company (via single row badge toggle, batch action bar disallow button, or Edit Record modal save):
-  - Prompts `window.confirm`: `"Do you also want to disallow all {count} related group(s) under company '{company}'?"`. If accepted, disallows all related groups.
-  - Independently prompts `window.confirm`: `"Do you also want to disallow all {count} related member(s) under company '{company}'?"`. If accepted, disallows all related members.
-- **Group Cascade**: Disallowing a group (via single row badge toggle, batch action bar disallow button, or Edit Record modal save):
-  - Prompts `window.confirm`: `"Do you also want to disallow all {count} related member(s) in group '{group}'?"`. If accepted, disallows all related members.
-- **Case-Insensitive String Matching**: Matching between company names and group/member parent fields uses `.trim().toLowerCase()` to prevent string format mismatches.
+### 6.4 Back Office "Allow Subscribe" (3-State), Cascade Disallow & Table Filter
+- **3-State "Allow Subscribe" Control**:
+  - Replaced legacy binary "Allow Import" with a 3-state **"Allow Subscribe"** permission in `default_dim_group` and `default_dim_member`:
+    - **`✓ Enabled`** (green badge): Visible and subscribable by all users in `/admin`.
+    - **`🛡️ Enabled-Admin`** (gold badge): Visible and subscribable **only by certified web super admins** (`pavin.ss2@gmail.com`). Regular users cannot see or subscribe to these entities.
+    - **`✕ Disabled`** (red badge): Hidden and disallowed for all users.
+  - Clicking the badge cycles through: `Enabled` $\rightarrow$ `Enabled-Admin` $\rightarrow$ `Disabled` $\rightarrow$ `Enabled`.
+  - Edit modals provide a dropdown selector for the 3 states.
+  - Batch Action Bar provides buttons to set selected items to **Enabled**, **Enabled-Admin**, or **Disabled**.
+- **"Allow Subscribe" Filter Dropdown in Back Office**:
+  - Both `default_dim_member` and `default_dim_group` include an **"Allow Subscribe"** filter dropdown selector in the tab header toolbar (`All Allow Subscribe`, `✓ Enabled`, `🛡️ Enabled-Admin`, `✕ Disabled`).
+- **Company-Level "Allow Import / Subscribe" Removed**:
+  - `default_dim_company` no longer has an "Allow Import" or "Allow Subscribe" field. Companies are derived dynamically based on whether their associated groups are available and accessible to the user.
+- **Member Status (Active/Inactive) Removed in Back Office**:
+  - `default_dim_member` in Back Office no longer maintains `is_active` (Active/Inactive) column or controls. When members are subscribed by a user, they default to active (`Sub`), while the user can customize inactive state in `/admin`.
+- **Group Cascade Disallow**: Disabling subscribe on a group (setting to `Disabled` via single row badge cycle, batch action bar button, or Edit Record modal save):
+  - Prompts `window.confirm`: `"Do you also want to disable subscribe for all {count} related member(s) in group '{group}'?"`. If accepted, sets all related members to `Disabled`.
+- **Case-Insensitive String Matching**: Matching between group names and member parent fields uses `.trim().toLowerCase()` to prevent string format mismatches.
 
 ### 6.5 Back Office `default_dim_group` Country Dropdown
 - When adding a new group (desktop top-row draft or mobile popup modal) or editing an existing group (Edit Record modal) in `default_dim_group`, the `Country` field is rendered as a `<select>` dropdown populated from `default_dim_country` (with fallback to `DEFAULT_COUNTRIES`) instead of a blank text fill box.
@@ -237,6 +251,7 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
 
 ### 6.14 Subscription Refactoring & Optional Selection Model in Admin Tab
 - **Subscription Architecture**: Replaced manual import with real-time live subscriptions from Back Office (`default_dim_*`). Subscribed default items are read-only for default properties while allowing personal `Active`/`Inactive` status toggling.
+- **Entity Visibility Fix & Company Derivation**: The Manage Subscriptions modal filters default groups based on `isAllowSubscribeAllowed(group, isSuperAdmin)`. Companies are no longer filtered by company-level `allow_import`; a company is visible in the modal if it contains groups accessible to the user (and matching selected country filters). This ensures all groups under active companies (such as EDEN, Atelier, MEMORIA, NO LIMIT) display properly.
 - **Group-Level Subscription Rule**: Subscription is strictly determined on a **Group** level (`userSubs.groups`). Subscribing to a Group automatically subscribes the parent Company, Country, and all Members belonging to that Group. Ticking a Country or Company in the modal without selecting any Group has zero effect.
 - **Untick-to-Unsubscribe Action**: Unticking any Group, Company, or Country badge in the "Manage Subscriptions" modal and clicking **Save** immediately unsubscribes those items and removes them from the user's Admin tab.
 - **Option Visibility & Subscribe All Behavior**: When "Subscribe All Default Data" is checked, all badge-pills remain visible as checked (`✓`). Unticking any individual badge automatically switches to explicit custom selection and deselects the chosen item.
@@ -249,14 +264,19 @@ The Raw Data tab incorporates all grid-entry operations to eliminate the need fo
   - Column 2 contains the Edit pencil icon button (`<Edit2 size={15} />`), **rendered exclusively for custom-made user items**. For subscribed default data rows (`status: Sub`), the Edit `.btn-icon` button is hidden.
   - **Dynamic Column Hiding**: If a table (or active filter view) contains **only Subscribed rows** (0 custom-made rows), both the tickbox column (`<th style={{ width: '38px' }}>`) and the **"Action"** column (`<th>Action</th>`) are automatically hidden, so the table starts cleanly with the **Status** column.
 - **Batch Action Bar**: Selecting one or more custom-made rows triggers a floating batch bar above the table with actions restricted strictly to **Set Active**, **Set Inactive**, **Delete**, and **Deselect All**.
-- **1-to-1 Backoffice Pill Tag Styling (`.status-tag`)**:
-  - Displays **`Sub`** (blue pill tag: `rgba(59, 130, 246, 0.15)` bg, `#3b82f6` text, subtle blue border), **`Active`** (green pill tag: `rgba(34, 197, 94, 0.15)` bg, `#22c55e` text, subtle green border), and **`Inactive`** (red pill tag: `rgba(239, 68, 68, 0.15)` bg, `#ef4444` text, subtle red border) matching attached pill tag image specs (`padding: 4px 14px`, `border-radius: 9999px`, `font-size: 0.8rem`, `font-weight: 700`, `cursor: default`, `user-select: none`).
+- **1-to-1 Backoffice Pill Tag Styling (`.status-tag`) & Inactive Subscribed Members**:
+  - Displays:
+    - **`Sub`** (blue pill tag: `rgba(59, 130, 246, 0.15)` bg, `#3b82f6` text, subtle blue border): Subscribed and active.
+    - **`Sub (Inactive)`** (muted gold tag: `rgba(180, 160, 100, 0.15)` bg, `#8a7a50` text, line-through decoration): Subscribed but toggled inactive by the user. Clicking toggles back to active `Sub`.
+    - **`Active`** (green pill tag: `rgba(34, 197, 94, 0.15)` bg, `#22c55e` text, subtle green border): Custom member active.
+    - **`Inactive`** (red pill tag: `rgba(239, 68, 68, 0.15)` bg, `#ef4444` text, subtle red border): Custom member inactive.
+  - Clicking the status badge on any row (subscribed or custom) toggles its active status. For subscribed members, it creates/updates a user override document (`backoffice_id` preserved, `is_active: false`) in the user's private collection so the member remains synced to Back Office while being inactive for that user.
 - **Table Header Gold Hover Color**:
   - All `.dim-table` column headers (`th`, `.sortable-th`) specify `transition: color 0.15s ease` and turn **gold (`var(--accent-primary)`)** on mouse hover matching all other page tables (`/backoffice`, `/events`, `/raw`).
 - **Back Office Entity Key Connection (`backoffice_id`)**:
   - User overrides on default items directly preserve and bind to the Back Office primary key (`id` / `backoffice_id`).
   - When an item's name or metadata is modified in Back Office (e.g. `"Tonliw"` $\rightarrow$ `"Tonliw (BNK48)"`), the live updates flow through to the Admin tab row in real time while preserving user active preferences, avoiding duplicate row creation.
-- **Group & Company Filters**: Admin tab headers feature filter drop-down selectors for **Group** and **Company** for instant table filtering.
+- **Group, Company & Status Filters**: Admin tab headers feature filter drop-down selectors for **Group**, **Company**, and **Status** (`All Status`, `Active`, `Sub`, `Sub (Inactive)`, `Inactive`) for instant table filtering across Members, Groups, and Companies.
 - **1-to-1 Backoffice CSS Alignment & Layout**:
   - Set `.admin-page` container padding to `0px`.
   - Copied `.tabs-bar` and `.tab-btn` CSS directly from `/backoffice` (`padding: 8px 14px`, `gap: 8px`, `font-size: 0.85rem`, gold-subtle active border).

@@ -15,7 +15,24 @@ function getItemValueString(item) {
   ).trim();
 }
 
-function mergeMetadata(tableName, defaultItems, userItems, userSubs = { subscribeAll: true, countries: [], companies: [], groups: [] }) {
+function getAllowSubscribeState(item) {
+  if (item.allow_subscribe && ['Enabled', 'Disabled', 'Enabled-Admin'].includes(item.allow_subscribe)) {
+    return item.allow_subscribe;
+  }
+  if (item.is_allowed_import === false || item.allow_import === false) {
+    return 'Disabled';
+  }
+  return 'Enabled';
+}
+
+function isAllowSubscribeAllowed(item, isSuperAdmin = false) {
+  const state = getAllowSubscribeState(item);
+  if (state === 'Enabled') return true;
+  if (state === 'Enabled-Admin' && isSuperAdmin) return true;
+  return false;
+}
+
+function mergeMetadata(tableName, defaultItems, userItems, userSubs = { subscribeAll: true, countries: [], companies: [], groups: [] }, isSuperAdmin = false) {
   const userOverridesById = new Map();
   const userOverridesByKey = new Map();
 
@@ -36,8 +53,9 @@ function mergeMetadata(tableName, defaultItems, userItems, userSubs = { subscrib
 
   // 1. Process Default items from Back Office (driven strictly by Group level subscription)
   defaultItems.forEach((d) => {
-    const isAllowed = d.is_allowed_import !== false && d.allow_import !== false;
-    if (!isAllowed) return;
+    if (tableName !== 'dim_company') {
+      if (!isAllowSubscribeAllowed(d, isSuperAdmin)) return;
+    }
 
     if (!userSubs.subscribeAll) {
       const itemCountry = String(d.country || '').trim().toLowerCase();
@@ -88,7 +106,7 @@ function mergeMetadata(tableName, defaultItems, userItems, userSubs = { subscrib
 
     const activeState = override && override.is_active !== undefined
       ? Boolean(override.is_active)
-      : (d.is_active !== undefined ? Boolean(d.is_active) : true);
+      : (tableName === 'dim_member' ? true : (d.is_active !== undefined ? Boolean(d.is_active) : true));
 
     const isDeleted = Boolean((override && override.is_deleted) || d.is_deleted);
     if (isDeleted) return;
@@ -238,4 +256,49 @@ console.log('🧪 Running Suite: Back Office Renaming & Group-Level Subscription
   console.log('  ✅ PASSED: Yami Yami member unsubscribed immediately when Yami Yami unticked and saved\n');
 }
 
-console.log('🎉 ALL 6 ANTI-DUPLICATE & GROUP SUBSCRIPTION TESTS PASSED SUCCESSFULLY!');
+// Test 7: 3-State Allow Subscribe Permissions (Enabled, Enabled-Admin, Disabled)
+{
+  console.log('Test 7: 3-State Allow Subscribe Permissions');
+  const defaultGroups = [
+    { id: 'default_dim_group_1', group: 'Public Group', allow_subscribe: 'Enabled' },
+    { id: 'default_dim_group_2', group: 'Admin Only Group', allow_subscribe: 'Enabled-Admin' },
+    { id: 'default_dim_group_3', group: 'Disabled Group', allow_subscribe: 'Disabled' },
+  ];
+  const userItems = [];
+
+  // Regular user view (isSuperAdmin = false)
+  const regularMerged = mergeMetadata('dim_group', defaultGroups, userItems, { subscribeAll: true }, false);
+  assert.equal(regularMerged.length, 1, 'Regular user should only see Enabled group');
+  assert.equal(regularMerged[0].group, 'Public Group');
+
+  // Super admin view (isSuperAdmin = true)
+  const adminMerged = mergeMetadata('dim_group', defaultGroups, userItems, { subscribeAll: true }, true);
+  assert.equal(adminMerged.length, 2, 'Super admin should see Enabled and Enabled-Admin groups');
+  const adminGroupNames = adminMerged.map(g => g.group);
+  assert.ok(adminGroupNames.includes('Public Group'), 'Super admin sees Public Group');
+  assert.ok(adminGroupNames.includes('Admin Only Group'), 'Super admin sees Admin Only Group');
+  assert.ok(!adminGroupNames.includes('Disabled Group'), 'Disabled group is hidden from all');
+  console.log('  ✅ PASSED: 3-state subscription permissions verified for regular vs super admin\n');
+}
+
+// Test 8: Default Member Active Status & User Inactive Override (Back Office Inactive Removed)
+{
+  console.log('Test 8: Default member status defaults to active and respects user override');
+  const defaultMembers = [
+    // Even if default has is_active: false (legacy), member defaults to active
+    { id: 'default_dim_member_1', member_name: 'Member A', group: 'Group A', is_active: false },
+    { id: 'default_dim_member_2', member_name: 'Member B', group: 'Group A', is_active: true },
+  ];
+  const userItems = [
+    // User explicitly overrides Member B to inactive
+    { id: 'default_dim_member_2', backoffice_id: 'default_dim_member_2', is_active: false }
+  ];
+
+  const merged = mergeMetadata('dim_member', defaultMembers, userItems, { subscribeAll: true });
+  assert.equal(merged.length, 2, 'Should output 2 members');
+  assert.equal(merged.find(m => m.id === 'default_dim_member_1')?.is_active, true, 'Member A should default to active');
+  assert.equal(merged.find(m => m.id === 'default_dim_member_2')?.is_active, false, 'Member B should respect user inactive override');
+  console.log('  ✅ PASSED: Member active status defaults to active and user override is preserved\n');
+}
+
+console.log('🎉 ALL 8 ANTI-DUPLICATE & GROUP SUBSCRIPTION TESTS PASSED SUCCESSFULLY!');
